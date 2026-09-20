@@ -20,18 +20,31 @@ export async function GET(req: NextRequest) {
   const supabase = db();
   const season = currentSeason();
 
-  // Jornadas disponibles y jornada actual (la primera con partidos por jugar)
+  // Jornadas disponibles y jornada actual.
+  // Un partido aplazado y reprogramado para otro día no debe retener su jornada original:
+  // solo cuentan como "pendientes" los partidos que caen cerca de la fecha típica de su jornada.
+  const DAY = 86400e3;
   const { data: light } = await supabase
     .from('matches')
-    .select('matchday,status')
+    .select('matchday,status,utc_date')
     .eq('season', season)
     .limit(1000);
-  const byMd = new Map<number, number>();
+  const groups = new Map<number, { dates: number[]; pending: number[] }>();
   for (const m of light ?? []) {
-    byMd.set(m.matchday, (byMd.get(m.matchday) ?? 0) + (PENDING.includes(m.status) ? 1 : 0));
+    const g = groups.get(m.matchday) ?? { dates: [], pending: [] };
+    const t = new Date(m.utc_date).getTime();
+    g.dates.push(t);
+    if (PENDING.includes(m.status)) g.pending.push(t);
+    groups.set(m.matchday, g);
   }
-  const matchdays = [...byMd.keys()].sort((a, b) => a - b);
-  const current = matchdays.find((md) => (byMd.get(md) ?? 0) > 0) ?? matchdays[matchdays.length - 1] ?? 1;
+  const openCount = (g: { dates: number[]; pending: number[] }) => {
+    const sorted = [...g.dates].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    return g.pending.filter((t) => Math.abs(t - median) <= 5 * DAY).length;
+  };
+  const matchdays = [...groups.keys()].sort((a, b) => a - b);
+  const current =
+    matchdays.find((md) => openCount(groups.get(md)!) > 0) ?? matchdays[matchdays.length - 1] ?? 1;
   const asked = Number(req.nextUrl.searchParams.get('matchday'));
   const matchday = matchdays.includes(asked) ? asked : current;
 

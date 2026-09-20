@@ -35,3 +35,33 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: 'No se pudo guardar el pronóstico.' }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
+
+// Quitar un pronóstico ya marcado (solo mientras el partido siga abierto)
+export async function DELETE(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Sesión caducada. Vuelve a entrar.' }, { status: 401 });
+
+  const body = await req.json().catch(() => null);
+  const matchId = Number(body?.matchId);
+  if (!Number.isInteger(matchId)) {
+    return NextResponse.json({ error: 'Partido no válido.' }, { status: 400 });
+  }
+
+  const { data: match } = await db()
+    .from('matches')
+    .select('id,status,utc_date')
+    .eq('id', matchId)
+    .maybeSingle();
+  if (!match) return NextResponse.json({ error: 'Partido no encontrado.' }, { status: 404 });
+  if (isLocked(match.status, match.utc_date)) {
+    return NextResponse.json({ error: 'Este partido ya está cerrado.' }, { status: 409 });
+  }
+
+  const { error } = await db()
+    .from('predictions')
+    .delete()
+    .eq('player_id', session.pid)
+    .eq('match_id', matchId);
+  if (error) return NextResponse.json({ error: 'No se pudo quitar el pronóstico.' }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

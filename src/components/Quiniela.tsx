@@ -185,16 +185,18 @@ export default function Quiniela() {
     return () => clearInterval(t);
   }, [md, load]);
 
+  // Pulsar la casilla ya marcada quita el pronóstico
   async function choose(m: MatchDTO, pick: Pick) {
     if (m.locked || !data) return;
+    const next: Pick | null = m.myPick === pick ? null : pick;
     setData({
       ...data,
-      matches: data.matches.map((x) => (x.id === m.id ? { ...x, myPick: pick } : x)),
+      matches: data.matches.map((x) => (x.id === m.id ? { ...x, myPick: next } : x)),
     });
     const res = await fetch('/api/predict', {
-      method: 'POST',
+      method: next ? 'POST' : 'DELETE',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ matchId: m.id, pick }),
+      body: JSON.stringify(next ? { matchId: m.id, pick: next } : { matchId: m.id }),
     });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
