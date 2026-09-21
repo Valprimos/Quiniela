@@ -27,9 +27,23 @@ Comprobar la sincronización a mano:
 curl -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/sync?force=1"
 ```
 
+## Qué incluye
+
+- **Pronósticos**: los 10 partidos de la jornada con puesto en la Liga y forma reciente de cada equipo, aviso de partidos
+  sin rellenar y cuenta atrás al próximo cierre. Al empezar cada partido se ve el reparto de pronósticos del grupo y,
+  al terminar, cuántos acertaron.
+- **Clasificación**: por jornada y general, con subidas y bajadas de puestos, "Ganó la jornada" y botón para compartirla en el grupo.
+- **Estadísticas**
+  - *Equipos*: % de acierto de cada equipo (total, de local y de visitante), para todo el grupo o para un jugador,
+    con resumen de más predecible, más traicionero, sobrevalorado e infravalorado.
+  - *Jugadores*: % de acierto, acierto cuando pones 1, X o 2, rachas, jornadas ganadas, plenos, mejor y peor jornada.
+  - *Liga*: clasificación real (general, local y visitante) calculada con los resultados guardados.
+  - *Grupo*: lo que pasa vs lo que pronosticáis, gráfica de evolución y los partidos que más engañaron.
+- **Cuenta**: cambio de PIN. Instalable en el móvil como app (manifest e iconos).
+
 ## Reglas
 
-- Se puede cambiar el pronóstico hasta que empieza el partido; después se bloquea.
+- Se puede cambiar o quitar el pronóstico hasta que empieza el partido; después se bloquea.
 - Los pronósticos de los demás solo se ven cuando el partido ha empezado.
 - 1 punto por acierto, solo en partidos terminados. Los empates en la clasificación comparten posición.
 - Los colegas se registran con nombre + PIN (4-6 números) y el código de invitación (`INVITE_CODE`).

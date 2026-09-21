@@ -4,10 +4,13 @@ import { getSession } from '@/lib/session';
 import { currentSeason } from '@/lib/season';
 import { syncIfStale } from '@/lib/sync';
 import { isLocked, resultOf } from '@/lib/scoring';
+import { MatchLite, buildLiga, isFinished } from '@/lib/league';
 
 export const dynamic = 'force-dynamic';
 
 const PENDING = ['SCHEDULED', 'TIMED', 'IN_PLAY', 'PAUSED', 'LIVE'];
+const COLS =
+  'id,matchday,utc_date,status,home_name,away_name,home_crest,away_crest,home_score,away_score';
 
 type PredRow = { player_id: string; match_id: number; pick: string };
 
@@ -20,17 +23,18 @@ export async function GET(req: NextRequest) {
   const supabase = db();
   const season = currentSeason();
 
+  // Toda la temporada (380 partidos) en una sola consulta
+  const { data: all } = await supabase.from('matches').select(COLS).eq('season', season).limit(1000);
+  const allMatches: MatchLite[] = all ?? [];
+  const liga = buildLiga(allMatches);
+  const ligaBy = new Map(liga.map((r) => [r.team, r]));
+
   // Jornadas disponibles y jornada actual.
   // Un partido aplazado y reprogramado para otro día no debe retener su jornada original:
   // solo cuentan como "pendientes" los partidos que caen cerca de la fecha típica de su jornada.
   const DAY = 86400e3;
-  const { data: light } = await supabase
-    .from('matches')
-    .select('matchday,status,utc_date')
-    .eq('season', season)
-    .limit(1000);
   const groups = new Map<number, { dates: number[]; pending: number[] }>();
-  for (const m of light ?? []) {
+  for (const m of allMatches) {
     const g = groups.get(m.matchday) ?? { dates: [], pending: [] };
     const t = new Date(m.utc_date).getTime();
     g.dates.push(t);
@@ -48,20 +52,16 @@ export async function GET(req: NextRequest) {
   const asked = Number(req.nextUrl.searchParams.get('matchday'));
   const matchday = matchdays.includes(asked) ? asked : current;
 
-  const [{ data: mRows }, { data: players }, { data: points }] = await Promise.all([
-    supabase
-      .from('matches')
-      .select('*')
-      .eq('season', season)
-      .eq('matchday', matchday)
-      .order('utc_date')
-      .order('id'),
+  const matchRows = allMatches
+    .filter((m) => m.matchday === matchday)
+    .sort((a, b) => new Date(a.utc_date).getTime() - new Date(b.utc_date).getTime() || a.id - b.id);
+
+  const [{ data: players }, { data: points }] = await Promise.all([
     supabase.from('players').select('id,name'),
     supabase.from('player_points').select('player_id,matchday,points').eq('season', season),
   ]);
-
-  const matchRows = mRows ?? [];
   const playerRows: { id: string; name: string }[] = players ?? [];
+
   const ids = matchRows.map((m) => m.id);
   let preds: PredRow[] = [];
   if (ids.length) {
@@ -72,6 +72,16 @@ export async function GET(req: NextRequest) {
   const nameById = new Map(playerRows.map((p) => [p.id, p.name]));
   const now = Date.now();
 
+  const teamInfo = (name: string, crest: string | null) => {
+    const r = ligaBy.get(name);
+    return {
+      name,
+      crest,
+      pos: r && r.total.pj > 0 ? r.pos : null,
+      form: r ? r.form : [],
+    };
+  };
+
   const matches = matchRows.map((m) => {
     const started = new Date(m.utc_date).getTime() <= now;
     const forMatch = preds.filter((p) => p.match_id === m.id);
@@ -79,8 +89,8 @@ export async function GET(req: NextRequest) {
       id: m.id,
       utcDate: m.utc_date,
       status: m.status,
-      home: { name: m.home_name, crest: m.home_crest },
-      away: { name: m.away_name, crest: m.away_crest },
+      home: teamInfo(m.home_name, m.home_crest),
+      away: teamInfo(m.away_name, m.away_crest),
       homeScore: m.home_score,
       awayScore: m.away_score,
       result: resultOf(m.status, m.home_score, m.away_score),
@@ -94,15 +104,36 @@ export async function GET(req: NextRequest) {
     };
   });
 
+  // Clasificaciones
   const total = new Map<string, number>();
+  const before = new Map<string, number>(); // puntos hasta la jornada anterior a la actual
   const jornada = new Map<string, number>();
   for (const r of points ?? []) {
     total.set(r.player_id, (total.get(r.player_id) ?? 0) + r.points);
+    if (r.matchday < current) before.set(r.player_id, (before.get(r.player_id) ?? 0) + r.points);
     if (r.matchday === matchday) jornada.set(r.player_id, r.points);
   }
-  const rank = (scores: Map<string, number>) =>
+  const positions = (scores: Map<string, number>) => {
+    const out = new Map<string, number>();
+    for (const p of playerRows) {
+      const s = scores.get(p.id) ?? 0;
+      out.set(p.id, 1 + playerRows.filter((q) => (scores.get(q.id) ?? 0) > s).length);
+    }
+    return out;
+  };
+  const nowPos = positions(total);
+  const prevPos = positions(before);
+  const currentStarted = allMatches.some((m) => m.matchday === current && isFinished(m));
+
+  const rank = (scores: Map<string, number>, withDelta: boolean) =>
     playerRows
-      .map((p) => ({ playerId: p.id, name: p.name, points: scores.get(p.id) ?? 0 }))
+      .map((p) => ({
+        playerId: p.id,
+        name: p.name,
+        points: scores.get(p.id) ?? 0,
+        // subida (+) o bajada (-) de puestos respecto a antes de la jornada actual
+        delta: withDelta && currentStarted ? (prevPos.get(p.id) ?? 0) - (nowPos.get(p.id) ?? 0) : 0,
+      }))
       .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
 
   return NextResponse.json({
@@ -113,7 +144,9 @@ export async function GET(req: NextRequest) {
     matchdays,
     matches,
     finished: matches.filter((m) => m.result).length,
-    rankingJornada: rank(jornada),
-    rankingGeneral: rank(total),
+    finishedTotal: allMatches.filter(isFinished).length,
+    jornadaComplete: matches.length > 0 && matches.every((m) => m.result),
+    rankingJornada: rank(jornada, false),
+    rankingGeneral: rank(total, true),
   });
 }

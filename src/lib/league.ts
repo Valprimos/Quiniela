@@ -1,0 +1,93 @@
+export type MatchLite = {
+  id: number;
+  matchday: number;
+  utc_date: string;
+  status: string;
+  home_name: string;
+  away_name: string;
+  home_crest: string | null;
+  away_crest: string | null;
+  home_score: number | null;
+  away_score: number | null;
+};
+
+export type Rec5 = { pj: number; g: number; e: number; p: number; gf: number; gc: number; pts: number };
+export type FormMark = 'G' | 'E' | 'P';
+export type LigaRow = {
+  team: string;
+  crest: string | null;
+  pos: number;
+  form: FormMark[]; // últimos 5, del más antiguo al más reciente
+  total: Rec5;
+  home: Rec5;
+  away: Rec5;
+};
+
+const empty = (): Rec5 => ({ pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0 });
+
+function add(r: Rec5, gf: number, gc: number) {
+  r.pj++;
+  r.gf += gf;
+  r.gc += gc;
+  if (gf > gc) {
+    r.g++;
+    r.pts += 3;
+  } else if (gf === gc) {
+    r.e++;
+    r.pts += 1;
+  } else {
+    r.p++;
+  }
+}
+
+export function isFinished(
+  m: MatchLite
+): m is MatchLite & { home_score: number; away_score: number } {
+  return m.status === 'FINISHED' && m.home_score != null && m.away_score != null;
+}
+
+// Clasificación real calculada con los resultados guardados (desempate: DG y goles a favor)
+export function buildLiga(matches: MatchLite[]): LigaRow[] {
+  const rows = new Map<string, LigaRow>();
+  const get = (team: string, crest: string | null): LigaRow => {
+    let r = rows.get(team);
+    if (!r) {
+      r = { team, crest, pos: 0, form: [], total: empty(), home: empty(), away: empty() };
+      rows.set(team, r);
+    }
+    if (!r.crest && crest) r.crest = crest;
+    return r;
+  };
+
+  for (const m of matches) {
+    get(m.home_name, m.home_crest);
+    get(m.away_name, m.away_crest);
+  }
+
+  const finished = matches
+    .filter(isFinished)
+    .sort((a, b) => new Date(a.utc_date).getTime() - new Date(b.utc_date).getTime() || a.id - b.id);
+
+  for (const m of finished) {
+    const h = get(m.home_name, m.home_crest);
+    const a = get(m.away_name, m.away_crest);
+    add(h.total, m.home_score, m.away_score);
+    add(h.home, m.home_score, m.away_score);
+    add(a.total, m.away_score, m.home_score);
+    add(a.away, m.away_score, m.home_score);
+    h.form.push(m.home_score > m.away_score ? 'G' : m.home_score === m.away_score ? 'E' : 'P');
+    a.form.push(m.away_score > m.home_score ? 'G' : m.away_score === m.home_score ? 'E' : 'P');
+  }
+
+  const list = [...rows.values()];
+  for (const r of list) r.form = r.form.slice(-5);
+  list.sort(
+    (a, b) =>
+      b.total.pts - a.total.pts ||
+      b.total.gf - b.total.gc - (a.total.gf - a.total.gc) ||
+      b.total.gf - a.total.gf ||
+      a.team.localeCompare(b.team, 'es')
+  );
+  list.forEach((r, i) => (r.pos = i + 1));
+  return list;
+}
