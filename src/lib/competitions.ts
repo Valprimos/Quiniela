@@ -2,16 +2,20 @@ export type CompetitionCode = 'PD' | 'SD' | 'CL';
 
 export type CompetitionDef = {
   code: CompetitionCode;
-  apiCode: string; // código en football-data.org
+  apiCode: string; // código en football-data.org (solo se usa si source = 'football-data')
   name: string;
   short: string;
-  freeTier: boolean; // si el plan gratuito de football-data.org la incluye
+  freeTier: boolean;
+  source: 'football-data' | 'api-football';
+  afLeagueId?: number; // solo si source = 'api-football'
 };
 
 export const COMPETITIONS: CompetitionDef[] = [
-  { code: 'PD', apiCode: 'PD', name: 'Primera División', short: 'Primera', freeTier: true },
-  { code: 'SD', apiCode: 'SD', name: 'Segunda División', short: 'Segunda', freeTier: false },
-  { code: 'CL', apiCode: 'CL', name: 'Champions League', short: 'Champions', freeTier: true },
+  { code: 'PD', apiCode: 'PD', name: 'Primera División', short: 'Primera', freeTier: true, source: 'football-data' },
+  // La Segunda no está en el plan gratuito de football-data.org, así que usa api-football.com
+  // (también gratis, pero con su propia clave: variable de entorno API_FOOTBALL_KEY).
+  { code: 'SD', apiCode: 'SD', name: 'Segunda División', short: 'Segunda', freeTier: true, source: 'api-football', afLeagueId: 141 },
+  { code: 'CL', apiCode: 'CL', name: 'Champions League', short: 'Champions', freeTier: true, source: 'football-data' },
 ];
 
 export function competitionDef(code: string): CompetitionDef {
