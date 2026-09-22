@@ -18,11 +18,11 @@ export async function POST(req: NextRequest) {
 
   const { data: match } = await db()
     .from('matches')
-    .select('id,status,utc_date')
+    .select('id,status,utc_date,admin_locked')
     .eq('id', matchId)
     .maybeSingle();
   if (!match) return NextResponse.json({ error: 'Partido no encontrado.' }, { status: 404 });
-  if (isLocked(match.status, match.utc_date)) {
+  if (isLocked(match.status, match.utc_date, match.admin_locked)) {
     return NextResponse.json({ error: 'Este partido ya está cerrado.' }, { status: 409 });
   }
 
@@ -49,11 +49,11 @@ export async function DELETE(req: NextRequest) {
 
   const { data: match } = await db()
     .from('matches')
-    .select('id,status,utc_date')
+    .select('id,status,utc_date,admin_locked')
     .eq('id', matchId)
     .maybeSingle();
   if (!match) return NextResponse.json({ error: 'Partido no encontrado.' }, { status: 404 });
-  if (isLocked(match.status, match.utc_date)) {
+  if (isLocked(match.status, match.utc_date, match.admin_locked)) {
     return NextResponse.json({ error: 'Este partido ya está cerrado.' }, { status: 409 });
   }
 

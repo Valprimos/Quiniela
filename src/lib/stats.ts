@@ -29,6 +29,10 @@ export type PlayerStat = {
   best: { matchday: number; points: number } | null;
   worst: { matchday: number; points: number } | null;
   avg: number | null;
+  // Cuántas veces se fue en contra de lo que votaba la mayoría del grupo, y cuántas acertó al hacerlo
+  brave: Rec;
+  // El equipo con peor % de acierto de este jugador (mínimo 3 pronósticos sobre él)
+  jinx: { team: string; pct: number } | null;
 };
 
 export type MatchInsight = {
@@ -69,6 +73,7 @@ type Agg = {
   best: number;
   md: Map<number, number>; // aciertos por jornada
   pickedMds: Set<number>; // jornadas en las que pronosticó algo
+  brave: Rec;
 };
 
 const rec = (): Rec => ({ h: 0, n: 0 });
@@ -125,6 +130,7 @@ export function computeStats(input: {
       best: 0,
       md: new Map(),
       pickedMds: new Set(),
+      brave: rec(),
     });
   }
 
@@ -146,6 +152,15 @@ export function computeStats(input: {
     const pm = predByMatch.get(m.id);
     let hits = 0;
     let n = 0;
+
+    // Pronóstico mayoritario del grupo en este partido (para medir quién se atreve a ir a la contra)
+    const tally: Record<Pick, number> = { '1': 0, X: 0, '2': 0 };
+    if (pm) for (const pick of pm.values()) tally[pick]++;
+    const majority: Pick | null =
+      pm && pm.size >= 2
+        ? (['1', 'X', '2'] as Pick[]).sort((a, b) => tally[b] - tally[a])[0]
+        : null;
+
     for (const pl of players) {
       const a = aggs.get(pl.id)!;
       a.md.set(m.matchday, a.md.get(m.matchday) ?? 0);
@@ -160,6 +175,7 @@ export function computeStats(input: {
       if (hit) hits++;
       a.played++;
       a.pickedMds.add(m.matchday);
+      if (majority && pick !== majority && tally[majority] > tally[pick]) bump(a.brave, hit);
       if (hit) {
         a.hits++;
         a.cur++;
@@ -207,6 +223,18 @@ export function computeStats(input: {
     });
   }
 
+  // El equipo con el que peor le va a cada jugador (mínimo 3 pronósticos sobre él)
+  const jinxOf = (playerId: string): PlayerStat['jinx'] => {
+    let worst: { team: string; pct: number } | null = null;
+    for (const t of teams.values()) {
+      const c = t.acc[playerId]?.total;
+      if (!c || c.n < 3) continue;
+      const pct = (c.h / c.n) * 100;
+      if (!worst || pct < worst.pct) worst = { team: t.team, pct };
+    }
+    return worst;
+  };
+
   const playerStats: PlayerStat[] = players.map((p) => {
     const a = aggs.get(p.id)!;
     const own = completed.filter((md) => a.pickedMds.has(md));
@@ -234,6 +262,8 @@ export function computeStats(input: {
       best,
       worst,
       avg: own.length ? sum / own.length : null,
+      brave: a.brave,
+      jinx: jinxOf(p.id),
     };
   });
   playerStats.sort(

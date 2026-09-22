@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 const COOKIE = 'q_session';
 const MAX_AGE = 60 * 60 * 24 * 180; // 180 días
 
-export type Session = { pid: string; name: string; exp: number };
+export type Session = { pid: string; name: string; gid: string; admin: boolean; exp: number };
 
 function sign(data: string): string {
   return createHmac('sha256', process.env.SESSION_SECRET!).update(data).digest('base64url');
@@ -26,8 +26,8 @@ export async function getSession(): Promise<Session | null> {
   }
 }
 
-export async function setSession(pid: string, name: string): Promise<void> {
-  const payload: Session = { pid, name, exp: Date.now() + MAX_AGE * 1000 };
+export async function setSession(pid: string, name: string, gid: string, admin: boolean): Promise<void> {
+  const payload: Session = { pid, name, gid, admin, exp: Date.now() + MAX_AGE * 1000 };
   const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
   (await cookies()).set(COOKIE, `${data}.${sign(data)}`, {
     httpOnly: true,

@@ -8,7 +8,8 @@ export default function LoginForm() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [code, setCode] = useState('');
+  const [groupName, setGroupName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -19,7 +20,7 @@ export default function LoginForm() {
     const res = await fetch('/api/auth', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ mode, name, pin, inviteCode }),
+      body: JSON.stringify({ mode, name, pin, code, groupName }),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -39,12 +40,38 @@ export default function LoginForm() {
         <h1 className="login-title">Quiniela</h1>
         <p className="muted">
           {registering
-            ? 'Elige un nombre y un PIN para jugar.'
-            : 'Entra con tu nombre y tu PIN.'}
+            ? 'Únete a la pandilla de tus colegas, o crea una nueva con un código que te inventes.'
+            : 'Entra con el código de tu pandilla, tu nombre y tu PIN.'}
         </p>
 
         <div className="field">
-          <label htmlFor="name">Nombre</label>
+          <label htmlFor="code">Código de pandilla</label>
+          <input
+            id="code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            autoComplete="off"
+            maxLength={30}
+            required
+          />
+        </div>
+
+        {registering && (
+          <div className="field">
+            <label htmlFor="groupName">Nombre de la pandilla (solo si es nueva)</label>
+            <input
+              id="groupName"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              autoComplete="off"
+              maxLength={40}
+              placeholder="Los del bar de Paco"
+            />
+          </div>
+        )}
+
+        <div className="field">
+          <label htmlFor="name">Tu nombre</label>
           <input
             id="name"
             value={name}
@@ -70,22 +97,10 @@ export default function LoginForm() {
           />
         </div>
 
-        {registering && (
-          <div className="field">
-            <label htmlFor="invite">Código de invitación</label>
-            <input
-              id="invite"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
-        )}
-
         {error && <p className="notice" role="alert">{error}</p>}
 
         <button className="primary" type="submit" disabled={busy}>
-          {registering ? 'Crear jugador' : 'Entrar'}
+          {registering ? 'Entrar o crear pandilla' : 'Entrar'}
         </button>
         <button
           className="link"
@@ -95,7 +110,7 @@ export default function LoginForm() {
             setError(null);
           }}
         >
-          {registering ? 'Ya tengo jugador' : 'Soy nuevo'}
+          {registering ? 'Ya tengo jugador' : 'Soy nuevo o quiero crear una pandilla'}
         </button>
       </form>
     </main>

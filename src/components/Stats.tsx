@@ -29,12 +29,26 @@ function pickBy<T>(items: T[], f: (x: T) => number | null, dir: 1 | -1): T | nul
   return best;
 }
 
-function Crest({ src }: { src: string | null }) {
-  return src ? (
+function Crest({
+  src,
+  name,
+  onClick,
+}: {
+  src: string | null;
+  name?: string;
+  onClick?: (name: string) => void;
+}) {
+  const img = src ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt="" loading="lazy" className="screst" />
   ) : (
     <span className="screst" />
+  );
+  if (!name || !onClick) return img;
+  return (
+    <button type="button" className="crestbtn" onClick={() => onClick(name)}>
+      {img}
+    </button>
   );
 }
 
@@ -50,7 +64,7 @@ function PctCell({ rec }: { rec: Rec }) {
 }
 
 /* ---------- Equipos: % de acierto por equipo ---------- */
-function Equipos({ stats }: { stats: StatsDTO }) {
+function Equipos({ stats, onTeamClick }: { stats: StatsDTO; onTeamClick: (name: string) => void }) {
   const [who, setWho] = useState('*');
   const [sortKey, setSortKey] = useState<Key>('total');
 
@@ -130,7 +144,7 @@ function Equipos({ stats }: { stats: StatsDTO }) {
             <li key={i.label}>
               <span className="il">{i.label}</span>
               <span className="iv">
-                <Crest src={i.t.crest} />
+                <Crest src={i.t.crest} name={i.t.team} onClick={onTeamClick} />
                 {i.t.team}
               </span>
               <span className="is">{i.text}</span>
@@ -153,7 +167,7 @@ function Equipos({ stats }: { stats: StatsDTO }) {
         {rows.map((r) => (
           <li key={r.t.team} className="agrid">
             <span className="ateam">
-              <Crest src={r.t.crest} />
+              <Crest src={r.t.crest} name={r.t.team} onClick={onTeamClick} />
               <span className="aname">{r.t.team}</span>
             </span>
             <PctCell rec={r.total} />
@@ -222,6 +236,14 @@ function Jugadores({ stats, meId }: { stats: StatsDTO; meId: string }) {
               <dt>Media por jornada</dt>
               <dd>{fmt(p.avg, 1)}</dd>
             </div>
+            <div>
+              <dt>Valentía (contra el grupo)</dt>
+              <dd>{p.brave.n ? `${fmt(pctOf(p.brave))}% de ${p.brave.n}` : '–'}</dd>
+            </div>
+            <div>
+              <dt>Equipo gafe</dt>
+              <dd>{p.jinx ? `${p.jinx.team} (${fmt(p.jinx.pct)}%)` : '–'}</dd>
+            </div>
           </dl>
         </li>
       ))}
@@ -230,7 +252,7 @@ function Jugadores({ stats, meId }: { stats: StatsDTO; meId: string }) {
 }
 
 /* ---------- Clasificación real de la Liga ---------- */
-function Liga({ liga }: { liga: LigaRow[] }) {
+function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: string) => void }) {
   const [scope, setScope] = useState<Key>('total');
   const rows = useMemo(() => {
     const dg = (r: Rec5) => r.gf - r.gc;
@@ -268,7 +290,7 @@ function Liga({ liga }: { liga: LigaRow[] }) {
           <li key={r.team} className="lgrid">
             <span className="lpos">{pos}</span>
             <span className="ateam">
-              <Crest src={r.crest} />
+              <Crest src={r.crest} name={r.team} onClick={onTeamClick} />
               <span className="aname">{r.team}</span>
             </span>
             <span>{s.pj}</span>
@@ -425,14 +447,24 @@ function Grupo({ stats, meId }: { stats: StatsDTO; meId: string }) {
 }
 
 /* ---------- Contenedor ---------- */
-export default function Stats({ meId, version }: { meId: string; version: number }) {
+export default function Stats({
+  meId,
+  competition,
+  version,
+  onTeamClick,
+}: {
+  meId: string;
+  competition: string;
+  version: number;
+  onTeamClick: (name: string) => void;
+}) {
   const [stats, setStats] = useState<StatsDTO | null>(null);
   const [failed, setFailed] = useState(false);
   const [view, setView] = useState<View>('equipos');
 
   useEffect(() => {
     let alive = true;
-    fetch('/api/stats', { cache: 'no-store' })
+    fetch(`/api/stats?competition=${competition}`, { cache: 'no-store' })
       .then((r) => {
         if (!r.ok) throw new Error();
         return r.json();
@@ -447,7 +479,7 @@ export default function Stats({ meId, version }: { meId: string; version: number
     return () => {
       alive = false;
     };
-  }, [version]);
+  }, [version, competition]);
 
   if (failed && !stats) return <p className="notice">No se pudieron cargar las estadísticas.</p>;
   if (!stats) return <p className="muted empty">Calculando estadísticas…</p>;
@@ -469,9 +501,9 @@ export default function Stats({ meId, version }: { meId: string; version: number
         ))}
       </div>
       <p className="hint">{stats.finished} partidos terminados en la temporada.</p>
-      {view === 'equipos' && <Equipos stats={stats} />}
+      {view === 'equipos' && <Equipos stats={stats} onTeamClick={onTeamClick} />}
       {view === 'jugadores' && <Jugadores stats={stats} meId={meId} />}
-      {view === 'liga' && <Liga liga={stats.liga} />}
+      {view === 'liga' && <Liga liga={stats.liga} onTeamClick={onTeamClick} />}
       {view === 'grupo' && <Grupo stats={stats} meId={meId} />}
     </>
   );

@@ -1,6 +1,8 @@
 export type MatchLite = {
   id: number;
+  competition: string;
   matchday: number;
+  stage: string | null;
   utc_date: string;
   status: string;
   home_name: string;
@@ -9,6 +11,7 @@ export type MatchLite = {
   away_crest: string | null;
   home_score: number | null;
   away_score: number | null;
+  admin_locked?: boolean;
 };
 
 export type Rec5 = { pj: number; g: number; e: number; p: number; gf: number; gc: number; pts: number };
@@ -46,7 +49,9 @@ export function isFinished(
   return m.status === 'FINISHED' && m.home_score != null && m.away_score != null;
 }
 
-// Clasificación real calculada con los resultados guardados (desempate: DG y goles a favor)
+// Clasificación real calculada con los resultados guardados (desempate: DG y goles a favor).
+// Para la Champions (con eliminatorias) esto solo tiene sentido en la fase de liga:
+// pásale ya filtrados los partidos de esa fase si hace falta.
 export function buildLiga(matches: MatchLite[]): LigaRow[] {
   const rows = new Map<string, LigaRow>();
   const get = (team: string, crest: string | null): LigaRow => {
@@ -90,4 +95,30 @@ export function buildLiga(matches: MatchLite[]): LigaRow[] {
   );
   list.forEach((r, i) => (r.pos = i + 1));
   return list;
+}
+
+// Todos los resultados de un equipo, más recientes primero (para el historial al pinchar en él)
+export function teamHistory(matches: MatchLite[], team: string) {
+  return matches
+    .filter((m) => m.home_name === team || m.away_name === team)
+    .sort((a, b) => new Date(b.utc_date).getTime() - new Date(a.utc_date).getTime())
+    .map((m) => {
+      const home = m.home_name === team;
+      const gf = home ? m.home_score : m.away_score;
+      const gc = home ? m.away_score : m.home_score;
+      const finished = isFinished(m);
+      const mark: FormMark | null = !finished || gf == null || gc == null ? null : gf > gc ? 'G' : gf === gc ? 'E' : 'P';
+      return {
+        matchId: m.id,
+        matchday: m.matchday,
+        utcDate: m.utc_date,
+        status: m.status,
+        home,
+        rival: home ? m.away_name : m.home_name,
+        rivalCrest: home ? m.away_crest : m.home_crest,
+        gf,
+        gc,
+        mark,
+      };
+    });
 }
