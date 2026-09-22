@@ -6,15 +6,15 @@ export type CompetitionDef = {
   name: string;
   short: string;
   freeTier: boolean;
-  source: 'football-data' | 'api-football';
-  afLeagueId?: number; // solo si source = 'api-football'
+  source: 'football-data' | 'thesportsdb';
 };
 
 export const COMPETITIONS: CompetitionDef[] = [
   { code: 'PD', apiCode: 'PD', name: 'Primera División', short: 'Primera', freeTier: true, source: 'football-data' },
-  // La Segunda no está en el plan gratuito de football-data.org, así que usa api-football.com
-  // (también gratis, pero con su propia clave: variable de entorno API_FOOTBALL_KEY).
-  { code: 'SD', apiCode: 'SD', name: 'Segunda División', short: 'Segunda', freeTier: true, source: 'api-football', afLeagueId: 141 },
+  // La Segunda no está en el plan gratuito de football-data.org (y el plan gratuito de
+  // api-football.com no da acceso a la temporada en curso), así que usa TheSportsDB: gratis
+  // y sin restricción de temporada, aunque los datos los mantiene la comunidad.
+  { code: 'SD', apiCode: 'SD', name: 'Segunda División', short: 'Segunda', freeTier: true, source: 'thesportsdb' },
   { code: 'CL', apiCode: 'CL', name: 'Champions League', short: 'Champions', freeTier: true, source: 'football-data' },
 ];
 

@@ -631,6 +631,11 @@ export default function Quiniela() {
           {error}
         </p>
       )}
+      {data.syncNotice && data.syncNotice.length > 0 && (
+        <p className="notice" role="alert">
+          No se ha podido traer datos de: {data.syncNotice.join(' · ')}
+        </p>
+      )}
 
       <div className="tabs" role="tablist">
         {(

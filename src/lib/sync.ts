@@ -1,6 +1,6 @@
 import { db } from './db';
 import { fetchMatches, FootballDataError } from './football';
-import { fetchApiFootballMatches, ApiFootballError } from './apifootball';
+import { fetchTheSportsDbMatches, TheSportsDbError } from './thesportsdb';
 import { currentSeason } from './season';
 import { COMPETITIONS, CompetitionCode, CompetitionDef, KNOCKOUT_STAGE_ORDER } from './competitions';
 
@@ -45,8 +45,8 @@ function syntheticMatchday(stage: string | undefined, fallback: number): number 
 }
 
 async function fetchRows(def: CompetitionDef, season: number): Promise<Row[]> {
-  if (def.source === 'api-football') {
-    const matches = await fetchApiFootballMatches(def.afLeagueId!, season);
+  if (def.source === 'thesportsdb') {
+    const matches = await fetchTheSportsDbMatches(season);
     return matches.map((m) => ({
       id: m.id,
       utc_date: m.utcDate,
@@ -136,7 +136,7 @@ async function syncCompetitionIfStale(
   } catch (e) {
     let msg = 'Fallo al sincronizar';
     if (e instanceof FootballDataError && e.status === 403) msg = 'No incluida en tu plan de football-data.org';
-    else if (e instanceof ApiFootballError) msg = e.message;
+    else if (e instanceof TheSportsDbError) msg = e.message;
     console.error(`Fallo al sincronizar ${competition}`, e);
     return { competition, synced: false, error: msg };
   }

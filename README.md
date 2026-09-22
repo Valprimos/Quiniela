@@ -4,16 +4,19 @@ Quiniela entre colegas para Primera División, Segunda División y Champions Lea
 resultados se sincronizan solos, con modo en vivo, clasificación por competición y combinada,
 estadísticas detalladas, varias pandillas independientes y panel de admin.
 
-> **Segunda División:** football-data.org no la trae en su plan gratuito, así que usa una fuente
-> distinta, api-football.com, que sí es gratis para esto (100 peticiones al día). Hace falta una
-> clave aparte: regístrate gratis en https://dashboard.api-football.com/register y ponla en
-> `API_FOOTBALL_KEY`. Primera y Champions siguen viniendo de football-data.org.
+> **Segunda División:** football-data.org no la trae en su plan gratuito, y el plan gratuito de
+> api-football.com no da acceso a la temporada en curso (solo a temporadas viejas). Así que la
+> Segunda usa TheSportsDB: gratis de verdad y sin ese límite, pero son datos que mantiene la
+> comunidad — pueden faltar partidos puntuales, las horas pueden ir desajustadas, y el "en
+> juego" no siempre se actualiza al segundo (a veces pasa directo de "por jugar" a "terminado").
+> No hace falta registrarse ni pedir ninguna clave: funciona con la clave pública por defecto.
+> Primera y Champions siguen viniendo de football-data.org.
 
 ## Puesta en marcha (instalación nueva)
 
 1. **Supabase**: crea un proyecto y ejecuta `supabase/schema.sql` en el SQL Editor.
-2. **football-data.org** (Primera y Champions) y **api-football.com** (Segunda): regístrate en
-   los dos y copia sus claves.
+2. **football-data.org** (Primera y Champions): regístrate y copia tu token. La Segunda no
+   necesita registro.
 3. Copia `.env.example` a `.env.local` y rellena las variables.
 4. `npm install` y `npm run dev`.
 5. Entra, pulsa "Soy nuevo o quiero crear una pandilla", inventa un código de pandilla y crea tu
