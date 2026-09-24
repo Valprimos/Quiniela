@@ -1,21 +1,15 @@
-export type CompetitionCode = 'PD' | 'SD' | 'CL';
+export type CompetitionCode = 'PD' | 'CL';
 
 export type CompetitionDef = {
   code: CompetitionCode;
-  apiCode: string; // código en football-data.org (solo se usa si source = 'football-data')
+  apiCode: string; // código en football-data.org
   name: string;
   short: string;
-  freeTier: boolean;
-  source: 'football-data' | 'thesportsdb';
 };
 
 export const COMPETITIONS: CompetitionDef[] = [
-  { code: 'PD', apiCode: 'PD', name: 'Primera División', short: 'Primera', freeTier: true, source: 'football-data' },
-  // La Segunda no está en el plan gratuito de football-data.org (y el plan gratuito de
-  // api-football.com no da acceso a la temporada en curso), así que usa TheSportsDB: gratis
-  // y sin restricción de temporada, aunque los datos los mantiene la comunidad.
-  { code: 'SD', apiCode: 'SD', name: 'Segunda División', short: 'Segunda', freeTier: true, source: 'thesportsdb' },
-  { code: 'CL', apiCode: 'CL', name: 'Champions League', short: 'Champions', freeTier: true, source: 'football-data' },
+  { code: 'PD', apiCode: 'PD', name: 'Primera División', short: 'Primera' },
+  { code: 'CL', apiCode: 'CL', name: 'Champions League', short: 'Champions' },
 ];
 
 export function competitionDef(code: string): CompetitionDef {
@@ -28,7 +22,7 @@ export function isCompetitionCode(v: unknown): v is CompetitionCode {
 
 // Fases de la Champions sin número de jornada (fase de liguilla = 1-8, esto es para
 // las eliminatorias de después). El orden es aproximado; solo se usa para ordenar
-// y para pintar una etiqueta, nunca para las jornadas de Primera o Segunda.
+// y para pintar una etiqueta, nunca para las jornadas de Primera.
 export const KNOCKOUT_STAGE_ORDER = [
   'PLAYOFFS',
   'LAST_16',

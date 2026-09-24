@@ -1,22 +1,17 @@
 # Quiniela
 
-Quiniela entre colegas para Primera División, Segunda División y Champions League. Los partidos y
-resultados se sincronizan solos, con modo en vivo, clasificación por competición y combinada,
-estadísticas detalladas, varias pandillas independientes y panel de admin.
+Quiniela entre colegas para Primera División y Champions League. Los partidos y resultados se
+sincronizan solos, con modo en vivo, clasificación por competición y combinada, estadísticas
+detalladas, varias pandillas independientes y panel de admin.
 
-> **Segunda División:** football-data.org no la trae en su plan gratuito, y el plan gratuito de
-> api-football.com no da acceso a la temporada en curso (solo a temporadas viejas). Así que la
-> Segunda usa TheSportsDB: gratis de verdad y sin ese límite, pero son datos que mantiene la
-> comunidad — pueden faltar partidos puntuales, las horas pueden ir desajustadas, y el "en
-> juego" no siempre se actualiza al segundo (a veces pasa directo de "por jugar" a "terminado").
-> No hace falta registrarse ni pedir ninguna clave: funciona con la clave pública por defecto.
-> Primera y Champions siguen viniendo de football-data.org.
+> **Segunda División:** no está incluida. football-data.org no la trae en su plan gratuito, y
+> ninguna otra fuente gratuita encontrada daba datos fiables de la temporada en curso. La única
+> vía real sería pagar (API-Football Pro, 19$/mes, o el plan de pago de football-data.org).
 
 ## Puesta en marcha (instalación nueva)
 
 1. **Supabase**: crea un proyecto y ejecuta `supabase/schema.sql` en el SQL Editor.
-2. **football-data.org** (Primera y Champions): regístrate y copia tu token. La Segunda no
-   necesita registro.
+2. **football-data.org**: regístrate y copia tu token.
 3. Copia `.env.example` a `.env.local` y rellena las variables.
 4. `npm install` y `npm run dev`.
 5. Entra, pulsa "Soy nuevo o quiero crear una pandilla", inventa un código de pandilla y crea tu
@@ -38,13 +33,13 @@ jugadores, pronósticos y clasificaciones, pero comparten los mismos partidos y 
 
 ## Competiciones
 
-Un selector arriba cambia entre Primera, Segunda y Champions. Cada una tiene su propia jornada,
+Un selector arriba cambia entre Primera y Champions. Cada una tiene su propia jornada,
 clasificación de Liga y estadísticas. En la Champions, las eliminatorias (sin número de jornada
 en los datos de origen) se agrupan por fase con un número de jornada interno; se ve la fase con
 una etiqueta ("Octavos de final", etc.) debajo del número de jornada.
 
 La Clasificación tiene tres vistas: por jornada, general de la competición elegida, y combinada
-(la suma de las tres competiciones).
+(la suma de Primera y Champions).
 
 ## Modo en vivo
 

@@ -191,7 +191,7 @@ export async function GET(req: NextRequest) {
     me: { id: session.pid, name: session.name, admin: session.admin },
     season,
     competition,
-    competitions: COMPETITIONS.map((c) => ({ code: c.code, name: c.name, short: c.short, freeTier: c.freeTier })),
+    competitions: COMPETITIONS.map((c) => ({ code: c.code, name: c.name, short: c.short })),
     matchday,
     stageLabel,
     currentMatchday: current,

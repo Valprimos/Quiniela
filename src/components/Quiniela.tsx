@@ -27,7 +27,7 @@ type MatchDTO = {
   picks: { name: string; pick: Pick }[];
 };
 type RankRow = { playerId: string; name: string; points: number; delta: number; provisional?: number };
-type CompetitionInfo = { code: string; name: string; short: string; freeTier: boolean };
+type CompetitionInfo = { code: string; name: string; short: string };
 type StateDTO = {
   me: { id: string; name: string; admin: boolean };
   season: number;
@@ -555,7 +555,6 @@ export default function Quiniela() {
             onClick={() => changeCompetition(c.code)}
           >
             {c.short}
-            {!c.freeTier && <sup title="Necesita un plan de pago en football-data.org">*</sup>}
           </button>
         ))}
       </div>
