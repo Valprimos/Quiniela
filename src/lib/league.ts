@@ -101,7 +101,7 @@ export function buildLiga(matches: MatchLite[]): LigaRow[] {
 export function teamHistory(matches: MatchLite[], team: string) {
   return matches
     .filter((m) => m.home_name === team || m.away_name === team)
-    .sort((a, b) => new Date(b.utc_date).getTime() - new Date(a.utc_date).getTime())
+    .sort((a, b) => new Date(a.utc_date).getTime() - new Date(b.utc_date).getTime())
     .map((m) => {
       const home = m.home_name === team;
       const gf = home ? m.home_score : m.away_score;

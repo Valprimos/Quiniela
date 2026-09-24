@@ -328,8 +328,12 @@ select {
 .modal-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
 .modal-head h2 { margin: 0; font-family: var(--font-display); font-size: 26px; }
 .teamhist { list-style: none; margin: 8px 0 0; padding: 0; }
-.teamhist li { display: grid; grid-template-columns: 32px 1fr auto 24px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.teamhist li { display: grid; grid-template-columns: 32px 20px 22px 1fr auto 24px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.teamhist li.thnow { background: rgba(255, 210, 63, 0.1); border-radius: 4px; padding-left: 6px; padding-right: 6px; margin: 0 -6px; border-bottom-color: transparent; }
 .thmd { color: var(--muted); font-family: var(--font-display); }
+.thvenue { display: flex; color: var(--muted); }
+.thcrest { width: 20px; height: 20px; object-fit: contain; }
+.thrival { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .thscore { font-weight: 700; }
 .thmark { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
 .thmark-G { background: var(--ok); color: #04231a; }
