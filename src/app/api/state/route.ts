@@ -192,6 +192,19 @@ export async function GET(req: NextRequest) {
     .map((p) => ({ playerId: p.id, name: p.name, points: combined.get(p.id) ?? 0, delta: 0 }))
     .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
 
+  // Partidos terminados en TODAS las competiciones, para el % de la clasificación combinada
+  const finishedByComp = await Promise.all(
+    COMPETITIONS.map((c) =>
+      supabase
+        .from('matches')
+        .select('id', { count: 'exact', head: true })
+        .eq('competition', c.code)
+        .eq('season', season)
+        .eq('status', 'FINISHED')
+    )
+  );
+  const finishedTotalCombined = finishedByComp.reduce((sum, r) => sum + (r.count ?? 0), 0);
+
   return NextResponse.json({
     me: { id: session.pid, name: session.name, admin: session.admin },
     season,
@@ -204,6 +217,7 @@ export async function GET(req: NextRequest) {
     matches,
     finished: matches.filter((m) => m.result).length,
     finishedTotal: allMatches.filter(isFinished).length,
+    finishedTotalCombined,
     jornadaComplete: matches.length > 0 && matches.every((m) => m.result),
     jornadaLive: jornadaHasLive,
     rankingJornada: rank(jornada, false).map((r) => ({ ...r, provisional: provisionalPts.get(r.playerId) ?? 0 })),

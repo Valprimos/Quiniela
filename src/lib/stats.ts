@@ -33,6 +33,7 @@ export type PlayerStat = {
   brave: Rec;
   // El equipo con peor % de acierto de este jugador (mínimo 3 pronósticos sobre él)
   jinx: { team: string; pct: number } | null;
+  style: { label: string; detail: string } | null;
 };
 
 export type MatchInsight = {
@@ -235,6 +236,38 @@ export function computeStats(input: {
     return worst;
   };
 
+  // Perfil de estilo: compara cómo pronostica cada uno con lo que pasa de verdad en la
+  // realidad (results) para ver si se inclina hacia el local, el empate o el visitante
+  // más que la media del grupo; si no destaca en eso, mira si suele ir a la contra de la
+  // mayoría (valentía) o casi siempre pronostica lo mismo que todos.
+  const totalRes = results['1'] + results.X + results['2'];
+  const realShare: Record<Pick, number> = totalRes
+    ? { '1': results['1'] / totalRes, X: results.X / totalRes, '2': results['2'] / totalRes }
+    : { '1': 0, X: 0, '2': 0 };
+  const MIN_FOR_STYLE = 8;
+  const LEAN_THRESHOLD = 0.12; // 12 puntos porcentuales por encima de lo normal
+  const styleOf = (a: Agg): PlayerStat['style'] => {
+    if (a.played < MIN_FOR_STYLE || totalRes === 0) return null;
+    const pickShare: Record<Pick, number> = {
+      '1': a.byPick['1'].n / a.played,
+      X: a.byPick.X.n / a.played,
+      '2': a.byPick['2'].n / a.played,
+    };
+    const diffs = (['1', 'X', '2'] as Pick[])
+      .map((k): [Pick, number] => [k, pickShare[k] - realShare[k]])
+      .sort((x, y) => y[1] - x[1]);
+    const [topPick, topDiff] = diffs[0];
+    if (topDiff > LEAN_THRESHOLD) {
+      if (topPick === '1') return { label: 'Localista', detail: 'le da la victoria al de casa más que la media del grupo' };
+      if (topPick === 'X') return { label: 'Empatador', detail: 'pronostica empates más que la media del grupo' };
+      return { label: 'Forastero', detail: 'le da la victoria al visitante más que la media del grupo' };
+    }
+    const bravePlayRate = a.played ? a.brave.n / a.played : 0;
+    if (bravePlayRate > 0.3) return { label: 'Atrevido', detail: 'se va con frecuencia en contra de la mayoría del grupo' };
+    if (bravePlayRate < 0.08) return { label: 'De favoritos', detail: 'casi siempre pronostica lo mismo que la mayoría' };
+    return { label: 'Equilibrado', detail: 'no se inclina especialmente hacia ningún patrón' };
+  };
+
   const playerStats: PlayerStat[] = players.map((p) => {
     const a = aggs.get(p.id)!;
     const own = completed.filter((md) => a.pickedMds.has(md));
@@ -264,6 +297,7 @@ export function computeStats(input: {
       avg: own.length ? sum / own.length : null,
       brave: a.brave,
       jinx: jinxOf(p.id),
+      style: styleOf(a),
     };
   });
   playerStats.sort(

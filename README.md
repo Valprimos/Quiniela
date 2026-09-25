@@ -39,7 +39,8 @@ en los datos de origen) se agrupan por fase con un número de jornada interno; s
 una etiqueta ("Octavos de final", etc.) debajo del número de jornada.
 
 La Clasificación tiene tres vistas: por jornada, general de la competición elegida, y combinada
-(la suma de Primera y Champions).
+(la suma de Primera y Champions). Cada fila muestra también el % de los puntos posibles que lleva
+cada uno (puntos entre partidos terminados en ese ámbito), con una barra para verlo de un vistazo.
 
 ## Modo en vivo
 
@@ -55,6 +56,14 @@ fuera, porterías a cero, mayor goleada a favor y en contra...) y todos sus resu
 icono de casa o avión según jugara en casa o fuera. Se abre ya colocado en la jornada actual.
 Pinchar en el rival de cualquier fila lleva a su propio panel, y se puede volver atrás con el
 botón de la esquina.
+
+## Estadísticas
+
+Dentro de "Cara a cara" se eligen dos equipos y se ven solo sus enfrentamientos directos de esta
+temporada (normalmente uno o dos partidos), separado del historial normal de cada equipo. En
+"Jugadores", cada uno lleva una etiqueta de estilo (Localista, Empatador, Forastero, Atrevido, De
+favoritos o Equilibrado) calculada comparando sus pronósticos con lo que pasa de verdad y con la
+mayoría del grupo; hace falta un mínimo de pronósticos para que salga.
 
 ## Panel de admin
 

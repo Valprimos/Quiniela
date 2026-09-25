@@ -40,6 +40,7 @@ type StateDTO = {
   matches: MatchDTO[];
   finished: number;
   finishedTotal: number;
+  finishedTotalCombined: number;
   jornadaComplete: boolean;
   jornadaLive: boolean;
   rankingJornada: RankRow[];
@@ -232,15 +233,18 @@ function Ranking({
   showDelta,
   crown,
   provisional,
+  maxPossible,
 }: {
   rows: RankRow[];
   meId: string;
   showDelta: boolean;
   crown: boolean;
   provisional: boolean;
+  maxPossible: number;
 }) {
   let pos = 0;
   let prev: number | null = null;
+  const topPoints = Math.max(1, ...rows.map((r) => r.points));
   return (
     <ol className="rank">
       {rows.map((r, i) => {
@@ -248,8 +252,15 @@ function Ranking({
           pos = i + 1;
           prev = r.points;
         }
+        const pct = maxPossible > 0 ? Math.round((r.points / maxPossible) * 100) : null;
+        const barWidth = (r.points / topPoints) * 100;
         return (
           <li key={r.playerId} className={r.playerId === meId ? 'me' : ''}>
+            <span
+              className="rankbar"
+              style={{ width: `${barWidth}%` }}
+              aria-hidden="true"
+            />
             <span className="pos">{pos}</span>
             <span className="who">
               {r.name}
@@ -259,6 +270,7 @@ function Ranking({
               {showDelta && r.delta > 0 && <span className="up">▲{r.delta}</span>}
               {showDelta && r.delta < 0 && <span className="down">▼{-r.delta}</span>}
             </span>
+            <span className="pctpts">{pct != null ? `${pct}%` : ''}</span>
             <span className="pts">
               {r.points}
               {provisional && !!r.provisional && <small className="ptslive">+{r.provisional} en vivo</small>}
@@ -702,15 +714,16 @@ export default function Quiniela() {
                 Combinada
               </button>
             </div>
-            {scope === 'combinada' && (
-              <p className="hint">Suma los puntos de las tres competiciones esta temporada.</p>
-            )}
+            {scope === 'combinada' && <p className="hint">Suma los puntos de Primera y Champions esta temporada.</p>}
             <Ranking
               rows={rankRows}
               meId={data.me.id}
               showDelta={scope === 'general'}
               crown={scope === 'jornada' && data.jornadaComplete}
               provisional={scope === 'jornada' && data.jornadaLive}
+              maxPossible={
+                scope === 'jornada' ? data.finished : scope === 'general' ? data.finishedTotal : data.finishedTotalCombined
+              }
             />
             <div className="share">
               <button type="button" className="link" onClick={shareRanking}>
