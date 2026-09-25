@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getSession } from '@/lib/session';
+import { getSession, clearSession } from '@/lib/session';
 import { currentSeason } from '@/lib/season';
 import { syncIfStale } from '@/lib/sync';
 import { isLocked, liveResultOf, resultOf } from '@/lib/scoring';
@@ -77,6 +77,11 @@ export async function GET(req: NextRequest) {
   ]);
   const playerRows: { id: string; name: string }[] = players ?? [];
   const playerIds = new Set(playerRows.map((p) => p.id));
+  if (!playerIds.has(session.pid)) {
+    // Un admin te ha expulsado de la pandilla: se cierra la sesión en vez de dejarla a medias.
+    await clearSession();
+    return NextResponse.json({ error: 'Ya no formas parte de esta pandilla.' }, { status: 401 });
+  }
 
   const ids = matchRows.map((m) => m.id);
   let preds: PredRow[] = [];

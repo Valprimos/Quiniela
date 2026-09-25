@@ -50,13 +50,21 @@ la jornada muestra los puntos "en vivo" aparte. Se recalcula solo, sin que haga 
 ## Historial de un equipo
 
 Pinchar en el nombre o el escudo de cualquier equipo (en los partidos o en las estadísticas) abre
-todos sus resultados de la temporada.
+un panel con sus estadísticas de la temporada (goles a favor y en contra, % de victorias en casa y
+fuera, porterías a cero, mayor goleada a favor y en contra...) y todos sus resultados, con un
+icono de casa o avión según jugara en casa o fuera. Se abre ya colocado en la jornada actual.
+Pinchar en el rival de cualquier fila lleva a su propio panel, y se puede volver atrás con el
+botón de la esquina.
 
 ## Panel de admin
 
 Solo lo ve quien tiene `is_admin`. Desde ahí se puede:
 
 - Resetear el PIN de un colega que lo haya olvidado.
+- Dar o quitar el rol de admin a otro jugador (no al propio, para no dejar la pandilla sin
+  ningún admin por error).
+- Expulsar a un jugador de la pandilla (borra también sus pronósticos). Si esa persona tiene la
+  web abierta en ese momento, se le cierra la sesión sola la próxima vez que se actualice.
 - Corregir a mano el resultado de un partido (queda marcado para que la próxima sincronización
   con football-data.org no lo vuelva a pisar).
 - Bloquear o desbloquear a mano los pronósticos de una jornada entera.

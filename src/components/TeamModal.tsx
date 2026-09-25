@@ -15,7 +15,20 @@ type Row = {
   mark: 'G' | 'E' | 'P' | null;
 };
 
+type Rec5 = { pj: number; g: number; e: number; p: number; gf: number; gc: number; pts: number };
+type Record_ = {
+  total: Rec5;
+  home: Rec5;
+  away: Rec5;
+  cleanSheets: number;
+  failedToScore: number;
+  biggestWin: { rival: string; score: string } | null;
+  biggestLoss: { rival: string; score: string } | null;
+};
+
 const MARK_TXT: Record<'G' | 'E' | 'P', string> = { G: 'Ganó', E: 'Empató', P: 'Perdió' };
+const fmt = (n: number, d = 0) => n.toLocaleString('es-ES', { maximumFractionDigits: d });
+const pct = (n: number, total: number) => (total ? `${fmt((n / total) * 100)}%` : '–');
 
 function HouseIcon() {
   return (
@@ -53,29 +66,112 @@ function Crest({ src }: { src: string | null }) {
   );
 }
 
+function StatBlock({ record }: { record: Record_ }) {
+  const { total, home, away } = record;
+  return (
+    <div className="tstats">
+      <div className="trow-head">
+        <span />
+        <span>PJ</span>
+        <span>V-E-D</span>
+        <span>GF:GC</span>
+        <span>% victorias</span>
+      </div>
+      <div className="trow">
+        <span className="tlabel">Total</span>
+        <span>{total.pj}</span>
+        <span>
+          {total.g}-{total.e}-{total.p}
+        </span>
+        <span>
+          {total.gf}:{total.gc}
+        </span>
+        <span>{pct(total.g, total.pj)}</span>
+      </div>
+      <div className="trow">
+        <span className="tlabel">Como local</span>
+        <span>{home.pj}</span>
+        <span>
+          {home.g}-{home.e}-{home.p}
+        </span>
+        <span>
+          {home.gf}:{home.gc}
+        </span>
+        <span>{pct(home.g, home.pj)}</span>
+      </div>
+      <div className="trow">
+        <span className="tlabel">Como visitante</span>
+        <span>{away.pj}</span>
+        <span>
+          {away.g}-{away.e}-{away.p}
+        </span>
+        <span>
+          {away.gf}:{away.gc}
+        </span>
+        <span>{pct(away.g, away.pj)}</span>
+      </div>
+      <dl className="tfacts">
+        <div>
+          <dt>Goles por partido</dt>
+          <dd>
+            {fmt(total.pj ? total.gf / total.pj : 0, 1)} a favor · {fmt(total.pj ? total.gc / total.pj : 0, 1)} en
+            contra
+          </dd>
+        </div>
+        <div>
+          <dt>Portería a cero</dt>
+          <dd>{record.cleanSheets}</dd>
+        </div>
+        <div>
+          <dt>Partidos sin marcar</dt>
+          <dd>{record.failedToScore}</dd>
+        </div>
+        <div>
+          <dt>Mayor goleada a favor</dt>
+          <dd>{record.biggestWin ? `${record.biggestWin.score} vs ${record.biggestWin.rival}` : '–'}</dd>
+        </div>
+        <div>
+          <dt>Mayor goleada en contra</dt>
+          <dd>{record.biggestLoss ? `${record.biggestLoss.score} vs ${record.biggestLoss.rival}` : '–'}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 export default function TeamModal({
   team,
   competition,
   onClose,
+  onNavigate,
+  onBack,
 }: {
   team: string;
   competition: string;
   onClose: () => void;
+  onNavigate: (team: string) => void;
+  onBack?: () => void;
 }) {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [record, setRecord] = useState<Record_ | null>(null);
   const [error, setError] = useState(false);
   const currentRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
     let alive = true;
     setRows(null);
+    setRecord(null);
     setError(false);
     fetch(`/api/team?name=${encodeURIComponent(team)}&competition=${competition}`, { cache: 'no-store' })
       .then((r) => {
         if (!r.ok) throw new Error();
         return r.json();
       })
-      .then((j) => alive && setRows(j.matches))
+      .then((j) => {
+        if (!alive) return;
+        setRows(j.matches);
+        setRecord(j.record);
+      })
       .catch(() => alive && setError(true));
     return () => {
       alive = false;
@@ -102,13 +198,21 @@ export default function TeamModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" role="dialog" aria-label={`Resultados de ${team}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>{team}</h2>
+          <h2>
+            {onBack && (
+              <button type="button" className="backbtn" onClick={onBack} aria-label="Volver">
+                ‹
+              </button>
+            )}
+            {team}
+          </h2>
           <button type="button" className="link" onClick={onClose}>
             Cerrar
           </button>
         </div>
         {error && <p className="notice">No se pudo cargar el historial de {team}.</p>}
         {!rows && !error && <p className="muted">Cargando…</p>}
+        {record && <StatBlock record={record} />}
         {rows && rows.length === 0 && <p className="muted empty">Todavía no tiene partidos esta temporada.</p>}
         {rows && rows.length > 0 && (
           <ul className="teamhist">
@@ -118,8 +222,10 @@ export default function TeamModal({
                 <span className="thvenue" title={r.home ? 'En casa' : 'Fuera'}>
                   {r.home ? <HouseIcon /> : <PlaneIcon />}
                 </span>
-                <Crest src={r.rivalCrest} />
-                <span className="thrival">{r.rival}</span>
+                <button type="button" className="thrivalbtn" onClick={() => onNavigate(r.rival)}>
+                  <Crest src={r.rivalCrest} />
+                  <span className="thrival">{r.rival}</span>
+                </button>
                 <span className="thscore">{r.gf != null && r.gc != null ? `${r.gf}-${r.gc}` : '–'}</span>
                 {r.mark && (
                   <span className={`thmark thmark-${r.mark}`} title={MARK_TXT[r.mark]}>

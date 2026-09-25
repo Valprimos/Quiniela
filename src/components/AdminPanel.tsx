@@ -15,24 +15,106 @@ async function call(url: string, body: unknown): Promise<{ ok: boolean; error?: 
   return { ok: res.ok, ...json };
 }
 
+function PlayerRow({
+  player,
+  isSelf,
+  onChanged,
+}: {
+  player: Player;
+  isSelf: boolean;
+  onChanged: () => void;
+}) {
+  const [resetOpen, setResetOpen] = useState(false);
+  const [pin, setPin] = useState('');
+  const [confirmKick, setConfirmKick] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function doReset(e: FormEvent) {
+    e.preventDefault();
+    const r = await call('/api/admin/reset-pin', { playerId: player.id, newPin: pin });
+    setMsg(r.ok ? 'PIN cambiado.' : (r.error as string) ?? 'No se pudo cambiar el PIN.');
+    if (r.ok) {
+      setPin('');
+      setResetOpen(false);
+    }
+  }
+
+  async function doToggleAdmin() {
+    const r = await call('/api/admin/toggle-admin', { playerId: player.id, admin: !player.is_admin });
+    if (r.ok) onChanged();
+    else setMsg((r.error as string) ?? 'No se pudo cambiar el rol.');
+  }
+
+  async function doKick() {
+    if (!confirmKick) {
+      setConfirmKick(true);
+      return;
+    }
+    const r = await call('/api/admin/kick-player', { playerId: player.id });
+    if (r.ok) onChanged();
+    else setMsg((r.error as string) ?? 'No se pudo expulsar al jugador.');
+  }
+
+  return (
+    <li className="adminplayer">
+      <div className="row adminplayer-head">
+        <span className="pname" style={{ fontSize: 15 }}>
+          {player.name}
+          {player.is_admin && <span className="badge">Admin</span>}
+        </span>
+        <div className="row">
+          <button type="button" className="link" onClick={() => setResetOpen((v) => !v)}>
+            PIN
+          </button>
+          {!isSelf && (
+            <button type="button" className="link" onClick={doToggleAdmin}>
+              {player.is_admin ? 'Quitar admin' : 'Hacer admin'}
+            </button>
+          )}
+          {!isSelf && (
+            <button type="button" className={`link${confirmKick ? ' danger' : ''}`} onClick={doKick}>
+              {confirmKick ? '¿Seguro? Confirmar' : 'Expulsar'}
+            </button>
+          )}
+        </div>
+      </div>
+      {resetOpen && (
+        <form className="row" onSubmit={doReset}>
+          <input
+            placeholder="PIN nuevo"
+            inputMode="numeric"
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            maxLength={6}
+            required
+          />
+          <button className="primary" type="submit">
+            Cambiar
+          </button>
+        </form>
+      )}
+      {msg && <p className="okmsg">{msg}</p>}
+    </li>
+  );
+}
+
 export default function AdminPanel({
   competition,
   matchday,
   matches,
+  meId,
   onClose,
   onChanged,
 }: {
   competition: string;
   matchday: number;
   matches: MatchOpt[];
+  meId: string;
   onClose: () => void;
   onChanged: () => void;
 }) {
   const [players, setPlayers] = useState<Player[] | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-
-  const [resetFor, setResetFor] = useState('');
-  const [resetPin, setResetPin] = useState('');
 
   const [fixMatch, setFixMatch] = useState('');
   const [fixHome, setFixHome] = useState('');
@@ -40,17 +122,16 @@ export default function AdminPanel({
 
   const [locked, setLocked] = useState(false);
 
-  useEffect(() => {
+  const loadPlayers = () => {
     fetch('/api/admin/players')
       .then((r) => r.json())
       .then((j) => setPlayers(j.players ?? []));
-  }, []);
+  };
+  useEffect(loadPlayers, []);
 
-  async function resetPinSubmit(e: FormEvent) {
-    e.preventDefault();
-    const r = await call('/api/admin/reset-pin', { playerId: resetFor, newPin: resetPin });
-    setMsg(r.ok ? 'PIN cambiado.' : r.error ?? 'No se pudo cambiar el PIN.');
-    if (r.ok) setResetPin('');
+  function playersChanged() {
+    loadPlayers();
+    onChanged();
   }
 
   async function fixResultSubmit(e: FormEvent) {
@@ -61,13 +142,13 @@ export default function AdminPanel({
       awayScore: Number(fixAway),
       status: 'FINISHED',
     });
-    setMsg(r.ok ? 'Resultado corregido.' : r.error ?? 'No se pudo corregir.');
+    setMsg(r.ok ? 'Resultado corregido.' : (r.error as string) ?? 'No se pudo corregir.');
     if (r.ok) onChanged();
   }
 
   async function toggleLock(next: boolean) {
     const r = await call('/api/admin/lock-matchday', { competition, matchday, locked: next });
-    setMsg(r.ok ? (next ? 'Jornada bloqueada.' : 'Jornada desbloqueada.') : r.error ?? 'No se pudo cambiar.');
+    setMsg(r.ok ? (next ? 'Jornada bloqueada.' : 'Jornada desbloqueada.') : (r.error as string) ?? 'No se pudo cambiar.');
     if (r.ok) {
       setLocked(next);
       onChanged();
@@ -76,7 +157,7 @@ export default function AdminPanel({
 
   async function archiveSeason() {
     const r = await call('/api/admin/archive-season', { competition });
-    setMsg(r.ok ? `Temporada archivada. Campeón: ${r.champion}.` : r.error ?? 'No se pudo archivar.');
+    setMsg(r.ok ? `Temporada archivada. Campeón: ${r.champion}.` : (r.error as string) ?? 'No se pudo archivar.');
   }
 
   return (
@@ -91,30 +172,12 @@ export default function AdminPanel({
       </div>
       {msg && <p className="okmsg">{msg}</p>}
 
-      <h3 className="sh small">Resetear el PIN de un jugador</h3>
-      <form className="row" onSubmit={resetPinSubmit}>
-        <select value={resetFor} onChange={(e) => setResetFor(e.target.value)} required>
-          <option value="" disabled>
-            Elige un jugador
-          </option>
-          {(players ?? []).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <input
-          placeholder="PIN nuevo"
-          inputMode="numeric"
-          value={resetPin}
-          onChange={(e) => setResetPin(e.target.value.replace(/\D/g, ''))}
-          maxLength={6}
-          required
-        />
-        <button className="primary" type="submit">
-          Cambiar
-        </button>
-      </form>
+      <h3 className="sh small">Jugadores</h3>
+      <ul className="adminplayers">
+        {(players ?? []).map((p) => (
+          <PlayerRow key={p.id} player={p} isSelf={p.id === meId} onChanged={playersChanged} />
+        ))}
+      </ul>
 
       <h3 className="sh small">Corregir un resultado (jornada {matchday})</h3>
       <form className="row" onSubmit={fixResultSubmit}>

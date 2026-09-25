@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { currentSeason } from '@/lib/season';
 import { fetchAll } from '@/lib/paging';
-import { MatchLite, teamHistory } from '@/lib/league';
+import { MatchLite, teamHistory, teamRecord } from '@/lib/league';
 import { isCompetitionCode } from '@/lib/competitions';
 
 export const dynamic = 'force-dynamic';
@@ -33,5 +33,5 @@ export async function GET(req: NextRequest) {
       .range(from, to)
   );
 
-  return NextResponse.json({ team: name, matches: teamHistory(matches, name) });
+  return NextResponse.json({ team: name, matches: teamHistory(matches, name), record: teamRecord(matches, name) });
 }

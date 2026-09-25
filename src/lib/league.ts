@@ -122,3 +122,48 @@ export function teamHistory(matches: MatchLite[], team: string) {
       };
     });
 }
+
+export type TeamRecord = {
+  total: Rec5;
+  home: Rec5;
+  away: Rec5;
+  cleanSheets: number; // partidos sin encajar
+  failedToScore: number; // partidos sin marcar
+  biggestWin: { rival: string; score: string } | null;
+  biggestLoss: { rival: string; score: string } | null;
+};
+
+// Estadísticas de un equipo esta temporada: para el panel que se abre al pinchar en él.
+export function teamRecord(matches: MatchLite[], team: string): TeamRecord {
+  const total = empty();
+  const home = empty();
+  const away = empty();
+  let cleanSheets = 0;
+  let failedToScore = 0;
+  let biggestWin: TeamRecord['biggestWin'] = null;
+  let biggestLoss: TeamRecord['biggestLoss'] = null;
+
+  const finished = matches
+    .filter(isFinished)
+    .filter((m) => m.home_name === team || m.away_name === team);
+
+  for (const m of finished) {
+    const isHome = m.home_name === team;
+    const gf = isHome ? m.home_score : m.away_score;
+    const gc = isHome ? m.away_score : m.home_score;
+    const rival = isHome ? m.away_name : m.home_name;
+    add(total, gf, gc);
+    add(isHome ? home : away, gf, gc);
+    if (gc === 0) cleanSheets++;
+    if (gf === 0) failedToScore++;
+    const diff = gf - gc;
+    if (diff > 0 && (!biggestWin || diff > Number(biggestWin.score.split('-')[0]) - Number(biggestWin.score.split('-')[1]))) {
+      biggestWin = { rival, score: `${gf}-${gc}` };
+    }
+    if (diff < 0 && (!biggestLoss || diff < Number(biggestLoss.score.split('-')[0]) - Number(biggestLoss.score.split('-')[1]))) {
+      biggestLoss = { rival, score: `${gf}-${gc}` };
+    }
+  }
+
+  return { total, home, away, cleanSheets, failedToScore, biggestWin, biggestLoss };
+}

@@ -354,7 +354,8 @@ export default function Quiniela() {
   const [showPin, setShowPin] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
-  const [openTeam, setOpenTeam] = useState<string | null>(null);
+  const [teamStack, setTeamStack] = useState<string[]>([]);
+  const openTeamModal = (name: string) => setTeamStack([name]);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
 
   const keyOf = (comp: string, matchday: number | null) => `${comp}:${matchday ?? 'current'}`;
@@ -565,11 +566,20 @@ export default function Quiniela() {
           competition={competition}
           matchday={data.matchday}
           matches={data.matches}
+          meId={data.me.id}
           onClose={() => setShowAdmin(false)}
           onChanged={refreshNow}
         />
       )}
-      {openTeam && <TeamModal team={openTeam} competition={competition} onClose={() => setOpenTeam(null)} />}
+      {teamStack.length > 0 && (
+        <TeamModal
+          team={teamStack[teamStack.length - 1]}
+          competition={competition}
+          onClose={() => setTeamStack([])}
+          onNavigate={(name) => setTeamStack((s) => [...s, name])}
+          onBack={teamStack.length > 1 ? () => setTeamStack((s) => s.slice(0, -1)) : undefined}
+        />
+      )}
 
       <section className="jornada" aria-label="Jornada">
         <button
@@ -671,7 +681,7 @@ export default function Quiniela() {
               )}
               <ul className="matches">
                 {data.matches.map((m) => (
-                  <MatchRow key={m.id} m={m} onPick={choose} onOpenTeam={setOpenTeam} />
+                  <MatchRow key={m.id} m={m} onPick={choose} onOpenTeam={openTeamModal} />
                 ))}
               </ul>
             </>
@@ -717,7 +727,7 @@ export default function Quiniela() {
         )}
 
         {tab === 'estadisticas' && (
-          <Stats meId={data.me.id} competition={competition} version={data.finishedTotal} onTeamClick={setOpenTeam} />
+          <Stats meId={data.me.id} competition={competition} version={data.finishedTotal} onTeamClick={openTeamModal} />
         )}
       </div>
     </main>
