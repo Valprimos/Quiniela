@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Stats from './Stats';
 import TeamModal from './TeamModal';
+import H2HModal from './H2HModal';
 import Archive from './Archive';
 import AdminPanel from './AdminPanel';
 
@@ -110,10 +111,10 @@ function TeamLine({
 }: {
   team: Team;
   score: number | null;
-  onOpen: (name: string) => void;
+  onOpen: (name: string, crest: string | null) => void;
 }) {
   return (
-    <button type="button" className="team teambtn" onClick={() => onOpen(team.name)}>
+    <button type="button" className="team teambtn" onClick={() => onOpen(team.name, team.crest)}>
       {team.crest ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={team.crest} alt="" loading="lazy" />
@@ -165,10 +166,12 @@ function MatchRow({
   m,
   onPick,
   onOpenTeam,
+  onOpenH2H,
 }: {
   m: MatchDTO;
   onPick: (m: MatchDTO, p: Pick) => void;
-  onOpenTeam: (name: string) => void;
+  onOpenTeam: (name: string, crest: string | null) => void;
+  onOpenH2H: (home: Team, away: Team) => void;
 }) {
   return (
     <li className={`match${m.provisional ? ' live' : ''}`}>
@@ -178,6 +181,9 @@ function MatchRow({
           {whenLabel(m)}
         </div>
         <TeamLine team={m.home} score={m.started ? m.homeScore : null} onOpen={onOpenTeam} />
+        <button type="button" className="h2htrigger" onClick={() => onOpenH2H(m.home, m.away)}>
+          Cara a cara
+        </button>
         <TeamLine team={m.away} score={m.started ? m.awayScore : null} onOpen={onOpenTeam} />
       </div>
 
@@ -366,8 +372,9 @@ export default function Quiniela() {
   const [showPin, setShowPin] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
-  const [teamStack, setTeamStack] = useState<string[]>([]);
-  const openTeamModal = (name: string) => setTeamStack([name]);
+  const [teamStack, setTeamStack] = useState<{ name: string; crest: string | null }[]>([]);
+  const openTeamModal = (name: string, crest: string | null) => setTeamStack([{ name, crest }]);
+  const [h2h, setH2h] = useState<{ a: Team; b: Team } | null>(null);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
 
   const keyOf = (comp: string, matchday: number | null) => `${comp}:${matchday ?? 'current'}`;
@@ -588,8 +595,17 @@ export default function Quiniela() {
           team={teamStack[teamStack.length - 1]}
           competition={competition}
           onClose={() => setTeamStack([])}
-          onNavigate={(name) => setTeamStack((s) => [...s, name])}
+          onNavigate={(name, crest) => setTeamStack((s) => [...s, { name, crest }])}
           onBack={teamStack.length > 1 ? () => setTeamStack((s) => s.slice(0, -1)) : undefined}
+        />
+      )}
+      {h2h && (
+        <H2HModal
+          teamA={h2h.a.name}
+          teamB={h2h.b.name}
+          crestA={h2h.a.crest}
+          crestB={h2h.b.crest}
+          onClose={() => setH2h(null)}
         />
       )}
 
@@ -693,7 +709,7 @@ export default function Quiniela() {
               )}
               <ul className="matches">
                 {data.matches.map((m) => (
-                  <MatchRow key={m.id} m={m} onPick={choose} onOpenTeam={openTeamModal} />
+                  <MatchRow key={m.id} m={m} onPick={choose} onOpenTeam={openTeamModal} onOpenH2H={(a, b) => setH2h({ a, b })} />
                 ))}
               </ul>
             </>

@@ -36,7 +36,7 @@ function Crest({
 }: {
   src: string | null;
   name?: string;
-  onClick?: (name: string) => void;
+  onClick?: (name: string, crest: string | null) => void;
 }) {
   const img = src ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -46,7 +46,7 @@ function Crest({
   );
   if (!name || !onClick) return img;
   return (
-    <button type="button" className="crestbtn" onClick={() => onClick(name)}>
+    <button type="button" className="crestbtn" onClick={() => onClick(name, src)}>
       {img}
     </button>
   );
@@ -64,7 +64,7 @@ function PctCell({ rec }: { rec: Rec }) {
 }
 
 /* ---------- Equipos: % de acierto por equipo ---------- */
-function Equipos({ stats, onTeamClick }: { stats: StatsDTO; onTeamClick: (name: string) => void }) {
+function Equipos({ stats, onTeamClick }: { stats: StatsDTO; onTeamClick: (name: string, crest: string | null) => void }) {
   const [who, setWho] = useState('*');
   const [sortKey, setSortKey] = useState<Key>('total');
 
@@ -259,7 +259,7 @@ function Jugadores({ stats, meId }: { stats: StatsDTO; meId: string }) {
 }
 
 /* ---------- Clasificación real de la Liga ---------- */
-function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: string) => void }) {
+function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: string, crest: string | null) => void }) {
   const [scope, setScope] = useState<Key>('total');
   const rows = useMemo(() => {
     const dg = (r: Rec5) => r.gf - r.gc;
@@ -571,7 +571,7 @@ export default function Stats({
   meId: string;
   competition: string;
   version: number;
-  onTeamClick: (name: string) => void;
+  onTeamClick: (name: string, crest: string | null) => void;
 }) {
   const [stats, setStats] = useState<StatsDTO | null>(null);
   const [failed, setFailed] = useState(false);
