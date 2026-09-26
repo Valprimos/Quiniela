@@ -1,15 +1,21 @@
-// Fuente de datos alternativa para competiciones que football-data.org no trae en su plan
-// gratuito (la Segunda División). Usa api-football.com (api-sports.io), que en su plan
-// gratuito (100 peticiones/día) sí incluye la Segunda.
+// Fuente de datos SOLO para el backfill de temporadas anteriores (el "cara a cara" entre
+// equipos). La sincronización en directo de la temporada actual sigue viniendo de
+// football-data.org; esto es un extra que un admin dispara a mano cuando quiere.
+//
+// Al contrario que para traer la temporada en curso, el plan gratuito de api-football.com
+// SÍ da acceso a temporadas viejas (es la temporada actual la que bloquea).
 //
 // Los partidos de aquí se guardan con un id desplazado (+900.000.000) para que nunca
-// choquen con los ids de football-data.org, que viven en un rango mucho más bajo.
+// choquen con los ids de football-data.org.
 export const AF_ID_OFFSET = 900_000_000;
+
+// IDs de liga en la numeración de api-football.com.
+export const AF_LEAGUE_ID: Record<'PD' | 'CL', number> = { PD: 140, CL: 2 };
 
 export type AFMatch = {
   id: number; // ya con el desplazamiento aplicado
   utcDate: string;
-  status: string; // ya traducido a nuestro vocabulario (FINISHED, IN_PLAY, etc.)
+  status: string;
   matchday: number;
   homeTeam: { name: string; crest: string | null };
   awayTeam: { name: string; crest: string | null };
@@ -41,16 +47,11 @@ const STATUS_MAP: Record<string, string> = {
   ABD: 'CANCELLED',
 };
 
-// "Regular Season - 12" -> 12. Si la ronda no trae número (playoffs de ascenso al final
-// de temporada), se agrupan todos juntos al final, igual que las eliminatorias de la Champions.
+// "Regular Season - 12" -> 12. Si la ronda no trae número (playoffs), se agrupan al final.
 function matchdayFromRound(round: string): number {
   const m = round.match(/(\d+)/);
   return m ? Number(m[1]) : 100;
 }
-
-// El ID de liga de la Segunda española en api-football.com es 141. Si algún día cambia o
-// devuelve vacío, compruébalo con una petición a /leagues?search=Segunda con tu propia clave.
-export const SEGUNDA_LEAGUE_ID = 141;
 
 export async function fetchApiFootballMatches(leagueId: number, season: number): Promise<AFMatch[]> {
   const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=${season}`, {

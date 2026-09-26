@@ -121,6 +121,7 @@ export default function AdminPanel({
   const [fixAway, setFixAway] = useState('');
 
   const [locked, setLocked] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
 
   const loadPlayers = () => {
     fetch('/api/admin/players')
@@ -158,6 +159,22 @@ export default function AdminPanel({
   async function archiveSeason() {
     const r = await call('/api/admin/archive-season', { competition });
     setMsg(r.ok ? `Temporada archivada. Campeón: ${r.champion}.` : (r.error as string) ?? 'No se pudo archivar.');
+  }
+
+  async function backfillHistory() {
+    setBackfilling(true);
+    const r = await call('/api/admin/backfill-history', { competition });
+    setBackfilling(false);
+    if (!r.ok) {
+      setMsg((r.error as string) ?? 'No se pudo traer el historial.');
+      return;
+    }
+    const results = (r.results as { season: number; count?: number; error?: string }[]) ?? [];
+    setMsg(
+      results
+        .map((x) => (x.error ? `${x.season}: ${x.error}` : `${x.season}: ${x.count} partidos`))
+        .join(' · ')
+    );
   }
 
   return (
@@ -229,6 +246,16 @@ export default function AdminPanel({
       <p className="hint">
         Guarda la clasificación de hoy en el archivo. Hazlo cuando termine la temporada, antes de que
         empiece la siguiente.
+      </p>
+
+      <h3 className="sh small">Historial de temporadas anteriores</h3>
+      <button type="button" className="primary" onClick={backfillHistory} disabled={backfilling}>
+        {backfilling ? 'Trayendo...' : 'Traer historial (últimas 4 temporadas)'}
+      </button>
+      <p className="hint">
+        Rellena el "Cara a cara" entre equipos con temporadas pasadas, usando una clave gratuita de
+        api-football.com (variable de entorno <code>API_FOOTBALL_KEY</code>). No toca la
+        sincronización en directo de esta temporada.
       </p>
     </div>
   );

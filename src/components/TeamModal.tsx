@@ -110,7 +110,70 @@ function TeamCard({ icon, label, r }: { icon: React.ReactNode; label: string; r:
   );
 }
 
+function BallIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+      <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M10 6.2 13 8.4l-1.1 3.6H8.1L7 8.4Z M10 6.2V4 M13 8.4l3-.5 M11.9 12l1.4 2.7 M8.1 12l-1.4 2.7 M7 8.4l-3-.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+      <path
+        d="M10 3 16 5.2v4.3c0 4-2.6 6.5-6 7.5-3.4-1-6-3.5-6-7.5V5.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M7.2 9.8l1.9 1.9 3.7-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MuteIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+      <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M6.5 6.5l7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TrendIcon({ up }: { up: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" style={{ transform: up ? undefined : 'scaleY(-1)' }}>
+      <path d="M3 13.5 8 8l3 3 6-6.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13 4.5h4v4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function Fact({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: React.ReactNode; color?: string }) {
+  return (
+    <div className="fact">
+      <span className="fact-icon" style={color ? { color } : undefined}>
+        {icon}
+      </span>
+      <span className="fact-body">
+        <span className="fact-label">{label}</span>
+        <span className="fact-value">{value}</span>
+      </span>
+    </div>
+  );
+}
+
 function StatBlock({ record }: { record: Record_ }) {
+  const perGame = (n: number) => fmt(record.total.pj ? n / record.total.pj : 0, 1);
   return (
     <div className="tstats">
       <div className="tcards">
@@ -118,31 +181,44 @@ function StatBlock({ record }: { record: Record_ }) {
         <TeamCard icon={<HouseIcon />} label="Casa" r={record.home} />
         <TeamCard icon={<PlaneIcon />} label="Fuera" r={record.away} />
       </div>
-      <dl className="tfacts">
-        <div>
-          <dt>Goles por partido</dt>
-          <dd>
-            {fmt(record.total.pj ? record.total.gf / record.total.pj : 0, 1)} a favor ·{' '}
-            {fmt(record.total.pj ? record.total.gc / record.total.pj : 0, 1)} en contra
-          </dd>
+
+      <div className="factgrid">
+        <Fact
+          icon={<TrendIcon up />}
+          label="Goles a favor / partido"
+          value={perGame(record.total.gf)}
+          color="var(--ok)"
+        />
+        <Fact
+          icon={<TrendIcon up={false} />}
+          label="Goles en contra / partido"
+          value={perGame(record.total.gc)}
+          color="var(--ko)"
+        />
+        <Fact icon={<ShieldIcon />} label="Portería a cero" value={record.cleanSheets} />
+        <Fact icon={<MuteIcon />} label="Sin marcar" value={record.failedToScore} />
+      </div>
+
+      {(record.biggestWin || record.biggestLoss) && (
+        <div className="bigscores">
+          {record.biggestWin && (
+            <div className="bigscore bigscore-win">
+              <BallIcon />
+              <span className="bigscore-txt">
+                Mayor goleada a favor: <b>{record.biggestWin.score}</b> vs {record.biggestWin.rival}
+              </span>
+            </div>
+          )}
+          {record.biggestLoss && (
+            <div className="bigscore bigscore-loss">
+              <BallIcon />
+              <span className="bigscore-txt">
+                Mayor goleada en contra: <b>{record.biggestLoss.score}</b> vs {record.biggestLoss.rival}
+              </span>
+            </div>
+          )}
         </div>
-        <div>
-          <dt>Portería a cero</dt>
-          <dd>{record.cleanSheets}</dd>
-        </div>
-        <div>
-          <dt>Partidos sin marcar</dt>
-          <dd>{record.failedToScore}</dd>
-        </div>
-        <div>
-          <dt>Mayor goleada a favor</dt>
-          <dd>{record.biggestWin ? `${record.biggestWin.score} vs ${record.biggestWin.rival}` : '–'}</dd>
-        </div>
-        <div>
-          <dt>Mayor goleada en contra</dt>
-          <dd>{record.biggestLoss ? `${record.biggestLoss.score} vs ${record.biggestLoss.rival}` : '–'}</dd>
-        </div>
-      </dl>
+      )}
     </div>
   );
 }

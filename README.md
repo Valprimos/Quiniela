@@ -7,6 +7,11 @@ detalladas, varias pandillas independientes y panel de admin.
 > **Segunda División:** no está incluida. football-data.org no la trae en su plan gratuito, y
 > ninguna otra fuente gratuita encontrada daba datos fiables de la temporada en curso. La única
 > vía real sería pagar (API-Football Pro, 19$/mes, o el plan de pago de football-data.org).
+>
+> **Historial para el "Cara a cara":** football-data.org limita su plan gratuito a la temporada
+> en curso (varias temporadas es un paquete de pago aparte). Para esto sí hay una vía gratuita:
+> api-football.com da acceso gratis a temporadas *viejas* (es la actual la que bloquea), así que
+> el panel de admin puede traer de una tacada las últimas temporadas pasadas con esa clave.
 
 ## Puesta en marcha (instalación nueva)
 
@@ -79,6 +84,9 @@ Solo lo ve quien tiene `is_admin`. Desde ahí se puede:
 - Bloquear o desbloquear a mano los pronósticos de una jornada entera.
 - Archivar la clasificación final de la temporada actual, para consultarla luego en "Archivo de
   temporadas" dentro de Clasificación.
+- Traer las últimas 4 temporadas pasadas de la competición elegida (necesita la variable
+  `API_FOOTBALL_KEY`, gratuita en https://dashboard.api-football.com/register). Rellena el
+  historial del "Cara a cara" entre equipos; no toca la sincronización de la temporada actual.
 
 ## Despliegue en Vercel
 
