@@ -5,63 +5,87 @@ import { isLocked } from '@/lib/scoring';
 
 export const dynamic = 'force-dynamic';
 
+const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
+
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Sesión caducada. Vuelve a entrar.' }, { status: 401 });
+  if (!session) return fail('Sesión caducada. Vuelve a entrar.', 401);
 
   const body = await req.json().catch(() => null);
   const matchId = Number(body?.matchId);
   const pick = body?.pick;
-  if (!Number.isInteger(matchId) || !['1', 'X', '2'].includes(pick)) {
-    return NextResponse.json({ error: 'Pronóstico no válido.' }, { status: 400 });
+  const hasPlenoGuess = body?.plenoHome != null && body?.plenoAway != null;
+  if (!Number.isInteger(matchId)) return fail('Partido no válido.');
+
+  let plenoHome = 0;
+  let plenoAway = 0;
+  if (hasPlenoGuess) {
+    plenoHome = Number(body.plenoHome);
+    plenoAway = Number(body.plenoAway);
+    if (
+      !Number.isInteger(plenoHome) ||
+      !Number.isInteger(plenoAway) ||
+      plenoHome < 0 ||
+      plenoAway < 0 ||
+      plenoHome > 20 ||
+      plenoAway > 20
+    ) {
+      return fail('El marcador no es válido.');
+    }
+  } else if (!['1', 'X', '2'].includes(pick)) {
+    return fail('Pronóstico no válido.');
   }
 
-  const { data: match } = await db()
+  const supabase = db();
+  const { data: match } = await supabase
     .from('matches')
-    .select('id,status,utc_date,admin_locked')
+    .select('id,status,utc_date,admin_locked,is_pleno')
     .eq('id', matchId)
     .maybeSingle();
-  if (!match) return NextResponse.json({ error: 'Partido no encontrado.' }, { status: 404 });
+  if (!match) return fail('Partido no encontrado.', 404);
   if (isLocked(match.status, match.utc_date, match.admin_locked)) {
-    return NextResponse.json({ error: 'Este partido ya está cerrado.' }, { status: 409 });
+    return fail('Este partido ya está cerrado.', 409);
   }
+  if (hasPlenoGuess && !match.is_pleno) return fail('Este partido no es el pleno al 15.');
+  if (!hasPlenoGuess && match.is_pleno) return fail('Este partido es el pleno al 15: pon un marcador exacto.');
 
-  const { error } = await db()
-    .from('predictions')
-    .upsert(
-      { player_id: session.pid, match_id: matchId, pick, updated_at: new Date().toISOString() },
-      { onConflict: 'player_id,match_id' }
-    );
-  if (error) return NextResponse.json({ error: 'No se pudo guardar el pronóstico.' }, { status: 500 });
+  // En el pleno al 15 el marcador exacto determina también el 1X2, para mantenerlo coherente.
+  const finalPick = hasPlenoGuess ? (plenoHome > plenoAway ? '1' : plenoHome < plenoAway ? '2' : 'X') : pick;
+
+  const { error } = await supabase.from('predictions').upsert(
+    {
+      player_id: session.pid,
+      match_id: matchId,
+      pick: finalPick,
+      ...(hasPlenoGuess ? { pleno_home: plenoHome, pleno_away: plenoAway } : {}),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'player_id,match_id' }
+  );
+  if (error) return fail('No se pudo guardar el pronóstico.', 500);
   return NextResponse.json({ ok: true });
 }
 
 // Quitar un pronóstico ya marcado (solo mientras el partido siga abierto)
 export async function DELETE(req: NextRequest) {
   const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Sesión caducada. Vuelve a entrar.' }, { status: 401 });
+  if (!session) return fail('Sesión caducada. Vuelve a entrar.', 401);
 
   const body = await req.json().catch(() => null);
   const matchId = Number(body?.matchId);
-  if (!Number.isInteger(matchId)) {
-    return NextResponse.json({ error: 'Partido no válido.' }, { status: 400 });
-  }
+  if (!Number.isInteger(matchId)) return fail('Partido no válido.');
 
   const { data: match } = await db()
     .from('matches')
     .select('id,status,utc_date,admin_locked')
     .eq('id', matchId)
     .maybeSingle();
-  if (!match) return NextResponse.json({ error: 'Partido no encontrado.' }, { status: 404 });
+  if (!match) return fail('Partido no encontrado.', 404);
   if (isLocked(match.status, match.utc_date, match.admin_locked)) {
-    return NextResponse.json({ error: 'Este partido ya está cerrado.' }, { status: 409 });
+    return fail('Este partido ya está cerrado.', 409);
   }
 
-  const { error } = await db()
-    .from('predictions')
-    .delete()
-    .eq('player_id', session.pid)
-    .eq('match_id', matchId);
-  if (error) return NextResponse.json({ error: 'No se pudo quitar el pronóstico.' }, { status: 500 });
+  const { error } = await db().from('predictions').delete().eq('player_id', session.pid).eq('match_id', matchId);
+  if (error) return fail('No se pudo quitar el pronóstico.', 500);
   return NextResponse.json({ ok: true });
 }

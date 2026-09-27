@@ -33,6 +33,8 @@ export type PlayerStat = {
   brave: Rec;
   // El equipo con peor % de acierto de este jugador (mínimo 3 pronósticos sobre él)
   jinx: { team: string; pct: number } | null;
+  // Pleno al 15: aciertos de marcador exacto (h) sobre cuántos ha jugado (n)
+  pleno15: Rec;
   style: { label: string; detail: string } | null;
 };
 
@@ -75,6 +77,7 @@ type Agg = {
   md: Map<number, number>; // aciertos por jornada
   pickedMds: Set<number>; // jornadas en las que pronosticó algo
   brave: Rec;
+  pleno15: Rec; // aciertos exactos del "pleno al 15" (h) sobre cuántos jugó (n)
 };
 
 const rec = (): Rec => ({ h: 0, n: 0 });
@@ -85,7 +88,7 @@ const bump = (r: Rec, hit: boolean) => {
 
 export function computeStats(input: {
   matches: MatchLite[];
-  preds: { player_id: string; match_id: number; pick: string }[];
+  preds: { player_id: string; match_id: number; pick: string; pleno_home?: number | null; pleno_away?: number | null }[];
   players: { id: string; name: string }[];
   liga: LigaRow[];
 }): StatsDTO {
@@ -95,10 +98,16 @@ export function computeStats(input: {
     .sort((a, b) => new Date(a.utc_date).getTime() - new Date(b.utc_date).getTime() || a.id - b.id);
 
   const predByMatch = new Map<number, Map<string, Pick>>();
+  const plenoGuessByMatch = new Map<number, Map<string, { home: number; away: number }>>();
   for (const p of preds) {
     let mm = predByMatch.get(p.match_id);
     if (!mm) predByMatch.set(p.match_id, (mm = new Map()));
     mm.set(p.player_id, p.pick as Pick);
+    if (p.pleno_home != null && p.pleno_away != null) {
+      let pg = plenoGuessByMatch.get(p.match_id);
+      if (!pg) plenoGuessByMatch.set(p.match_id, (pg = new Map()));
+      pg.set(p.player_id, { home: p.pleno_home, away: p.pleno_away });
+    }
   }
 
   const teams = new Map<string, TeamAcc>();
@@ -132,6 +141,7 @@ export function computeStats(input: {
       md: new Map(),
       pickedMds: new Set(),
       brave: rec(),
+      pleno15: rec(),
     });
   }
 
@@ -151,6 +161,7 @@ export function computeStats(input: {
     if (res === '2') away.won++;
 
     const pm = predByMatch.get(m.id);
+    const pg = m.is_pleno ? plenoGuessByMatch.get(m.id) : undefined;
     let hits = 0;
     let n = 0;
 
@@ -177,6 +188,10 @@ export function computeStats(input: {
       a.played++;
       a.pickedMds.add(m.matchday);
       if (majority && pick !== majority && tally[majority] > tally[pick]) bump(a.brave, hit);
+      if (pg?.has(pl.id)) {
+        const g = pg.get(pl.id)!;
+        bump(a.pleno15, g.home === m.home_score && g.away === m.away_score);
+      }
       if (hit) {
         a.hits++;
         a.cur++;
@@ -297,6 +312,7 @@ export function computeStats(input: {
       avg: own.length ? sum / own.length : null,
       brave: a.brave,
       jinx: jinxOf(p.id),
+      pleno15: a.pleno15,
       style: styleOf(a),
     };
   });

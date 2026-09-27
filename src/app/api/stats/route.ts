@@ -10,7 +10,7 @@ import { isCompetitionCode } from '@/lib/competitions';
 export const dynamic = 'force-dynamic';
 
 const COLS =
-  'id,competition,matchday,stage,utc_date,status,home_name,away_name,home_crest,away_crest,home_score,away_score';
+  'id,competition,matchday,stage,utc_date,status,home_name,away_name,home_crest,away_crest,home_score,away_score,is_pleno';
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -36,14 +36,15 @@ export async function GET(req: NextRequest) {
 
   // Solo pronósticos de partidos terminados: nunca se filtra nada de partidos abiertos
   const finishedIds = matches.filter(isFinished).map((m) => m.id);
-  const preds: { player_id: string; match_id: number; pick: string }[] = [];
+  type PredRow = { player_id: string; match_id: number; pick: string; pleno_home: number | null; pleno_away: number | null };
+  const preds: PredRow[] = [];
   for (let i = 0; i < finishedIds.length; i += 150) {
     const chunk = finishedIds.slice(i, i + 150);
     preds.push(
-      ...(await fetchAll<{ player_id: string; match_id: number; pick: string }>((from, to) =>
+      ...(await fetchAll<PredRow>((from, to) =>
         supabase
           .from('predictions')
-          .select('player_id,match_id,pick')
+          .select('player_id,match_id,pick,pleno_home,pleno_away')
           .in('match_id', chunk)
           .order('match_id')
           .order('player_id')

@@ -11,9 +11,9 @@ export const dynamic = 'force-dynamic';
 
 const PENDING = ['SCHEDULED', 'TIMED', 'IN_PLAY', 'PAUSED', 'LIVE'];
 const COLS =
-  'id,competition,matchday,stage,utc_date,status,home_name,away_name,home_crest,away_crest,home_score,away_score,admin_locked';
+  'id,competition,matchday,stage,utc_date,status,home_name,away_name,home_crest,away_crest,home_score,away_score,admin_locked,is_pleno';
 
-type PredRow = { player_id: string; match_id: number; pick: string };
+type PredRow = { player_id: string; match_id: number; pick: string; pleno_home: number | null; pleno_away: number | null };
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -67,6 +67,15 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => new Date(a.utc_date).getTime() - new Date(b.utc_date).getTime() || a.id - b.id);
   const stageLabel = matchRows[0]?.stage ? STAGE_LABEL[matchRows[0].stage] ?? null : null;
 
+  // El "pleno al 15" es el penúltimo partido de la jornada (por orden de fecha). Se asigna
+  // una sola vez la primera vez que se ve esta jornada con al menos 2 partidos, y luego se
+  // queda fijo (no se reasigna aunque algún partido se aplace y cambie el orden).
+  if (matchRows.length >= 2 && !matchRows.some((m) => m.is_pleno)) {
+    const plenoMatch = matchRows[matchRows.length - 2];
+    await supabase.from('matches').update({ is_pleno: true }).eq('id', plenoMatch.id);
+    plenoMatch.is_pleno = true;
+  }
+
   const [{ data: players }, { data: points }] = await Promise.all([
     supabase.from('players').select('id,name,is_admin').eq('group_id', session.gid),
     supabase
@@ -86,7 +95,10 @@ export async function GET(req: NextRequest) {
   const ids = matchRows.map((m) => m.id);
   let preds: PredRow[] = [];
   if (ids.length) {
-    const { data } = await supabase.from('predictions').select('player_id,match_id,pick').in('match_id', ids);
+    const { data } = await supabase
+      .from('predictions')
+      .select('player_id,match_id,pick,pleno_home,pleno_away')
+      .in('match_id', ids);
     preds = (data ?? []).filter((p) => playerIds.has(p.player_id));
   }
 
@@ -107,6 +119,7 @@ export async function GET(req: NextRequest) {
     const started = new Date(m.utc_date).getTime() <= now;
     const forMatch = preds.filter((p) => p.match_id === m.id);
     const live = liveResultOf(m.status, m.home_score, m.away_score);
+    const mine = forMatch.find((p) => p.player_id === session.pid);
     return {
       id: m.id,
       utcDate: m.utc_date,
@@ -120,10 +133,16 @@ export async function GET(req: NextRequest) {
       provisional: live != null && m.status !== 'FINISHED',
       started,
       locked: isLocked(m.status, m.utc_date, m.admin_locked),
-      myPick: forMatch.find((p) => p.player_id === session.pid)?.pick ?? null,
+      isPleno: m.is_pleno === true,
+      myPick: mine?.pick ?? null,
+      myPlenoGuess: mine?.pleno_home != null && mine?.pleno_away != null ? { home: mine.pleno_home, away: mine.pleno_away } : null,
       // Los pronósticos de los demás solo se ven cuando el partido ha empezado
       picks: started
-        ? forMatch.map((p) => ({ name: nameById.get(p.player_id) ?? '?', pick: p.pick }))
+        ? forMatch.map((p) => ({
+            name: nameById.get(p.player_id) ?? '?',
+            pick: p.pick,
+            plenoGuess: p.pleno_home != null && p.pleno_away != null ? { home: p.pleno_home, away: p.pleno_away } : null,
+          }))
         : [],
     };
   });
@@ -136,7 +155,14 @@ export async function GET(req: NextRequest) {
     for (const m of matches) {
       if (!m.liveResult) continue;
       for (const c of preds.filter((p) => p.match_id === m.id)) {
-        if (c.pick === m.liveResult) provisionalPts.set(c.player_id, (provisionalPts.get(c.player_id) ?? 0) + 1);
+        const gained = m.isPleno
+          ? c.pleno_home === m.homeScore && c.pleno_away === m.awayScore
+            ? 3
+            : 0
+          : c.pick === m.liveResult
+            ? 1
+            : 0;
+        if (gained) provisionalPts.set(c.player_id, (provisionalPts.get(c.player_id) ?? 0) + gained);
       }
     }
   }

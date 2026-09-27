@@ -24,8 +24,10 @@ type MatchDTO = {
   provisional: boolean;
   started: boolean;
   locked: boolean;
+  isPleno: boolean;
   myPick: Pick | null;
-  picks: { name: string; pick: Pick }[];
+  myPlenoGuess: { home: number; away: number } | null;
+  picks: { name: string; pick: Pick; plenoGuess: { home: number; away: number } | null }[];
 };
 type RankRow = { playerId: string; name: string; points: number; delta: number; provisional?: number };
 type CompetitionInfo = { code: string; name: string; short: string };
@@ -162,23 +164,87 @@ function Consensus({ m }: { m: MatchDTO }) {
   );
 }
 
+function PlenoSlip({ m, onSave }: { m: MatchDTO; onSave: (home: number, away: number) => void }) {
+  const [home, setHome] = useState(m.myPlenoGuess?.home?.toString() ?? '');
+  const [away, setAway] = useState(m.myPlenoGuess?.away?.toString() ?? '');
+
+  useEffect(() => {
+    setHome(m.myPlenoGuess?.home?.toString() ?? '');
+    setAway(m.myPlenoGuess?.away?.toString() ?? '');
+  }, [m.myPlenoGuess?.home, m.myPlenoGuess?.away]);
+
+  function commit() {
+    const h = Number(home);
+    const a = Number(away);
+    if (home === '' || away === '' || !Number.isInteger(h) || !Number.isInteger(a) || h < 0 || a < 0) return;
+    if (h === m.myPlenoGuess?.home && a === m.myPlenoGuess?.away) return;
+    onSave(h, a);
+  }
+
+  if (m.result) {
+    const played = m.myPlenoGuess != null;
+    const hit = played && m.myPlenoGuess!.home === m.homeScore && m.myPlenoGuess!.away === m.awayScore;
+    return (
+      <div className={`plenoslip plenoslip-done${played ? (hit ? ' pleno-hit' : ' pleno-miss') : ''}`}>
+        <span className="plenolabel">Tu marcador</span>
+        <span className="plenoscore">{played ? `${m.myPlenoGuess!.home}-${m.myPlenoGuess!.away}` : 'Sin jugar'}</span>
+        {played && <span className="plenopts">{hit ? '+3' : '+0'}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="plenoslip">
+      <span className="plenolabel">Marcador exacto</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={20}
+        value={home}
+        onChange={(e) => setHome(e.target.value)}
+        onBlur={commit}
+        disabled={m.locked}
+        className="plenoinput"
+        aria-label={`Goles de ${m.home.name}`}
+      />
+      <span className="plenodash">-</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={20}
+        value={away}
+        onChange={(e) => setAway(e.target.value)}
+        onBlur={commit}
+        disabled={m.locked}
+        className="plenoinput"
+        aria-label={`Goles de ${m.away.name}`}
+      />
+    </div>
+  );
+}
+
 function MatchRow({
   m,
   onPick,
+  onSavePleno,
   onOpenTeam,
   onOpenH2H,
 }: {
   m: MatchDTO;
   onPick: (m: MatchDTO, p: Pick) => void;
+  onSavePleno: (m: MatchDTO, home: number, away: number) => void;
   onOpenTeam: (name: string, crest: string | null) => void;
   onOpenH2H: (home: Team, away: Team) => void;
 }) {
   return (
-    <li className={`match${m.provisional ? ' live' : ''}`}>
+    <li className={`match${m.provisional ? ' live' : ''}${m.isPleno ? ' pleno' : ''}`}>
       <div className="match-info">
         <div className="when">
           {m.provisional && <i className="livedot" aria-hidden="true" />}
           {whenLabel(m)}
+          {m.isPleno && <span className="plenobadge">Pleno al 15</span>}
         </div>
         <TeamLine team={m.home} score={m.started ? m.homeScore : null} onOpen={onOpenTeam} />
         <button type="button" className="h2htrigger" onClick={() => onOpenH2H(m.home, m.away)}>
@@ -187,37 +253,51 @@ function MatchRow({
         <TeamLine team={m.away} score={m.started ? m.awayScore : null} onOpen={onOpenTeam} />
       </div>
 
-      <div className="slip" role="group" aria-label={`Pronóstico: ${m.home.name} contra ${m.away.name}`}>
-        {PICKS.map((p) => {
-          const selected = m.myPick === p;
-          const real = m.result ?? (m.provisional ? m.liveResult : null);
-          const cls = ['box'];
-          if (selected) cls.push('sel');
-          if (real) {
-            if (p === real) cls.push('real');
-            if (selected) cls.push(p === real ? (m.provisional ? 'hit-live' : 'hit') : m.provisional ? 'miss-live' : 'miss');
-          }
-          return (
-            <button
-              key={p}
-              type="button"
-              className={cls.join(' ')}
-              disabled={m.locked}
-              aria-pressed={selected}
-              aria-label={pickLabel(p, m)}
-              onClick={() => onPick(m, p)}
-            >
-              {p}
-            </button>
-          );
-        })}
-      </div>
+      {m.isPleno ? (
+        <PlenoSlip m={m} onSave={(h, a) => onSavePleno(m, h, a)} />
+      ) : (
+        <div className="slip" role="group" aria-label={`Pronóstico: ${m.home.name} contra ${m.away.name}`}>
+          {PICKS.map((p) => {
+            const selected = m.myPick === p;
+            const real = m.result ?? (m.provisional ? m.liveResult : null);
+            const cls = ['box'];
+            if (selected) cls.push('sel');
+            if (real) {
+              if (p === real) cls.push('real');
+              if (selected) cls.push(p === real ? (m.provisional ? 'hit-live' : 'hit') : m.provisional ? 'miss-live' : 'miss');
+            }
+            return (
+              <button
+                key={p}
+                type="button"
+                className={cls.join(' ')}
+                disabled={m.locked}
+                aria-pressed={selected}
+                aria-label={pickLabel(p, m)}
+                onClick={() => onPick(m, p)}
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <Consensus m={m} />
 
       {m.picks.length > 0 && (
         <ul className="chips" aria-label="Pronósticos de los jugadores">
           {m.picks.map((c, i) => {
+            if (m.isPleno) {
+              const hit = m.result != null && c.plenoGuess != null && c.plenoGuess.home === m.homeScore && c.plenoGuess.away === m.awayScore;
+              const state = m.result ? (c.plenoGuess ? (hit ? 'hit' : 'miss') : '') : '';
+              return (
+                <li key={i} className={`chip ${state}`}>
+                  {c.name}
+                  <b>{c.plenoGuess ? `${c.plenoGuess.home}-${c.plenoGuess.away}` : '–'}</b>
+                </li>
+              );
+            }
             const real = m.result ?? (m.provisional ? m.liveResult : null);
             const state = real ? (c.pick === real ? 'hit' : 'miss') : '';
             return (
@@ -482,6 +562,29 @@ export default function Quiniela() {
     }
   }
 
+  async function savePleno(m: MatchDTO, home: number, away: number) {
+    if (m.locked || !data) return;
+    const updated = {
+      ...data,
+      matches: data.matches.map((x) => (x.id === m.id ? { ...x, myPlenoGuess: { home, away } } : x)),
+    };
+    setData(updated);
+    cache.current.set(keyOf(competition, md), updated);
+    const res = await fetch('/api/predict', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ matchId: m.id, plenoHome: home, plenoAway: away }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setError(json.error ?? 'No se pudo guardar el marcador.');
+      cache.current.delete(keyOf(competition, md));
+      load(competition, md);
+    } else {
+      setError(null);
+    }
+  }
+
   async function logout() {
     await fetch('/api/logout', { method: 'POST' });
     router.replace('/login');
@@ -652,7 +755,7 @@ export default function Quiniela() {
 
       <p className="progress">
         {data.finished} de {data.matches.length} partidos jugados
-        {data.finished > 0 && `. Llevas ${myPoints} ${myPoints === 1 ? 'acierto' : 'aciertos'}`}
+        {data.finished > 0 && `. Llevas ${myPoints} ${myPoints === 1 ? 'punto' : 'puntos'}`}
         {data.matchday !== data.currentMatchday && (
           <>
             {' '}
@@ -709,7 +812,7 @@ export default function Quiniela() {
               )}
               <ul className="matches">
                 {data.matches.map((m) => (
-                  <MatchRow key={m.id} m={m} onPick={choose} onOpenTeam={openTeamModal} onOpenH2H={(a, b) => setH2h({ a, b })} />
+                  <MatchRow key={m.id} m={m} onPick={choose} onSavePleno={savePleno} onOpenTeam={openTeamModal} onOpenH2H={(a, b) => setH2h({ a, b })} />
                 ))}
               </ul>
             </>

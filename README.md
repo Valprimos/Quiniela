@@ -112,4 +112,8 @@ curl -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/sync?force=1"
 - Los pronósticos de los demás solo se ven cuando el partido ha empezado.
 - 1 punto por acierto, solo en partidos terminados. Los empates en la clasificación comparten
   posición.
+- **Pleno al 15**: el penúltimo partido de cada jornada (por orden de fecha) pide el marcador
+  exacto en vez de 1X2. Acertarlo vale 3 puntos; fallarlo vale 0, aunque hubieras acertado quién
+  gana. Se asigna una sola vez la primera vez que se ve esa jornada, y no cambia después aunque
+  algún partido se aplace.
 - Los colegas se registran con el código de su pandilla, un nombre y un PIN (4-6 números).

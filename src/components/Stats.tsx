@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { StatsDTO, Rec, TeamAcc, MatchInsight } from '@/lib/stats';
 import type { LigaRow, Rec5 } from '@/lib/league';
+import { H2HBody } from './H2HModal';
 
 type View = 'equipos' | 'jugadores' | 'liga' | 'grupo' | 'h2h';
 type Key = 'total' | 'home' | 'away';
@@ -251,6 +252,10 @@ function Jugadores({ stats, meId }: { stats: StatsDTO; meId: string }) {
               <dt>Equipo gafe</dt>
               <dd>{p.jinx ? `${p.jinx.team} (${fmt(p.jinx.pct)}%)` : '–'}</dd>
             </div>
+            <div>
+              <dt>Pleno al 15</dt>
+              <dd>{p.pleno15.n ? `${p.pleno15.h} de ${p.pleno15.n}` : '–'}</dd>
+            </div>
           </dl>
         </li>
       ))}
@@ -454,46 +459,10 @@ function Grupo({ stats, meId }: { stats: StatsDTO; meId: string }) {
 }
 
 /* ---------- Cara a cara ---------- */
-type H2HMatch = {
-  matchId: number;
-  matchday: number;
-  utcDate: string;
-  status: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeScore: number | null;
-  awayScore: number | null;
-};
-type H2HData = {
-  teamA: string;
-  teamB: string;
-  matches: H2HMatch[];
-  summary: { winsA: number; winsB: number; draws: number; goalsA: number; goalsB: number };
-};
-
-function H2H({ teams, competition }: { teams: string[]; competition: string }) {
+function H2H({ teams }: { teams: { team: string; crest: string | null }[] }) {
   const [teamA, setTeamA] = useState('');
   const [teamB, setTeamB] = useState('');
-  const [data, setData] = useState<H2HData | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!teamA || !teamB || teamA === teamB) {
-      setData(null);
-      return;
-    }
-    let alive = true;
-    setLoading(true);
-    fetch(`/api/h2h?teamA=${encodeURIComponent(teamA)}&teamB=${encodeURIComponent(teamB)}&competition=${competition}`, {
-      cache: 'no-store',
-    })
-      .then((r) => r.json())
-      .then((j) => alive && setData(j))
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [teamA, teamB, competition]);
+  const crestOf = (name: string) => teams.find((t) => t.team === name)?.crest ?? null;
 
   return (
     <>
@@ -501,8 +470,8 @@ function H2H({ teams, competition }: { teams: string[]; competition: string }) {
         <select value={teamA} onChange={(e) => setTeamA(e.target.value)}>
           <option value="">Elige un equipo</option>
           {teams.map((t) => (
-            <option key={t} value={t} disabled={t === teamB}>
-              {t}
+            <option key={t.team} value={t.team} disabled={t.team === teamB}>
+              {t.team}
             </option>
           ))}
         </select>
@@ -510,8 +479,8 @@ function H2H({ teams, competition }: { teams: string[]; competition: string }) {
         <select value={teamB} onChange={(e) => setTeamB(e.target.value)}>
           <option value="">Elige un equipo</option>
           {teams.map((t) => (
-            <option key={t} value={t} disabled={t === teamA}>
-              {t}
+            <option key={t.team} value={t.team} disabled={t.team === teamA}>
+              {t.team}
             </option>
           ))}
         </select>
@@ -521,41 +490,8 @@ function H2H({ teams, competition }: { teams: string[]; competition: string }) {
         <p className="muted empty">Elige dos equipos para ver sus enfrentamientos directos.</p>
       ) : teamA === teamB ? (
         <p className="muted empty">Elige dos equipos distintos.</p>
-      ) : loading ? (
-        <p className="muted">Cargando…</p>
-      ) : !data || data.matches.length === 0 ? (
-        <p className="muted empty">No se han enfrentado esta temporada.</p>
       ) : (
-        <>
-          <div className="h2hsummary">
-            <div>
-              <b>{data.summary.winsA}</b>
-              <span>{teamA}</span>
-            </div>
-            <div>
-              <b>{data.summary.draws}</b>
-              <span>Empates</span>
-            </div>
-            <div>
-              <b>{data.summary.winsB}</b>
-              <span>{teamB}</span>
-            </div>
-          </div>
-          <p className="hint">
-            Goles: {data.summary.goalsA} de {teamA} · {data.summary.goalsB} de {teamB}
-          </p>
-          <ul className="ilist">
-            {data.matches.map((m) => (
-              <li key={m.matchId}>
-                <span className="imd">J{m.matchday}</span>
-                <span className="imatch">
-                  {m.homeTeam} {m.homeScore ?? '-'}-{m.awayScore ?? '-'} {m.awayTeam}
-                </span>
-                <span className="ihits">{m.status === 'FINISHED' ? '' : 'por jugar'}</span>
-              </li>
-            ))}
-          </ul>
-        </>
+        <H2HBody teamA={teamA} teamB={teamB} crestA={crestOf(teamA)} crestB={crestOf(teamB)} />
       )}
     </>
   );
@@ -621,7 +557,9 @@ export default function Stats({
       {view === 'jugadores' && <Jugadores stats={stats} meId={meId} />}
       {view === 'liga' && <Liga liga={stats.liga} onTeamClick={onTeamClick} />}
       {view === 'grupo' && <Grupo stats={stats} meId={meId} />}
-      {view === 'h2h' && <H2H teams={stats.teams.map((t) => t.team).sort((a, b) => a.localeCompare(b, 'es'))} competition={competition} />}
+      {view === 'h2h' && (
+        <H2H teams={[...stats.teams].sort((a, b) => a.team.localeCompare(b.team, 'es')).map((t) => ({ team: t.team, crest: t.crest }))} />
+      )}
     </>
   );
 }

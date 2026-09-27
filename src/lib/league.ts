@@ -12,6 +12,7 @@ export type MatchLite = {
   home_score: number | null;
   away_score: number | null;
   admin_locked?: boolean;
+  is_pleno?: boolean;
 };
 
 export type Rec5 = { pj: number; g: number; e: number; p: number; gf: number; gc: number; pts: number };

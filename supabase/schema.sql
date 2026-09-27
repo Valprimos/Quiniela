@@ -40,6 +40,7 @@ create table matches (
   away_score integer,
   manual_override boolean not null default false, -- true = un admin lo corrigió a mano
   admin_locked boolean not null default false,     -- true = un admin lo bloqueó a mano
+  is_pleno boolean not null default false,         -- el "pleno al 15" de la jornada (marcador exacto)
   updated_at timestamptz not null default now()
 );
 create index matches_comp_season_matchday_idx on matches (competition, season, matchday);
@@ -48,6 +49,8 @@ create table predictions (
   player_id uuid not null references players(id) on delete cascade,
   match_id integer not null references matches(id) on delete cascade,
   pick char(1) not null check (pick in ('1', 'X', '2')),
+  pleno_home smallint, -- solo si este partido es el "pleno al 15" de su jornada
+  pleno_away smallint,
   updated_at timestamptz not null default now(),
   primary key (player_id, match_id)
 );
@@ -71,18 +74,28 @@ create table season_archive (
   unique (group_id, competition, season, player_id)
 );
 
--- Puntos por jugador, competición y jornada: 1 punto por acierto en partidos terminados
+-- Puntos por jugador, competición y jornada: 1 punto por acierto en partidos normales.
+-- En el "pleno al 15" (is_pleno) la regla es distinta: 3 puntos si aciertas el marcador
+-- exacto, 0 si no, aunque hubieras acertado quién gana.
 create view player_points with (security_invoker = true) as
 select
   pr.player_id,
   m.competition,
   m.season,
   m.matchday,
-  count(*) filter (
-    where pr.pick = case
-      when m.home_score > m.away_score then '1'
-      when m.home_score < m.away_score then '2'
-      else 'X'
+  sum(
+    case
+      when m.is_pleno then
+        case when pr.pleno_home = m.home_score and pr.pleno_away = m.away_score then 3 else 0 end
+      else
+        case
+          when pr.pick = case
+            when m.home_score > m.away_score then '1'
+            when m.home_score < m.away_score then '2'
+            else 'X'
+          end then 1
+          else 0
+        end
     end
   ) as points
 from predictions pr
