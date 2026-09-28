@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
 type Row = {
   matchId: number;
   matchday: number;
+  season: number | null;
   utcDate: string;
   status: string;
   home: boolean;
@@ -238,6 +239,8 @@ export default function TeamModal({
 }) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [record, setRecord] = useState<Record_ | null>(null);
+  const [recordAll, setRecordAll] = useState<Record_ | null>(null);
+  const [scope, setScope] = useState<'now' | 'all'>('now');
   const [error, setError] = useState(false);
   const currentRef = useRef<HTMLLIElement>(null);
 
@@ -245,6 +248,7 @@ export default function TeamModal({
     let alive = true;
     setRows(null);
     setRecord(null);
+    setRecordAll(null);
     setError(false);
     fetch(`/api/team?name=${encodeURIComponent(team.name)}&competition=${competition}`, { cache: 'no-store' })
       .then((r) => {
@@ -255,6 +259,7 @@ export default function TeamModal({
         if (!alive) return;
         setRows(j.matches);
         setRecord(j.record);
+        setRecordAll(j.recordAll);
       })
       .catch(() => alive && setError(true));
     return () => {
@@ -294,13 +299,32 @@ export default function TeamModal({
         </div>
         {error && <p className="notice">No se pudo cargar el historial de {team.name}.</p>}
         {!rows && !error && <p className="muted">Cargando…</p>}
-        {record && <StatBlock record={record} />}
+        {record && recordAll && (
+          <>
+            {recordAll.total.pj > record.total.pj && (
+              <div className="seg" role="group" aria-label="Periodo de las estadísticas">
+                <button type="button" aria-pressed={scope === 'now'} onClick={() => setScope('now')}>
+                  Esta temporada
+                </button>
+                <button type="button" aria-pressed={scope === 'all'} onClick={() => setScope('all')}>
+                  Histórico
+                </button>
+              </div>
+            )}
+            <StatBlock record={scope === 'all' ? recordAll : record} />
+          </>
+        )}
         {rows && rows.length === 0 && <p className="muted empty">Todavía no tiene partidos esta temporada.</p>}
         {rows && rows.length > 0 && (
           <ul className="teamhist">
             {rows.map((r, i) => (
+              <Fragment key={r.matchId}>
+                {(i === 0 || rows[i - 1].season !== r.season) && r.season != null && (
+                  <li className="thseason">
+                    Temporada {String(r.season).slice(2)}/{String(r.season + 1).slice(2)}
+                  </li>
+                )}
               <li
-                key={r.matchId}
                 ref={i === currentIdx ? currentRef : null}
                 className={`thmark-row-${r.mark ?? 'none'}${i === currentIdx ? ' thnow' : ''}`}
               >
@@ -319,6 +343,7 @@ export default function TeamModal({
                   </span>
                 )}
               </li>
+              </Fragment>
             ))}
           </ul>
         )}

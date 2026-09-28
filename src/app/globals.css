@@ -101,7 +101,21 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .team { display: flex; align-items: center; gap: 8px; min-height: 28px; font-weight: 600; }
 .team img, .crest-empty { width: 22px; height: 22px; object-fit: contain; flex: none; }
 .team .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.team .score { font-family: var(--font-display); font-size: 24px; font-weight: 700; padding-right: 4px; }
+.team.winner .name { color: var(--ok); font-weight: 700; }
+.team.winner img { filter: drop-shadow(0 0 0 var(--ok)); }
+
+/* Marcador centrado, como un scoreboard de verdad */
+.scoreboard { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 2px 0 4px; }
+.scoreboard-score { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: 0.02em; }
+.scoreboard-score i { font-style: normal; color: var(--muted); margin: 0 6px; font-weight: 400; }
+.scoreboard-tag {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+  padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px;
+}
+.scoreboard.final .scoreboard-tag { color: var(--ok); border-color: var(--ok); }
+.scoreboard.live .scoreboard-tag { color: var(--ko); border-color: var(--ko); animation: pulse 1.4s ease-in-out infinite; }
+.scoreboard.live .scoreboard-score { color: var(--foco); }
+@media (prefers-reduced-motion: reduce) { .scoreboard.live .scoreboard-tag { animation: none; } }
 
 .slip { display: flex; gap: 6px; }
 .box {
@@ -433,6 +447,7 @@ select {
 /* Botón "Cara a cara" entre los dos equipos de un partido */
 .h2htrigger {
   grid-column: 1 / -1;
+  display: block; width: 100%;
   background: none; border: 0; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line);
   padding: 5px 0; margin: 2px 0; font-size: 11px; color: var(--muted); text-transform: uppercase;
   letter-spacing: 0.04em; cursor: pointer; text-align: center;
@@ -440,9 +455,10 @@ select {
 .h2htrigger:hover { color: var(--foco); border-color: var(--foco); }
 
 /* Modal de cara a cara */
-.h2htitle { display: flex; align-items: center; gap: 10px; }
-.h2htitle .thcrest { width: 32px; height: 32px; }
-.h2hvs { font-family: var(--font-display); font-size: 15px; color: var(--muted); }
+.h2htitle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.h2htitle .thcrest { flex: none; }
+.h2htitle-name { font-size: 17px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h2hvs { font-family: var(--font-display); font-size: 13px; color: var(--muted); text-transform: uppercase; }
 .h2hnames { margin: -4px 0 12px; font-size: 13px; color: var(--muted); }
 .h2hsummary { margin-bottom: 14px; }
 .h2hbar { display: flex; height: 30px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
@@ -488,3 +504,11 @@ select {
 .plenoslip-done.pleno-hit { background: rgba(69, 216, 156, 0.14); }
 .plenoslip-done.pleno-hit .plenoscore, .plenoslip-done.pleno-hit .plenopts { color: var(--ok); }
 .plenoslip-done.pleno-miss .plenopts { color: var(--ko); }
+
+/* Separador de temporada en el historial de un equipo */
+.teamhist li.thseason {
+  display: block; padding: 10px 4px 4px; border-bottom: 1px solid var(--line); border-left: none;
+  font-family: var(--font-display); font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--muted);
+}
+.modal .seg { margin: 0 0 12px; }

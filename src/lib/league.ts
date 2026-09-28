@@ -1,3 +1,16 @@
+// football-data.org y api-football.com no siempre escriben el mismo equipo igual
+// ("Atlético Madrid" vs "Atletico de Madrid"). Se compara por esta forma normalizada
+// para que el historial y el cara a cara encuentren los partidos aunque el nombre
+// guardado no sea carácter por carácter idéntico.
+export function normalizeTeamName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\b(cf|fc|cd|sad|ud|sd|rcd|club|futbol|balompie|de|del|la|el)\b/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
 export type MatchLite = {
   id: number;
   competition: string;
@@ -13,6 +26,7 @@ export type MatchLite = {
   away_score: number | null;
   admin_locked?: boolean;
   is_pleno?: boolean;
+  season?: number;
 };
 
 export type Rec5 = { pj: number; g: number; e: number; p: number; gf: number; gc: number; pts: number };
@@ -100,11 +114,12 @@ export function buildLiga(matches: MatchLite[]): LigaRow[] {
 
 // Todos los resultados de un equipo, más recientes primero (para el historial al pinchar en él)
 export function teamHistory(matches: MatchLite[], team: string) {
+  const key = normalizeTeamName(team);
   return matches
-    .filter((m) => m.home_name === team || m.away_name === team)
+    .filter((m) => normalizeTeamName(m.home_name) === key || normalizeTeamName(m.away_name) === key)
     .sort((a, b) => new Date(a.utc_date).getTime() - new Date(b.utc_date).getTime())
     .map((m) => {
-      const home = m.home_name === team;
+      const home = normalizeTeamName(m.home_name) === key;
       const gf = home ? m.home_score : m.away_score;
       const gc = home ? m.away_score : m.home_score;
       const finished = isFinished(m);
@@ -112,6 +127,7 @@ export function teamHistory(matches: MatchLite[], team: string) {
       return {
         matchId: m.id,
         matchday: m.matchday,
+        season: m.season ?? null,
         utcDate: m.utc_date,
         status: m.status,
         home,
@@ -136,6 +152,7 @@ export type TeamRecord = {
 
 // Estadísticas de un equipo esta temporada: para el panel que se abre al pinchar en él.
 export function teamRecord(matches: MatchLite[], team: string): TeamRecord {
+  const key = normalizeTeamName(team);
   const total = empty();
   const home = empty();
   const away = empty();
@@ -146,10 +163,10 @@ export function teamRecord(matches: MatchLite[], team: string): TeamRecord {
 
   const finished = matches
     .filter(isFinished)
-    .filter((m) => m.home_name === team || m.away_name === team);
+    .filter((m) => normalizeTeamName(m.home_name) === key || normalizeTeamName(m.away_name) === key);
 
   for (const m of finished) {
-    const isHome = m.home_name === team;
+    const isHome = normalizeTeamName(m.home_name) === key;
     const gf = isHome ? m.home_score : m.away_score;
     const gc = isHome ? m.away_score : m.home_score;
     const rival = isHome ? m.away_name : m.home_name;

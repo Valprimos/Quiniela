@@ -108,15 +108,15 @@ function FormDots({ form }: { form: Mark[] }) {
 
 function TeamLine({
   team,
-  score,
+  winner,
   onOpen,
 }: {
   team: Team;
-  score: number | null;
+  winner?: boolean;
   onOpen: (name: string, crest: string | null) => void;
 }) {
   return (
-    <button type="button" className="team teambtn" onClick={() => onOpen(team.name, team.crest)}>
+    <button type="button" className={`team teambtn${winner ? ' winner' : ''}`} onClick={() => onOpen(team.name, team.crest)}>
       {team.crest ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={team.crest} alt="" loading="lazy" />
@@ -130,8 +130,24 @@ function TeamLine({
         </span>
       )}
       <FormDots form={team.form} />
-      {score != null && <span className="score">{score}</span>}
     </button>
+  );
+}
+
+function Scoreboard({ m }: { m: MatchDTO }) {
+  if (!m.started) return null;
+  const final = m.status === 'FINISHED';
+  return (
+    <div className={`scoreboard${m.provisional ? ' live' : ''}${final ? ' final' : ''}`}>
+      <span className="scoreboard-score">
+        {m.homeScore ?? '–'}
+        <i>-</i>
+        {m.awayScore ?? '–'}
+      </span>
+      <span className="scoreboard-tag">
+        {final ? 'Final' : m.provisional ? 'En juego' : ''}
+      </span>
+    </div>
   );
 }
 
@@ -246,11 +262,12 @@ function MatchRow({
           {whenLabel(m)}
           {m.isPleno && <span className="plenobadge">Pleno al 15</span>}
         </div>
-        <TeamLine team={m.home} score={m.started ? m.homeScore : null} onOpen={onOpenTeam} />
+        <TeamLine team={m.home} winner={m.result === '1'} onOpen={onOpenTeam} />
+        <Scoreboard m={m} />
         <button type="button" className="h2htrigger" onClick={() => onOpenH2H(m.home, m.away)}>
           Cara a cara
         </button>
-        <TeamLine team={m.away} score={m.started ? m.awayScore : null} onOpen={onOpenTeam} />
+        <TeamLine team={m.away} winner={m.result === '2'} onOpen={onOpenTeam} />
       </div>
 
       {m.isPleno ? (
@@ -467,7 +484,10 @@ export default function Quiniela() {
         router.replace('/login');
         return null;
       }
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Error desconocido');
+      }
       return (await res.json()) as StateDTO;
     },
     [router]
@@ -503,8 +523,8 @@ export default function Quiniela() {
               .catch(() => {});
           }
         }
-      } catch {
-        if (!cached) setError('No se pudo cargar la jornada. Reintentando en un minuto.');
+      } catch (e) {
+        if (!cached) setError(e instanceof Error && e.message ? e.message : 'No se pudo cargar la jornada. Reintentando en un minuto.');
       } finally {
         setLoading(false);
       }

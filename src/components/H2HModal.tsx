@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 type Row = {
   matchId: number;
   utcDate: string;
+  season: number | null;
   competition: string;
   stageLabel: string | null;
   homeTeam: string;
@@ -140,7 +141,8 @@ export function H2HBody({
             return (
               <li key={r.matchId} className={`h2hrow${r.status !== 'FINISHED' ? ' h2hrow-pending' : ''}`}>
                 <span className="thmd">
-                  {COMP_LABEL[r.competition] ?? r.competition} {seasonLabel(r.utcDate)}
+                  {COMP_LABEL[r.competition] ?? r.competition}{' '}
+                  {r.season != null ? `${String(r.season).slice(2)}/${String(r.season + 1).slice(2)}` : seasonLabel(r.utcDate)}
                   {r.stageLabel && ` · ${r.stageLabel}`}
                 </span>
                 <span className="h2hmatch">
@@ -188,17 +190,16 @@ export default function H2HModal({
       >
         <div className="modal-head">
           <h2 className="h2htitle">
-            <Crest src={crestA} size={32} />
+            <Crest src={crestA} size={30} />
+            <span className="h2htitle-name">{teamA}</span>
             <span className="h2hvs">vs</span>
-            <Crest src={crestB} size={32} />
+            <span className="h2htitle-name">{teamB}</span>
+            <Crest src={crestB} size={30} />
           </h2>
           <button type="button" className="link" onClick={onClose}>
             Cerrar
           </button>
         </div>
-        <p className="h2hnames">
-          {teamA} · {teamB}
-        </p>
         <H2HBody teamA={teamA} teamB={teamB} crestA={crestA} crestB={crestB} />
       </div>
     </div>

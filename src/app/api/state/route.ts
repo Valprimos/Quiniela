@@ -28,12 +28,19 @@ export async function GET(req: NextRequest) {
     : 'PD';
 
   // Toda la temporada de esta competición en una sola consulta
-  const { data: all } = await supabase
+  const { data: all, error: matchesError } = await supabase
     .from('matches')
     .select(COLS)
     .eq('competition', competition)
     .eq('season', season)
     .limit(1000);
+  if (matchesError) {
+    console.error('Error leyendo partidos', matchesError);
+    return NextResponse.json(
+      { error: `No se pudo leer la base de datos: ${matchesError.message}` },
+      { status: 500 }
+    );
+  }
   const allMatches: MatchLite[] = all ?? [];
   // La clasificación de Liga real solo tiene sentido en la fase de liga (matchday < 100)
   const liga = buildLiga(allMatches.filter((m) => m.matchday < 100));

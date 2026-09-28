@@ -58,7 +58,8 @@ la jornada muestra los puntos "en vivo" aparte. Se recalcula solo, sin que haga 
 Pinchar en el nombre o el escudo de cualquier equipo (en los partidos o en las estadísticas) abre
 un panel con sus estadísticas de la temporada (goles a favor y en contra, % de victorias en casa y
 fuera, porterías a cero, mayor goleada a favor y en contra...) y todos sus resultados, con un
-icono de casa o avión según jugara en casa o fuera. Se abre ya colocado en la jornada actual.
+icono de casa o avión según jugara en casa o fuera. Se abre ya colocado en la jornada actual, con las temporadas anteriores guardadas por encima
+(separadas por temporada) y un selector para ver las estadísticas de esta temporada o las históricas.
 Pinchar en el rival de cualquier fila lleva a su propio panel, y se puede volver atrás con el
 botón de la esquina.
 
