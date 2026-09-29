@@ -167,10 +167,10 @@ function Equipos({ stats, onTeamClick }: { stats: StatsDTO; onTeamClick: (name: 
       <ul className="alist">
         {rows.map((r) => (
           <li key={r.t.team} className="agrid">
-            <span className="ateam">
-              <Crest src={r.t.crest} name={r.t.team} onClick={onTeamClick} />
+            <button type="button" className="ateam ateambtn" onClick={() => onTeamClick(r.t.team, r.t.crest)}>
+              <Crest src={r.t.crest} />
               <span className="aname">{r.t.team}</span>
-            </span>
+            </button>
             <PctCell rec={r.total} />
             <PctCell rec={r.home} />
             <PctCell rec={r.away} />
@@ -301,10 +301,10 @@ function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: stri
         {rows.map(({ r, pos, s }) => (
           <li key={r.team} className="lgrid">
             <span className="lpos">{pos}</span>
-            <span className="ateam">
-              <Crest src={r.crest} name={r.team} onClick={onTeamClick} />
+            <button type="button" className="ateam ateambtn" onClick={() => onTeamClick(r.team, r.crest)}>
+              <Crest src={r.crest} />
               <span className="aname">{r.team}</span>
-            </span>
+            </button>
             <span>{s.pj}</span>
             <span>{s.gf - s.gc > 0 ? `+${s.gf - s.gc}` : s.gf - s.gc}</span>
             <b>{s.pts}</b>
@@ -557,9 +557,7 @@ export default function Stats({
       {view === 'jugadores' && <Jugadores stats={stats} meId={meId} />}
       {view === 'liga' && <Liga liga={stats.liga} onTeamClick={onTeamClick} />}
       {view === 'grupo' && <Grupo stats={stats} meId={meId} />}
-      {view === 'h2h' && (
-        <H2H teams={[...stats.teams].sort((a, b) => a.team.localeCompare(b.team, 'es')).map((t) => ({ team: t.team, crest: t.crest }))} />
-      )}
+      {view === 'h2h' && <H2H teams={stats.allTeams ?? []} />}
     </>
   );
 }

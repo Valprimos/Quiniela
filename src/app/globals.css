@@ -101,20 +101,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .team { display: flex; align-items: center; gap: 8px; min-height: 28px; font-weight: 600; }
 .team img, .crest-empty { width: 22px; height: 22px; object-fit: contain; flex: none; }
 .team .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.team.winner .name { color: var(--ok); font-weight: 700; }
-.team.winner img { filter: drop-shadow(0 0 0 var(--ok)); }
+.team .name-won { color: var(--ok); font-weight: 700; }
+.scorechip { min-width: 26px; text-align: center; padding: 3px 8px; border-radius: 6px; font-family: var(--font-display); font-size: 17px; font-weight: 700; background: var(--panel-2); color: var(--muted); }
+.scorechip-won { background: var(--ok); color: #04231a; }
+.resultbadge { margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle; }
+.resultbadge.hit { background: var(--ok); color: #04231a; }
+.resultbadge.miss { background: var(--panel-2); border: 1px solid var(--ko); color: var(--ko); }
 
 /* Marcador centrado, como un scoreboard de verdad */
-.scoreboard { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 2px 0 4px; }
-.scoreboard-score { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: 0.02em; }
-.scoreboard-score i { font-style: normal; color: var(--muted); margin: 0 6px; font-weight: 400; }
-.scoreboard-tag {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
   padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px;
 }
-.scoreboard.final .scoreboard-tag { color: var(--ok); border-color: var(--ok); }
-.scoreboard.live .scoreboard-tag { color: var(--ko); border-color: var(--ko); animation: pulse 1.4s ease-in-out infinite; }
-.scoreboard.live .scoreboard-score { color: var(--foco); }
 @media (prefers-reduced-motion: reduce) { .scoreboard.live .scoreboard-tag { animation: none; } }
 
 .slip { display: flex; gap: 6px; }
@@ -258,6 +255,8 @@ select {
 .alist { list-style: none; margin: 0; padding: 0; }
 .alist li { padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .ateam { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ateambtn { background: none; border: 0; padding: 0; cursor: pointer; color: inherit; text-align: left; font: inherit; width: 100%; }
+.ateambtn:hover .aname { text-decoration: underline; }
 .aname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .pct {
   display: flex; flex-direction: column; align-items: center; padding: 4px 0; border-radius: 3px;
@@ -477,35 +476,22 @@ select {
 .plenoslip-done.pleno-hit .plenoscore, .plenoslip-done.pleno-hit .plenopts { color: var(--ok); }
 .plenoslip-done.pleno-miss .plenopts { color: var(--ko); }
 
-/* Separador de temporada en el historial de un equipo */
-.teamhist li.thseason {
-  display: block; padding: 10px 4px 4px; border-bottom: 1px solid var(--line); border-left: none;
-  font-family: var(--font-display); font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--muted);
-}
 .modal .seg { margin: 0 0 12px; }
 
 
 /* ===== Cara a cara (interior) ===== */
-:root { --ha: #ffd23f; --hb: #5ab1ff; }
 .h2hheading { font-family: var(--font-display); font-size: 22px; margin: 0; }
 .h2hhero { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin: 6px 0 14px; }
 .h2hteam { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-weight: 700; font-size: 14px; line-height: 1.15; min-width: 0; }
 .h2hteam span { overflow-wrap: anywhere; }
-.h2hteam-a span { color: var(--ha); }
-.h2hteam-b span { color: var(--hb); }
 .h2hcenter { text-align: center; }
 .h2hbig { display: flex; align-items: baseline; justify-content: center; gap: 6px; font-family: var(--font-display); }
 .h2hbig b { font-size: 40px; line-height: 1; }
 .h2hbig i { font-style: normal; color: var(--muted); font-size: 22px; }
-.h2hbig .ca { color: var(--ha); }
-.h2hbig .cb { color: var(--hb); }
 .h2hbig .cd { color: var(--muted); }
 .h2hcenter small { display: block; margin-top: 2px; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .h2hbar { display: flex; gap: 3px; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 16px; }
-.h2hseg-a { background: var(--ha); }
 .h2hseg-d { background: var(--line); }
-.h2hseg-b { background: var(--hb); }
 
 .cmps { display: grid; gap: 2px; margin-bottom: 14px; }
 .cmp { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px dashed var(--line); }
@@ -513,15 +499,11 @@ select {
 .cmp b { font-family: var(--font-display); font-size: 20px; color: var(--muted); }
 .cmp b:first-child { text-align: left; }
 .cmp b:last-child { text-align: right; }
-.cmp b.cmp-lead-a { color: var(--ha); }
-.cmp b.cmp-lead-b { color: var(--hb); }
 
 .h2hlast { margin-bottom: 8px; }
 .h2hlast-title { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
 .h2hlast-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
 .h2hchip { min-width: 44px; text-align: center; padding: 5px 8px; border-radius: 6px; font-family: var(--font-display); font-size: 16px; font-weight: 700; }
-.chip-a { background: var(--ha); color: #1a1500; }
-.chip-b { background: var(--hb); color: #04182b; }
 .chip-d { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
 
 .h2hcards { list-style: none; margin: 14px 0 0; padding: 0; }
@@ -535,7 +517,6 @@ select {
 .h2hside-r { justify-content: flex-start; }
 .h2hname { min-width: 0; overflow-wrap: anywhere; line-height: 1.15; }
 .h2hside.lost { opacity: 0.55; }
-.h2hside.won.tone-a .h2hname { color: var(--ha); font-weight: 700; }
-.h2hside.won.tone-b .h2hname { color: var(--hb); font-weight: 700; }
+.h2hside.won .h2hname { font-weight: 700; }
 .h2hres { display: flex; align-items: center; font-family: var(--font-display); font-size: 24px; font-weight: 700; padding: 2px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; }
 .h2hres i { font-style: normal; color: var(--muted); margin: 0 5px; font-weight: 400; }

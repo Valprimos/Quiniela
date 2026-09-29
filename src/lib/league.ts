@@ -2,13 +2,48 @@
 // ("Atlético Madrid" vs "Atletico de Madrid"). Se compara por esta forma normalizada
 // para que el historial y el cara a cara encuentren los partidos aunque el nombre
 // guardado no sea carácter por carácter idéntico.
+// Apodos habituales que una fuente de datos puede usar como nombre corto, cuando la otra
+// usa el nombre largo del club. Se normalizan al mismo resultado que el nombre completo.
+const NICKNAME_MAP: Record<string, string> = {
+  atleti: 'atleticomadrid',
+  barca: 'barcelona',
+};
+
 export function normalizeTeamName(name: string): string {
-  return name
+  const base = name
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/\b(cf|fc|cd|sad|ud|sd|rcd|club|futbol|balompie|de|del|la|el)\b/g, '')
     .replace(/[^a-z0-9]/g, '');
+  return NICKNAME_MAP[base] ?? base;
+}
+
+// Un color propio por equipo. Unos pocos grandes llevan un color a mano; el resto saca uno
+// determinista a partir de su nombre (siempre el mismo para el mismo equipo, sin mantenimiento).
+const TEAM_COLOR_OVERRIDES: Record<string, string> = {
+  realmadrid: '#e8e8ec',
+  barcelona: '#4d8fe0',
+  atleticomadrid: '#e2453d',
+  athleticclub: '#9c2b2b',
+  sevilla: '#c2202e',
+  realbetis: '#2e9e52',
+  realsociedad: '#2f7fc4',
+  villarreal: '#e0a72c',
+  valencia: '#f2924d',
+  celtavigo: '#5aa8d6',
+  espanyol: '#3060a8',
+  osasuna: '#1d3f6e',
+  rayovallecano: '#e0526a',
+  alaves: '#4472c4',
+};
+
+export function teamColor(name: string): string {
+  const key = normalizeTeamName(name);
+  if (TEAM_COLOR_OVERRIDES[key]) return TEAM_COLOR_OVERRIDES[key];
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return `hsl(${hash % 360} 62% 62%)`;
 }
 
 export type MatchLite = {

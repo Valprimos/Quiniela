@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState } from 'react';
+import { teamColor } from '@/lib/league';
 
 type Row = {
   matchId: number;
@@ -40,12 +41,28 @@ function seasonOf(r: Row): number {
 }
 
 // Una fila de comparación: valor de A · etiqueta · valor de B. Se resalta el que "gana".
-function Cmp({ label, a, b, aNum, bNum }: { label: string; a: string; b: string; aNum: number; bNum: number }) {
+function Cmp({
+  label,
+  a,
+  b,
+  aNum,
+  bNum,
+  colorA,
+  colorB,
+}: {
+  label: string;
+  a: string;
+  b: string;
+  aNum: number;
+  bNum: number;
+  colorA: string;
+  colorB: string;
+}) {
   return (
     <div className="cmp">
-      <b className={aNum > bNum ? 'cmp-lead cmp-lead-a' : ''}>{a}</b>
+      <b style={aNum > bNum ? { color: colorA } : undefined}>{a}</b>
       <span>{label}</span>
-      <b className={bNum > aNum ? 'cmp-lead cmp-lead-b' : ''}>{b}</b>
+      <b style={bNum > aNum ? { color: colorB } : undefined}>{b}</b>
     </div>
   );
 }
@@ -67,6 +84,8 @@ export function H2HBody({
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState(false);
+  const colorA = teamColor(teamA);
+  const colorB = teamColor(teamB);
 
   useEffect(() => {
     let alive = true;
@@ -107,23 +126,23 @@ export function H2HBody({
       {summary && (
         <>
           <div className="h2hhero">
-            <div className="h2hteam h2hteam-a">
+            <div className="h2hteam">
               <Crest src={crestA} size={46} />
-              <span>{teamA}</span>
+              <span style={{ color: colorA }}>{teamA}</span>
             </div>
             <div className="h2hcenter">
               <div className="h2hbig">
-                <b className="ca">{summary.winsA}</b>
+                <b style={{ color: colorA }}>{summary.winsA}</b>
                 <i>·</i>
                 <b className="cd">{summary.draws}</b>
                 <i>·</i>
-                <b className="cb">{summary.winsB}</b>
+                <b style={{ color: colorB }}>{summary.winsB}</b>
               </div>
               <small>victorias · empates · victorias</small>
             </div>
-            <div className="h2hteam h2hteam-b">
+            <div className="h2hteam">
               <Crest src={crestB} size={46} />
-              <span>{teamB}</span>
+              <span style={{ color: colorB }}>{teamB}</span>
             </div>
           </div>
 
@@ -135,27 +154,31 @@ export function H2HBody({
           ) : (
             <>
               <div className="h2hbar" role="img" aria-label={`${summary.winsA} victorias de ${teamA}, ${summary.draws} empates, ${summary.winsB} victorias de ${teamB}`}>
-                {summary.winsA > 0 && <span className="h2hseg h2hseg-a" style={{ flex: summary.winsA }} />}
+                {summary.winsA > 0 && <span className="h2hseg" style={{ flex: summary.winsA, background: colorA }} />}
                 {summary.draws > 0 && <span className="h2hseg h2hseg-d" style={{ flex: summary.draws }} />}
-                {summary.winsB > 0 && <span className="h2hseg h2hseg-b" style={{ flex: summary.winsB }} />}
+                {summary.winsB > 0 && <span className="h2hseg" style={{ flex: summary.winsB, background: colorB }} />}
               </div>
 
               <div className="cmps">
-                <Cmp label="Goles" a={String(summary.goalsA)} b={String(summary.goalsB)} aNum={summary.goalsA} bNum={summary.goalsB} />
+                <Cmp label="Goles" a={String(summary.goalsA)} b={String(summary.goalsB)} aNum={summary.goalsA} bNum={summary.goalsB} colorA={colorA} colorB={colorB} />
                 <Cmp
                   label="Goles por partido"
                   a={fmt(summary.goalsA / total, 1)}
                   b={fmt(summary.goalsB / total, 1)}
                   aNum={summary.goalsA}
                   bNum={summary.goalsB}
+                  colorA={colorA}
+                  colorB={colorB}
                 />
-                <Cmp label="Victorias en su campo" a={String(homeWinsA)} b={String(homeWinsB)} aNum={homeWinsA} bNum={homeWinsB} />
+                <Cmp label="Victorias en su campo" a={String(homeWinsA)} b={String(homeWinsB)} aNum={homeWinsA} bNum={homeWinsB} colorA={colorA} colorB={colorB} />
                 <Cmp
                   label="Mayor victoria"
                   a={bestA ? `${bestA.scoreA}-${bestA.scoreB}` : '–'}
                   b={bestB ? `${bestB.scoreB}-${bestB.scoreA}` : '–'}
                   aNum={bestA ? bestA.scoreA! - bestA.scoreB! : 0}
                   bNum={bestB ? bestB.scoreB! - bestB.scoreA! : 0}
+                  colorA={colorA}
+                  colorB={colorB}
                 />
               </div>
 
@@ -164,11 +187,12 @@ export function H2HBody({
                   <span className="h2hlast-title">Últimos {last5.length} cruces</span>
                   <div className="h2hlast-chips">
                     {last5.map((r) => {
-                      const cls = r.scoreA! > r.scoreB! ? 'chip-a' : r.scoreB! > r.scoreA! ? 'chip-b' : 'chip-d';
+                      const chipColor = r.scoreA! > r.scoreB! ? colorA : r.scoreB! > r.scoreA! ? colorB : undefined;
                       return (
                         <span
                           key={r.matchId}
-                          className={`h2hchip ${cls}`}
+                          className={`h2hchip${chipColor ? '' : ' chip-d'}`}
+                          style={chipColor ? { background: chipColor, color: '#141414' } : undefined}
                           title={`${r.homeTeam} ${r.homeScore}-${r.awayScore} ${r.awayTeam}`}
                         >
                           {r.scoreA}-{r.scoreB}
@@ -190,8 +214,8 @@ export function H2HBody({
             const played = r.homeScore != null && r.awayScore != null && r.status === 'FINISHED';
             const homeWon = played && r.homeScore! > r.awayScore!;
             const awayWon = played && r.awayScore! > r.homeScore!;
-            const homeTone = r.aIsHome ? 'a' : 'b';
-            const awayTone = r.aIsHome ? 'b' : 'a';
+            const homeColor = r.aIsHome ? colorA : colorB;
+            const awayColor = r.aIsHome ? colorB : colorA;
             const s = seasonOf(r);
             const newSeason = i === 0 || seasonOf(rows[i - 1]) !== s;
             return (
@@ -210,8 +234,8 @@ export function H2HBody({
                     {!played && ' · por jugar'}
                   </div>
                   <div className="h2hgame">
-                    <span className={`h2hside h2hside-l tone-${homeTone}${homeWon ? ' won' : awayWon ? ' lost' : ''}`}>
-                      <span className="h2hname">{r.homeTeam}</span>
+                    <span className={`h2hside h2hside-l${homeWon ? ' won' : awayWon ? ' lost' : ''}`}>
+                      <span className="h2hname" style={homeWon ? { color: homeColor } : undefined}>{r.homeTeam}</span>
                       <Crest src={r.homeCrest} size={22} />
                     </span>
                     <span className="h2hres">
@@ -219,9 +243,9 @@ export function H2HBody({
                       <i>-</i>
                       {r.awayScore ?? '–'}
                     </span>
-                    <span className={`h2hside h2hside-r tone-${awayTone}${awayWon ? ' won' : homeWon ? ' lost' : ''}`}>
+                    <span className={`h2hside h2hside-r${awayWon ? ' won' : homeWon ? ' lost' : ''}`}>
                       <Crest src={r.awayCrest} size={22} />
-                      <span className="h2hname">{r.awayTeam}</span>
+                      <span className="h2hname" style={awayWon ? { color: awayColor } : undefined}>{r.awayTeam}</span>
                     </span>
                   </div>
                 </li>

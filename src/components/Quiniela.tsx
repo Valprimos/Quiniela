@@ -108,48 +108,45 @@ function FormDots({ form }: { form: Mark[] }) {
 
 function TeamLine({
   team,
-  winner,
+  score,
+  chipWon,
   onOpen,
 }: {
   team: Team;
-  winner?: boolean;
+  score?: number | null;
+  chipWon?: boolean;
   onOpen: (name: string, crest: string | null) => void;
 }) {
   return (
-    <button type="button" className={`team teambtn${winner ? ' winner' : ''}`} onClick={() => onOpen(team.name, team.crest)}>
+    <button type="button" className="team teambtn" onClick={() => onOpen(team.name, team.crest)}>
       {team.crest ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={team.crest} alt="" loading="lazy" />
       ) : (
         <span className="crest-empty" />
       )}
-      <span className="name">{team.name}</span>
+      <span className={`name${chipWon ? ' name-won' : ''}`}>{team.name}</span>
       {team.pos != null && (
         <span className="tpos" title="Puesto en la Liga">
           {team.pos}º
         </span>
       )}
       <FormDots form={team.form} />
+      {score != null && <span className={`scorechip${chipWon ? ' scorechip-won' : ''}`}>{score}</span>}
     </button>
   );
 }
 
-function Scoreboard({ m }: { m: MatchDTO }) {
-  if (!m.started) return null;
+function ResultBadge({ m }: { m: MatchDTO }) {
   const final = m.status === 'FINISHED';
+  const real = final ? m.result : m.provisional ? m.liveResult : null;
+  if (real == null || m.myPick == null) return null;
+  const hit = m.myPick === real;
   return (
-    <div className={`scoreboard${m.provisional ? ' live' : ''}${final ? ' final' : ''}`}>
-      <span className="scoreboard-score">
-        {m.homeScore ?? '–'}
-        <i>-</i>
-        {m.awayScore ?? '–'}
-      </span>
-      <span className="scoreboard-tag">
-        {final ? 'Final' : m.provisional ? 'En juego' : ''}
-      </span>
-    </div>
+    <span className={`resultbadge${hit ? ' hit' : ' miss'}`}>{hit ? `Acertaste${final ? ' +1' : ''}` : 'Fallaste'}</span>
   );
 }
+
 
 function Consensus({ m }: { m: MatchDTO }) {
   const n = m.picks.length;
@@ -261,13 +258,23 @@ function MatchRow({
           {m.provisional && <i className="livedot" aria-hidden="true" />}
           {whenLabel(m)}
           {m.isPleno && <span className="plenobadge">Pleno al 15</span>}
+          {!m.isPleno && <ResultBadge m={m} />}
         </div>
-        <TeamLine team={m.home} winner={m.result === '1'} onOpen={onOpenTeam} />
-        <Scoreboard m={m} />
+        <TeamLine
+          team={m.home}
+          score={m.started ? m.homeScore : null}
+          chipWon={m.result === '1' || (m.provisional && m.liveResult === '1')}
+          onOpen={onOpenTeam}
+        />
         <button type="button" className="h2htrigger" onClick={() => onOpenH2H(m.home, m.away)}>
           Cara a cara
         </button>
-        <TeamLine team={m.away} winner={m.result === '2'} onOpen={onOpenTeam} />
+        <TeamLine
+          team={m.away}
+          score={m.started ? m.awayScore : null}
+          chipWon={m.result === '2' || (m.provisional && m.liveResult === '2')}
+          onOpen={onOpenTeam}
+        />
       </div>
 
       {m.isPleno ? (

@@ -11,10 +11,8 @@ export const dynamic = 'force-dynamic';
 const COLS =
   'id,competition,season,matchday,stage,utc_date,status,home_name,away_name,home_crest,away_crest,home_score,away_score';
 
-// Historial de un equipo en una competición: TODAS las temporadas guardadas (la actual y las
-// que se hayan traído con el backfill), con estadísticas de la temporada actual y también
-// históricas. Se comparan los nombres normalizados porque cada fuente de datos puede escribir
-// el mismo equipo de forma ligeramente distinta.
+// Historial de un equipo esta temporada, para el panel que se abre al pinchar en él.
+// Las temporadas anteriores solo se muestran en el "Cara a cara" entre dos equipos, no aquí.
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
@@ -27,20 +25,22 @@ export async function GET(req: NextRequest) {
 
   const supabase = db();
   const all = await fetchAll<MatchLite>((from, to) =>
-    supabase.from('matches').select(COLS).eq('competition', competition).order('id').range(from, to)
+    supabase
+      .from('matches')
+      .select(COLS)
+      .eq('competition', competition)
+      .eq('season', currentSeason())
+      .range(from, to)
   );
+  // Se compara por nombre normalizado por si esta temporada trae el nombre escrito distinto
+  // a como se guardó en el backfill (no debería pasar dentro de la misma temporada, pero es
+  // la misma comparación robusta que usa el resto de la app).
   const key = normalizeTeamName(name);
   const mine = all.filter((m) => normalizeTeamName(m.home_name) === key || normalizeTeamName(m.away_name) === key);
-  const now = currentSeason();
-  const current = mine.filter((m) => m.season === now);
-  const seasons = [...new Set(mine.map((m) => m.season as number))].sort((a, b) => a - b);
 
   return NextResponse.json({
     team: name,
     matches: teamHistory(mine, name),
-    record: teamRecord(current, name),
-    recordAll: teamRecord(mine, name),
-    seasons,
-    currentSeason: now,
+    record: teamRecord(mine, name),
   });
 }
