@@ -38,12 +38,52 @@ const TEAM_COLOR_OVERRIDES: Record<string, string> = {
   alaves: '#4472c4',
 };
 
+function hashOf(key: string): number {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return hash;
+}
+
 export function teamColor(name: string): string {
   const key = normalizeTeamName(name);
   if (TEAM_COLOR_OVERRIDES[key]) return TEAM_COLOR_OVERRIDES[key];
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-  return `hsl(${hash % 360} 62% 62%)`;
+  return `hsl(${hashOf(key) % 360} 62% 62%)`;
+}
+
+function colorHue(color: string): number {
+  if (color.startsWith('hsl')) return Number(color.match(/hsl\((\d+)/)?.[1] ?? 0);
+  const r = parseInt(color.slice(1, 3), 16) / 255;
+  const g = parseInt(color.slice(3, 5), 16) / 255;
+  const b = parseInt(color.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const d = max - min;
+  let h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return Math.round(h * 60);
+}
+
+// Un color por equipo local y otro por el visitante. Si les tocara un color demasiado
+// parecido (por azar, o dos equipos con overrides cercanos), se aparta el del visitante.
+export function pairTeamColors(homeName: string, awayName: string): { home: string; away: string } {
+  const home = teamColor(homeName);
+  let away = teamColor(awayName);
+  const diff = Math.min(Math.abs(colorHue(home) - colorHue(away)), 360 - Math.abs(colorHue(home) - colorHue(away)));
+  if (diff < 35) {
+    const shift = 150 + (hashOf(normalizeTeamName(awayName)) % 60);
+    away = `hsl(${(colorHue(home) + shift) % 360} 62% 62%)`;
+  }
+  return { home, away };
+}
+
+// Equipos con camiseta a rayas verticales reconocibles: en vez de un color plano, un
+// degradado a rayas con su color y blanco, para diferenciarlos aún mejor de un vistazo.
+const STRIPED_TEAMS = new Set(['athleticclub', 'atleticomadrid', 'barcelona', 'sevilla']);
+
+export function teamFill(name: string, color: string): string {
+  const key = normalizeTeamName(name);
+  if (!STRIPED_TEAMS.has(key)) return color;
+  return `repeating-linear-gradient(90deg, ${color} 0 5px, #f2f2f2 5px 9px)`;
 }
 
 export type MatchLite = {

@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState } from 'react';
-import { teamColor } from '@/lib/league';
+import { pairTeamColors, teamFill } from '@/lib/league';
 
 type Row = {
   matchId: number;
@@ -84,8 +84,9 @@ export function H2HBody({
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState(false);
-  const colorA = teamColor(teamA);
-  const colorB = teamColor(teamB);
+  const { home: colorA, away: colorB } = pairTeamColors(teamA, teamB);
+  const fillA = teamFill(teamA, colorA);
+  const fillB = teamFill(teamB, colorB);
 
   useEffect(() => {
     let alive = true;
@@ -154,9 +155,9 @@ export function H2HBody({
           ) : (
             <>
               <div className="h2hbar" role="img" aria-label={`${summary.winsA} victorias de ${teamA}, ${summary.draws} empates, ${summary.winsB} victorias de ${teamB}`}>
-                {summary.winsA > 0 && <span className="h2hseg" style={{ flex: summary.winsA, background: colorA }} />}
+                {summary.winsA > 0 && <span className="h2hseg" style={{ flex: summary.winsA, background: fillA }} />}
                 {summary.draws > 0 && <span className="h2hseg h2hseg-d" style={{ flex: summary.draws }} />}
-                {summary.winsB > 0 && <span className="h2hseg" style={{ flex: summary.winsB, background: colorB }} />}
+                {summary.winsB > 0 && <span className="h2hseg" style={{ flex: summary.winsB, background: fillB }} />}
               </div>
 
               <div className="cmps">
@@ -187,12 +188,12 @@ export function H2HBody({
                   <span className="h2hlast-title">Últimos {last5.length} cruces</span>
                   <div className="h2hlast-chips">
                     {last5.map((r) => {
-                      const chipColor = r.scoreA! > r.scoreB! ? colorA : r.scoreB! > r.scoreA! ? colorB : undefined;
+                      const chipFill = r.scoreA! > r.scoreB! ? fillA : r.scoreB! > r.scoreA! ? fillB : undefined;
                       return (
                         <span
                           key={r.matchId}
-                          className={`h2hchip${chipColor ? '' : ' chip-d'}`}
-                          style={chipColor ? { background: chipColor, color: '#141414' } : undefined}
+                          className={`h2hchip${chipFill ? '' : ' chip-d'}`}
+                          style={chipFill ? { background: chipFill, color: '#141414' } : undefined}
                           title={`${r.homeTeam} ${r.homeScore}-${r.awayScore} ${r.awayTeam}`}
                         >
                           {r.scoreA}-{r.scoreB}

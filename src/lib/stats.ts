@@ -54,7 +54,6 @@ export type StatsDTO = {
   liga: LigaRow[];
   teams: TeamAcc[];
   players: PlayerStat[];
-  allTeams?: { team: string; crest: string | null }[];
   group: {
     results: Record<Pick, number>;
     picks: Record<Pick, number>;

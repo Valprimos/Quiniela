@@ -452,8 +452,9 @@ select {
   margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--foco); color: #1a1500;
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle;
 }
-.plenoslip { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
-.plenolabel { font-size: 12px; color: var(--muted); margin-right: auto; }
+.plenoslip { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; }
+.plenolabel { font-size: 11px; color: var(--muted); text-align: center; }
+.plenoinputs { display: flex; align-items: center; gap: 6px; }
 .plenoinput {
   width: 46px; height: 40px; text-align: center; font-family: var(--font-display); font-size: 18px; font-weight: 700;
   background: var(--panel); color: var(--text); border: 1.5px solid var(--line); border-radius: 4px;

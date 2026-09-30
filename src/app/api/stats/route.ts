@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { currentSeason } from '@/lib/season';
 import { fetchAll } from '@/lib/paging';
-import { MatchLite, buildLiga, isFinished, normalizeTeamName } from '@/lib/league';
+import { MatchLite, buildLiga, isFinished } from '@/lib/league';
 import { computeStats } from '@/lib/stats';
 import { isCompetitionCode } from '@/lib/competitions';
 
@@ -54,33 +54,12 @@ export async function GET(req: NextRequest) {
   }
   const groupPreds = preds.filter((p) => playerIds.has(p.player_id));
 
-  // Todos los equipos vistos en esta competición alguna vez (temporada actual + backfill),
-  // para el buscador de "Cara a cara" — que no se quede sin los que ya no están esta temporada.
-  const allTeamRows = await fetchAll<{ home_name: string; home_crest: string | null; away_name: string; away_crest: string | null }>(
-    (from, to) =>
-      supabase.from('matches').select('home_name,home_crest,away_name,away_crest').eq('competition', competition).range(from, to)
-  );
-  const allTeamsByKey = new Map<string, { team: string; crest: string | null }>();
-  for (const r of allTeamRows) {
-    for (const [name, crest] of [
-      [r.home_name, r.home_crest],
-      [r.away_name, r.away_crest],
-    ] as const) {
-      const key = normalizeTeamName(name);
-      if (!allTeamsByKey.has(key) || (!allTeamsByKey.get(key)!.crest && crest)) {
-        allTeamsByKey.set(key, { team: name, crest });
-      }
-    }
-  }
-  const allTeams = [...allTeamsByKey.values()].sort((a, b) => a.team.localeCompare(b.team, 'es'));
-
-  return NextResponse.json({
-    ...computeStats({
+  return NextResponse.json(
+    computeStats({
       matches,
       preds: groupPreds,
       players: playerRows,
       liga: buildLiga(matches.filter((m) => m.matchday < 100)),
-    }),
-    allTeams,
-  });
+    })
+  );
 }

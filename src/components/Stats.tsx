@@ -557,7 +557,9 @@ export default function Stats({
       {view === 'jugadores' && <Jugadores stats={stats} meId={meId} />}
       {view === 'liga' && <Liga liga={stats.liga} onTeamClick={onTeamClick} />}
       {view === 'grupo' && <Grupo stats={stats} meId={meId} />}
-      {view === 'h2h' && <H2H teams={stats.allTeams ?? []} />}
+      {view === 'h2h' && (
+        <H2H teams={[...stats.teams].sort((a, b) => a.team.localeCompare(b.team, 'es')).map((t) => ({ team: t.team, crest: t.crest }))} />
+      )}
     </>
   );
 }

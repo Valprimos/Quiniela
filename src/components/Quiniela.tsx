@@ -209,31 +209,33 @@ function PlenoSlip({ m, onSave }: { m: MatchDTO; onSave: (home: number, away: nu
   return (
     <div className="plenoslip">
       <span className="plenolabel">Marcador exacto</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={0}
-        max={20}
-        value={home}
-        onChange={(e) => setHome(e.target.value)}
-        onBlur={commit}
-        disabled={m.locked}
-        className="plenoinput"
-        aria-label={`Goles de ${m.home.name}`}
-      />
-      <span className="plenodash">-</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={0}
-        max={20}
-        value={away}
-        onChange={(e) => setAway(e.target.value)}
-        onBlur={commit}
-        disabled={m.locked}
-        className="plenoinput"
-        aria-label={`Goles de ${m.away.name}`}
-      />
+      <div className="plenoinputs">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={20}
+          value={home}
+          onChange={(e) => setHome(e.target.value)}
+          onBlur={commit}
+          disabled={m.locked}
+          className="plenoinput"
+          aria-label={`Goles de ${m.home.name}`}
+        />
+        <span className="plenodash">-</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={20}
+          value={away}
+          onChange={(e) => setAway(e.target.value)}
+          onBlur={commit}
+          disabled={m.locked}
+          className="plenoinput"
+          aria-label={`Goles de ${m.away.name}`}
+        />
+      </div>
     </div>
   );
 }
