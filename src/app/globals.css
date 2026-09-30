@@ -108,12 +108,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .resultbadge.hit { background: var(--ok); color: #04231a; }
 .resultbadge.miss { background: var(--panel-2); border: 1px solid var(--ko); color: var(--ko); }
 
-/* Marcador centrado, como un scoreboard de verdad */
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
-  padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px;
-}
-@media (prefers-reduced-motion: reduce) { .scoreboard.live .scoreboard-tag { animation: none; } }
-
 .slip { display: flex; gap: 6px; }
 .box {
   width: 44px; height: 44px; padding: 0;
