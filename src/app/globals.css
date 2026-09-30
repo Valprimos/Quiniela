@@ -108,7 +108,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .resultbadge.hit { background: var(--ok); color: #04231a; }
 .resultbadge.miss { background: var(--panel-2); border: 1px solid var(--ko); color: var(--ko); }
 
-.slip { display: flex; gap: 6px; }
+.slip { display: flex; gap: 6px; justify-content: center; }
 .box {
   width: 44px; height: 44px; padding: 0;
   background: var(--panel); border: 1.5px solid var(--line); border-radius: 4px;
