@@ -268,6 +268,9 @@ function MatchRow({
           chipWon={m.result === '1' || (m.provisional && m.liveResult === '1')}
           onOpen={onOpenTeam}
         />
+        <button type="button" className="h2htrigger" onClick={() => onOpenH2H(m.home, m.away)}>
+          Cara a cara
+        </button>
         <TeamLine
           team={m.away}
           score={m.started ? m.awayScore : null}
@@ -305,10 +308,6 @@ function MatchRow({
           })}
         </div>
       )}
-
-      <button type="button" className="h2htrigger" onClick={() => onOpenH2H(m.home, m.away)}>
-        Cara a cara
-      </button>
 
       <Consensus m={m} />
 

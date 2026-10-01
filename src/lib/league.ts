@@ -23,9 +23,9 @@ export function normalizeTeamName(name: string): string {
 // determinista a partir de su nombre (siempre el mismo para el mismo equipo, sin mantenimiento).
 const TEAM_COLOR_OVERRIDES: Record<string, string> = {
   realmadrid: '#e8e8ec',
-  barcelona: '#1c4fa0',
+  barcelona: '#4d8fe0',
   atleticomadrid: '#e2453d',
-  athletic: '#9c2b2b',
+  athleticclub: '#9c2b2b',
   sevilla: '#c2202e',
   realbetis: '#2e9e52',
   realsociedad: '#2f7fc4',
@@ -33,9 +33,9 @@ const TEAM_COLOR_OVERRIDES: Record<string, string> = {
   valencia: '#f2924d',
   celtavigo: '#5aa8d6',
   espanyol: '#3060a8',
-  caosasuna: '#1d3f6e',
+  osasuna: '#1d3f6e',
   rayovallecano: '#e0526a',
-  deportivoalaves: '#4472c4',
+  alaves: '#4472c4',
 };
 
 function hashOf(key: string): number {
@@ -77,18 +77,13 @@ export function pairTeamColors(homeName: string, awayName: string): { home: stri
 }
 
 // Equipos con camiseta a rayas verticales reconocibles: en vez de un color plano, un
-// degradado a rayas con sus dos colores reales (no siempre es "color + blanco": el Barça
-// es azul y grana, sin blanco de por medio).
-const STRIPE_SECONDARY: Record<string, string> = {
-  barcelona: '#a50044', // azulgrana: su azul (teamColor) + este grana, sin blanco
-};
-const STRIPED_TEAMS = new Set(['athletic', 'atleticomadrid', 'barcelona', 'sevilla']);
+// degradado a rayas con su color y blanco, para diferenciarlos aún mejor de un vistazo.
+const STRIPED_TEAMS = new Set(['athleticclub', 'atleticomadrid', 'barcelona', 'sevilla']);
 
 export function teamFill(name: string, color: string): string {
   const key = normalizeTeamName(name);
   if (!STRIPED_TEAMS.has(key)) return color;
-  const secondary = STRIPE_SECONDARY[key] ?? '#f2f2f2';
-  return `repeating-linear-gradient(90deg, ${color} 0 5px, ${secondary} 5px 9px)`;
+  return `repeating-linear-gradient(90deg, ${color} 0 5px, #f2f2f2 5px 9px)`;
 }
 
 export type MatchLite = {

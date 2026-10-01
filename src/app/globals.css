@@ -435,7 +435,7 @@ select {
 
 /* Botón "Cara a cara" entre los dos equipos de un partido */
 .h2htrigger {
-  grid-column: 2;
+  grid-column: 1 / -1;
   display: block; width: 100%;
   background: none; border: 0; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line);
   padding: 5px 0; margin: 2px 0; font-size: 11px; color: var(--muted); text-transform: uppercase;
