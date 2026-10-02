@@ -97,7 +97,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
   padding: 14px 0; border-bottom: 1px dashed var(--line);
 }
 .match-info { min-width: 0; }
-.when { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.when { grid-column: 1 / -1; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 .team { display: flex; align-items: center; gap: 8px; min-height: 28px; font-weight: 600; }
 .team img, .crest-empty { width: 22px; height: 22px; object-fit: contain; flex: none; }
 .team .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

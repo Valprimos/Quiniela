@@ -255,13 +255,14 @@ function MatchRow({
 }) {
   return (
     <li className={`match${m.provisional ? ' live' : ''}${m.isPleno ? ' pleno' : ''}`}>
+      <div className="when">
+        {m.provisional && <i className="livedot" aria-hidden="true" />}
+        {whenLabel(m)}
+        {m.isPleno && <span className="plenobadge">Pleno al 15</span>}
+        {!m.isPleno && <ResultBadge m={m} />}
+      </div>
+
       <div className="match-info">
-        <div className="when">
-          {m.provisional && <i className="livedot" aria-hidden="true" />}
-          {whenLabel(m)}
-          {m.isPleno && <span className="plenobadge">Pleno al 15</span>}
-          {!m.isPleno && <ResultBadge m={m} />}
-        </div>
         <TeamLine
           team={m.home}
           score={m.started ? m.homeScore : null}
