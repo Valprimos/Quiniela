@@ -2,6 +2,53 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 
+type TeamNameGroup = { key: string; names: string[]; seasons: number[]; matches: number };
+
+function TeamNamesDebug({ competition }: { competition: string }) {
+  const [query, setQuery] = useState('');
+  const [teams, setTeams] = useState<TeamNameGroup[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTeams(null);
+    setError(null);
+    fetch(`/api/admin/team-names?competition=${competition}`)
+      .then((r) => r.json())
+      .then((j) => (j.error ? setError(j.error) : setTeams(j.teams)))
+      .catch(() => setError('No se pudo cargar.'));
+  }, [competition]);
+
+  const filtered = teams?.filter((t) => !query || t.names.some((n) => n.toLowerCase().includes(query.toLowerCase())));
+
+  return (
+    <div>
+      <input
+        placeholder="Buscar equipo (p. ej. Celta)"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        style={{ width: '100%', marginBottom: 8 }}
+      />
+      {error && <p className="notice">{error}</p>}
+      {!teams && !error && <p className="muted">Cargando…</p>}
+      {filtered && filtered.length === 0 && <p className="muted">Nada con ese nombre guardado en {competition}.</p>}
+      {filtered && filtered.length > 0 && (
+        <ul className="teamnames">
+          {filtered.map((t) => (
+            <li key={t.key}>
+              <b>{t.names.join(' / ')}</b>
+              <span className="muted">
+                {' '}
+                — temporadas {t.seasons.join(', ')} · {t.matches} filas
+                {t.names.length > 1 && ' ⚠️ varios nombres sin agrupar'}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 type Player = { id: string; name: string; is_admin: boolean };
 type MatchOpt = { id: number; home: { name: string }; away: { name: string }; homeScore: number | null; awayScore: number | null };
 
@@ -257,6 +304,12 @@ export default function AdminPanel({
         api-football.com (variable de entorno <code>API_FOOTBALL_KEY</code>). No toca la
         sincronización en directo de esta temporada.
       </p>
+
+      <h3 className="sh small">Equipos guardados ({competition})</h3>
+      <p className="hint">
+        Para comprobar si un equipo falta o está guardado con dos nombres distintos sin agrupar.
+      </p>
+      <TeamNamesDebug competition={competition} />
     </div>
   );
 }

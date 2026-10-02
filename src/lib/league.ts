@@ -14,29 +14,10 @@ export function normalizeTeamName(name: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/\b(cf|fc|cd|sad|ud|sd|rcd|club|futbol|balompie|de|del|la|el)\b/g, '')
+    .replace(/\b(cf|fc|cd|sad|ud|sd|rcd|rc|club|futbol|balompie|de|del|la|el)\b/g, '')
     .replace(/[^a-z0-9]/g, '');
   return NICKNAME_MAP[base] ?? base;
 }
-
-// Un color propio por equipo. Unos pocos grandes llevan un color a mano; el resto saca uno
-// determinista a partir de su nombre (siempre el mismo para el mismo equipo, sin mantenimiento).
-const TEAM_COLOR_OVERRIDES: Record<string, string> = {
-  realmadrid: '#e8e8ec',
-  barcelona: '#1c4fa0',
-  atleticomadrid: '#e2453d',
-  athletic: '#9c2b2b',
-  sevilla: '#c2202e',
-  realbetis: '#2e9e52',
-  realsociedad: '#2f7fc4',
-  villarreal: '#e0a72c',
-  valencia: '#f2924d',
-  celtavigo: '#5aa8d6',
-  espanyol: '#3060a8',
-  caosasuna: '#1d3f6e',
-  rayovallecano: '#e0526a',
-  deportivoalaves: '#4472c4',
-};
 
 function hashOf(key: string): number {
   let hash = 0;
@@ -44,10 +25,38 @@ function hashOf(key: string): number {
   return hash;
 }
 
-export function teamColor(name: string): string {
+// Color de la camiseta local y de la de visitante de cada equipo. Solo se usa la de
+// visitante cuando hace falta (choque de colores con el rival), nunca porque sí.
+type Kit = { home: string; away: string };
+const TEAM_KITS: Record<string, Kit> = {
+  realmadrid: { home: '#e8e8ec', away: '#4a2e6b' },
+  barcelona: { home: '#1c4fa0', away: '#f2b705' },
+  atleticomadrid: { home: '#e2453d', away: '#1c3a63' },
+  athletic: { home: '#9c2b2b', away: '#2d4f7c' },
+  sevilla: { home: '#c2202e', away: '#1b3a6b' },
+  realbetis: { home: '#2e9e52', away: '#c9a227' },
+  realsociedad: { home: '#2f7fc4', away: '#16305c' },
+  villarreal: { home: '#e0a72c', away: '#1c2e4a' },
+  valencia: { home: '#f2924d', away: '#2a2a2a' },
+  celtavigo: { home: '#5aa8d6', away: '#1b3350' },
+  espanyol: { home: '#3060a8', away: '#d9a52c' },
+  caosasuna: { home: '#d2543f', away: '#1d3f6e' },
+  rayovallecano: { home: '#e0526a', away: '#2a2a2a' },
+  deportivoalaves: { home: '#4472c4', away: '#d9b23a' },
+  levante: { home: '#1c3a63', away: '#7a2436' },
+  deportivocoruna: { home: '#1a4faa', away: '#2a2a2a' },
+  malaga: { home: '#2f5fa0', away: '#d8d8d8' },
+};
+
+function kitOf(name: string): Kit {
   const key = normalizeTeamName(name);
-  if (TEAM_COLOR_OVERRIDES[key]) return TEAM_COLOR_OVERRIDES[key];
-  return `hsl(${hashOf(key) % 360} 62% 62%)`;
+  if (TEAM_KITS[key]) return TEAM_KITS[key];
+  const hue = hashOf(key) % 360;
+  return { home: `hsl(${hue} 62% 62%)`, away: `hsl(${(hue + 180) % 360} 62% 62%)` };
+}
+
+export function teamColor(name: string): string {
+  return kitOf(name).home;
 }
 
 function colorHue(color: string): number {
@@ -63,26 +72,24 @@ function colorHue(color: string): number {
   return Math.round(h * 60);
 }
 
-// Un color por equipo local y otro por el visitante. Si les tocara un color demasiado
-// parecido (por azar, o dos equipos con overrides cercanos), se aparta el del visitante.
+// El local siempre lleva su color de casa. El visitante también, salvo que se parezca
+// demasiado al del local — entonces, y solo entonces, se usa su color de visitante de verdad.
 export function pairTeamColors(homeName: string, awayName: string): { home: string; away: string } {
-  const home = teamColor(homeName);
-  let away = teamColor(awayName);
-  const diff = Math.min(Math.abs(colorHue(home) - colorHue(away)), 360 - Math.abs(colorHue(home) - colorHue(away)));
-  if (diff < 35) {
-    const shift = 150 + (hashOf(normalizeTeamName(awayName)) % 60);
-    away = `hsl(${(colorHue(home) + shift) % 360} 62% 62%)`;
-  }
-  return { home, away };
+  const homeKit = kitOf(homeName);
+  const awayKit = kitOf(awayName);
+  const diff = Math.min(
+    Math.abs(colorHue(homeKit.home) - colorHue(awayKit.home)),
+    360 - Math.abs(colorHue(homeKit.home) - colorHue(awayKit.home))
+  );
+  return { home: homeKit.home, away: diff < 35 ? awayKit.away : awayKit.home };
 }
 
-// Equipos con camiseta a rayas verticales reconocibles: en vez de un color plano, un
-// degradado a rayas con sus dos colores reales (no siempre es "color + blanco": el Barça
-// es azul y grana, sin blanco de por medio).
+// Equipos con camiseta a rayas verticales reconocibles de verdad (no por aproximar):
+// Athletic y Atlético (rojiblancas), Barça (azulgrana) y Betis (verdiblancas).
 const STRIPE_SECONDARY: Record<string, string> = {
-  barcelona: '#a50044', // azulgrana: su azul (teamColor) + este grana, sin blanco
+  barcelona: '#a50044', // azulgrana: su azul + este grana, sin blanco
 };
-const STRIPED_TEAMS = new Set(['athletic', 'atleticomadrid', 'barcelona', 'sevilla']);
+const STRIPED_TEAMS = new Set(['athletic', 'atleticomadrid', 'barcelona', 'realbetis']);
 
 export function teamFill(name: string, color: string): string {
   const key = normalizeTeamName(name);
