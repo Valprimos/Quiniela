@@ -9,7 +9,6 @@ export default function LoginForm() {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [code, setCode] = useState('');
-  const [groupName, setGroupName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -20,7 +19,7 @@ export default function LoginForm() {
     const res = await fetch('/api/auth', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ mode, name, pin, code, groupName }),
+      body: JSON.stringify({ mode, name, pin, code }),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -40,7 +39,7 @@ export default function LoginForm() {
         <h1 className="login-title">Quiniela</h1>
         <p className="muted">
           {registering
-            ? 'Únete a la pandilla de tus colegas, o crea una nueva con un código que te inventes.'
+            ? 'Únete a la pandilla con el código, tu nombre y un PIN.'
             : 'Entra con el código de tu pandilla, tu nombre y tu PIN.'}
         </p>
 
@@ -55,20 +54,6 @@ export default function LoginForm() {
             required
           />
         </div>
-
-        {registering && (
-          <div className="field">
-            <label htmlFor="groupName">Nombre de la pandilla (solo si es nueva)</label>
-            <input
-              id="groupName"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              autoComplete="off"
-              maxLength={40}
-              placeholder="Los del bar de Paco"
-            />
-          </div>
-        )}
 
         <div className="field">
           <label htmlFor="name">Tu nombre</label>
@@ -100,7 +85,7 @@ export default function LoginForm() {
         {error && <p className="notice" role="alert">{error}</p>}
 
         <button className="primary" type="submit" disabled={busy}>
-          {registering ? 'Entrar o crear pandilla' : 'Entrar'}
+          {registering ? 'Crear jugador' : 'Entrar'}
         </button>
         <button
           className="link"
@@ -110,7 +95,7 @@ export default function LoginForm() {
             setError(null);
           }}
         >
-          {registering ? 'Ya tengo jugador' : 'Soy nuevo o quiero crear una pandilla'}
+          {registering ? 'Ya tengo jugador' : 'Soy nuevo'}
         </button>
       </form>
     </main>
