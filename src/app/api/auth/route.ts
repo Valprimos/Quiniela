@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
         return fail('No se pudo crear el jugador. Inténtalo otra vez.', 500);
       }
 
-      await setSession(data.id, data.name);
+      // Se pasan los 4 argumentos requeridos por setSession
+      await setSession(data.id, data.name, group.id, false);
       return NextResponse.json({ ok: true });
     }
 
@@ -62,20 +63,22 @@ export async function POST(req: NextRequest) {
       return fail('No se pudo crear el jugador. Inténtalo otra vez.', 500);
     }
 
-    await setSession(data.id, data.name);
+    // Se pasan los 4 argumentos requeridos por setSession
+    await setSession(data.id, data.name, '', false);
     return NextResponse.json({ ok: true });
   }
 
   // login
   const { data } = await supabase
     .from('players')
-    .select('id,name,pin_hash')
+    .select('id,name,pin_hash,group_id')
     .eq('name_key', name.toLowerCase())
     .maybeSingle();
 
   const valid = data ? await bcrypt.compare(pin, data.pin_hash) : false;
   if (!data || !valid) return fail('Nombre o PIN incorrectos.', 401);
 
-  await setSession(data.id, data.name);
+  // Se pasan los 4 argumentos requeridos por setSession
+  await setSession(data.id, data.name, data.group_id ?? '', false);
   return NextResponse.json({ ok: true });
 }
