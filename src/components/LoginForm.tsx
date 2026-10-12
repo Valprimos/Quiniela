@@ -13,38 +13,30 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const registering = mode === 'register';
-
-  async function handleSubmit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
     setBusy(true);
-
-    try {
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ mode, name, pin, code, groupName }),
-      });
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setError(json.error || 'Ocurrió un error. Inténtalo de nuevo.');
-        setBusy(false);
-        return;
-      }
-
-      router.push('/');
-      router.refresh();
-    } catch {
-      setError('Error de conexión. Inténtalo de nuevo.');
+    setError(null);
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mode, name, pin, code, groupName }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json.error ?? 'Algo salió mal. Inténtalo otra vez.');
       setBusy(false);
+      return;
     }
+    router.replace('/');
+    router.refresh();
   }
 
+  const registering = mode === 'register';
+
   return (
-    <main className="login-card">
-      <form onSubmit={handleSubmit}>
+    <main className="login">
+      <form className="login-form" onSubmit={submit}>
         <h1 className="login-title">Quiniela</h1>
         <p className="muted">
           {registering
@@ -53,15 +45,14 @@ export default function LoginForm() {
         </p>
 
         <div className="field">
-          <label htmlFor="code">Código de la pandilla</label>
+          <label htmlFor="code">Código de pandilla</label>
           <input
             id="code"
-            type="text"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            required
             autoComplete="off"
-            placeholder="Ej: mi-grupo"
+            maxLength={30}
+            required
           />
         </div>
 
@@ -83,26 +74,26 @@ export default function LoginForm() {
           <label htmlFor="name">Tu nombre</label>
           <input
             id="name"
-            type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            required
             autoComplete="username"
-            placeholder="Ej: Paco"
+            maxLength={20}
+            required
           />
         </div>
 
         <div className="field">
-          <label htmlFor="pin">PIN (4-6 números)</label>
+          <label htmlFor="pin">PIN (4 a 6 números)</label>
           <input
             id="pin"
             type="password"
             inputMode="numeric"
+            pattern="\d{4,6}"
             value={pin}
-            onChange={(e) => setPin(e.target.value)}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            autoComplete={registering ? 'new-password' : 'current-password'}
+            maxLength={6}
             required
-            autoComplete="current-password"
-            placeholder="****"
           />
         </div>
 
@@ -111,7 +102,6 @@ export default function LoginForm() {
         <button className="primary" type="submit" disabled={busy}>
           {registering ? 'Entrar o crear pandilla' : 'Entrar'}
         </button>
-
         <button
           className="link"
           type="button"
