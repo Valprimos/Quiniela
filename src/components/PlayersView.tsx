@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { StatsDTO, PlayerStat, Round, FormMark } from '@/lib/stats';
+import type { StatsDTO, PlayerStat, Round, FormMark, Pair } from '@/lib/stats';
 import { COMP_COLOR, compColor, compName, fmt, pctOf } from './statsUtil';
 
 type Players = PlayerStat[];
@@ -45,12 +45,22 @@ function buildAwards(stats: StatsDTO, meId: string): Award[] {
   add('Más acertador', leaders(ps, (p) => (p.played >= 8 ? p.pct : null), 0), (v) => `${fmt(v)}%`, 'de acierto');
   add('Mejor racha', leaders(ps, (p) => p.bestStreak, 2), String, 'aciertos seguidos');
   add(
-    'Más atrevido',
+    'La suegra',
     leaders(ps, (p) => (p.played >= 8 && p.brave.n >= 3 ? p.brave.n / p.played : null), 0),
     (v) => `${fmt(v * 100)}%`,
     'a la contra del grupo'
   );
   add('Rey del pleno', leaders(ps, (p) => p.pleno15.h, 1), String, 'plenos al 15');
+  const top = stats.siamese[0];
+  if (top) {
+    out.push({
+      label: 'Siamesismo',
+      who: [top.aName, top.bName],
+      num: `${fmt(top.pct)}%`,
+      unit: 'de pronósticos iguales',
+      mine: top.a === meId || top.b === meId,
+    });
+  }
   add('Jornadas ganadas', leaders(ps, (p) => p.wins, 1), String, 'jornadas');
   add('Mala racha', leaders(ps, (p) => p.worstStreak, 3), String, 'fallos seguidos');
   if (stats.comps.length > 1) {
@@ -195,7 +205,7 @@ function Heatmap({ stats, meId }: { stats: StatsDTO; meId: string }) {
 /* ---------- Comparador con radar ---------- */
 const COLOR_A = 'var(--foco)';
 const COLOR_B = '#b79cff';
-const AXES = ['Acierto', 'Media', 'Racha', 'Atrevido', 'Constancia', 'Pleno'];
+const AXES = ['Acierto', 'Media', 'Racha', 'La suegra', 'Constancia', 'Pleno'];
 
 function axisValues(p: PlayerStat, g: { maxAvg: number; maxStreak: number; maxPleno: number }): number[] {
   const clamp = (x: number) => Math.max(0, Math.min(1, x));
@@ -311,9 +321,103 @@ function Versus({ stats, meId }: { stats: StatsDTO; meId: string }) {
         })}
       </div>
       <p className="hint">
-        Cada eje va de 0 al máximo del grupo (acierto, de 0 a 100%). Atrevido es la frecuencia con la que
+        Cada eje va de 0 al máximo del grupo (acierto, de 0 a 100%). La suegra es la frecuencia con la que
         va contra la mayoría; Constancia, los partidos que sí pronosticó.
       </p>
+    </>
+  );
+}
+
+/* ---------- Siamesismo: quién piensa igual que quién ---------- */
+function Overlap({ pct, a, b }: { pct: number; a: string; b: string }) {
+  // Dos círculos que se solapan más cuanto más parecidos son sus pronósticos
+  const r = 46;
+  const d = 2 * r * (1 - pct / 100) * 0.92 + 0.08 * 2 * r; // 100% = casi encimados; 0% = rozándose
+  const cx = 150;
+  const cy = 62;
+  const xa = cx - d / 2;
+  const xb = cx + d / 2;
+  return (
+    <svg viewBox="0 0 300 124" className="siam-svg" role="img" aria-label={`${a} y ${b} coinciden un ${fmt(pct)}%`}>
+      <circle cx={xa} cy={cy} r={r} fill="rgba(69, 216, 156, 0.22)" stroke="var(--ok)" strokeWidth={2.5} />
+      <circle cx={xb} cy={cy} r={r} fill="rgba(183, 156, 255, 0.22)" stroke="#b79cff" strokeWidth={2.5} />
+      <text x={cx} y={cy + 9} textAnchor="middle" className="siam-pct">
+        {fmt(pct)}%
+      </text>
+    </svg>
+  );
+}
+
+function PairRow({ p, meId }: { p: Pair; meId: string }) {
+  const mine = p.a === meId || p.b === meId;
+  return (
+    <li className={mine ? 'siam-row me' : 'siam-row'}>
+      <span className="siam-names">
+        {p.aName} <i>y</i> {p.bName}
+      </span>
+      <span className="siam-track">
+        <i style={{ width: `${p.pct}%` }} />
+      </span>
+      <span className="siam-val">
+        <b>{fmt(p.pct)}%</b>
+        <small>
+          {p.same}/{p.n}
+        </small>
+      </span>
+    </li>
+  );
+}
+
+function Siamesismo({ stats, meId }: { stats: StatsDTO; meId: string }) {
+  const pairs = stats.siamese;
+  if (!pairs.length) {
+    return (
+      <p className="muted">
+        Aparece cuando dos jugadores hayan pronosticado al menos 8 partidos terminados en común.
+      </p>
+    );
+  }
+  const top = pairs[0];
+  const last = pairs.length > 1 ? pairs[pairs.length - 1] : null;
+  const shown = pairs.slice(1, 6);
+  const rest = pairs.slice(6);
+  return (
+    <>
+      <div className="siam-hero">
+        <Overlap pct={top.pct} a={top.aName} b={top.bName} />
+        <div className="siam-who">
+          <b style={{ color: 'var(--ok)' }}>{top.aName}</b>
+          <span>y</span>
+          <b style={{ color: '#b79cff' }}>{top.bName}</b>
+        </div>
+        <p className="siam-sub">
+          Los más siameses: pusieron lo mismo en {top.same} de {top.n} partidos.
+        </p>
+      </div>
+
+      {shown.length > 0 && (
+        <ul className="siam-list">
+          {shown.map((p) => (
+            <PairRow key={`${p.a}|${p.b}`} p={p} meId={meId} />
+          ))}
+        </ul>
+      )}
+      {rest.length > 0 && (
+        <details className="pmore">
+          <summary>Todas las parejas ({pairs.length})</summary>
+          <ul className="siam-list">
+            {rest.map((p) => (
+              <PairRow key={`${p.a}|${p.b}`} p={p} meId={meId} />
+            ))}
+          </ul>
+        </details>
+      )}
+      {last && (
+        <p className="hint">
+          Los más distintos: {last.aName} y {last.bName} ({fmt(last.pct)}%). El porcentaje es la parte de
+          partidos terminados, pronosticados por los dos, en los que pusieron lo mismo (1, X o 2).
+        </p>
+      )}
     </>
   );
 }
@@ -414,6 +518,14 @@ function CompSplit({ p, comps }: { p: PlayerStat; comps: string[] }) {
 
 type SortKey = 'points' | 'pct' | 'streak';
 
+// Con quién coincide más (o menos) un jugador, según las parejas calculadas
+function twin(pairs: Pair[], id: string, which: 'most' | 'least'): string {
+  const mine = pairs.filter((p) => p.a === id || p.b === id);
+  if (!mine.length) return '–';
+  const p = which === 'most' ? mine[0] : mine[mine.length - 1];
+  return `${p.a === id ? p.bName : p.aName} (${fmt(p.pct)}%)`;
+}
+
 function PlayerCards({ stats, meId }: { stats: StatsDTO; meId: string }) {
   const [sort, setSort] = useState<SortKey>('points');
   const { rounds, series } = stats.evolution;
@@ -497,10 +609,12 @@ function PlayerCards({ stats, meId }: { stats: StatsDTO; meId: string }) {
                 <Fact label="Peor jornada" value={p.worst ? `${p.worst.points} (${p.worst.round})` : '–'} />
                 <Fact label="Media por jornada" value={fmt(p.avg, 1)} />
                 <Fact
-                  label="Valentía (contra el grupo)"
+                  label="La suegra (contra el grupo)"
                   value={p.brave.n ? `${fmt(pctOf(p.brave))}% de ${p.brave.n}` : '–'}
                 />
                 <Fact label="Equipo gafe" value={p.jinx ? `${p.jinx.team} (${fmt(p.jinx.pct)}%)` : '–'} />
+                <Fact label="Su siamés" value={twin(stats.siamese, p.playerId, 'most')} />
+                <Fact label="Su opuesto" value={twin(stats.siamese, p.playerId, 'least')} />
               </dl>
             </details>
           </li>
@@ -535,6 +649,9 @@ export default function PlayersView({ stats, meId }: { stats: StatsDTO; meId: st
 
       <h2 className="sh">Cara a cara de jugadores</h2>
       <Versus stats={stats} meId={meId} />
+
+      <h2 className="sh">Siamesismo</h2>
+      <Siamesismo stats={stats} meId={meId} />
 
       <h2 className="sh">Cada jugador</h2>
       <PlayerCards stats={stats} meId={meId} />

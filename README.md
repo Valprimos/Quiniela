@@ -69,7 +69,10 @@ La pestaña abre en **Jugadores**, con un selector para ver **Primera + Champion
 defecto) o solo la competición elegida arriba. Jugadores incluye: premios (líder, más acertador,
 mejor y peor racha, más atrevido, rey del pleno...), puntos apilados por competición, un mapa de
 calor jornada a jornada, un comparador de dos jugadores con gráfico de radar, y una tarjeta por
-jugador con anillo de acierto, últimos 10 partidos, puntos por jornada y reparto 1/X/2. Los
+jugador con anillo de acierto, últimos 10 partidos, puntos por jornada y reparto 1/X/2. El
+**Siamesismo** mide qué parejas de jugadores piensan más parecido (porcentaje de partidos en los que
+ponen lo mismo, con un mínimo de 8 en común), y **La suegra** es quien más va contra la mayoría del
+grupo. Los
 "puntos" son los mismos de la clasificación (el pleno al 15 vale 3).
 
 Dentro de "Cara a cara" se eligen dos equipos y se ven solo sus enfrentamientos directos de esta

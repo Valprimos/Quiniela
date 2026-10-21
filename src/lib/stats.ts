@@ -61,6 +61,17 @@ export type PlayerStat = {
   style: { label: string; detail: string } | null;
 };
 
+// Siamesismo: cuánto coinciden los pronósticos de dos jugadores
+export type Pair = {
+  a: string; // id del primer jugador
+  b: string;
+  aName: string;
+  bName: string;
+  same: number; // partidos en los que pusieron lo mismo
+  n: number; // partidos terminados que pronosticaron los dos
+  pct: number; // same / n, de 0 a 100
+};
+
 export type MatchInsight = {
   matchId: number;
   round: string;
@@ -78,6 +89,7 @@ export type StatsDTO = {
   liga: LigaRow[];
   teams: TeamAcc[];
   players: PlayerStat[];
+  siamese: Pair[]; // parejas con suficientes partidos en común, de más a menos parecidas
   group: {
     results: Record<Pick, number>;
     picks: Record<Pick, number>;
@@ -115,6 +127,9 @@ type Agg = {
   comp: Record<string, CompTally>;
   form: FormMark[];
 };
+
+// Mínimo de partidos pronosticados por los dos para que una pareja cuente
+const MIN_PAIR = 8;
 
 const rec = (): Rec => ({ h: 0, n: 0 });
 const bump = (r: Rec, hit: boolean) => {
@@ -244,6 +259,8 @@ export function computeStats(input: {
   const hitByResult: Record<Pick, Rec> = { '1': rec(), X: rec(), '2': rec() };
   const groupComp: Record<string, Rec> = Object.fromEntries(comps.map((c) => [c, rec()]));
   const insights: MatchInsight[] = [];
+  // Coincidencias entre cada pareja de jugadores (i < j)
+  const pairs = new Map<string, { same: number; n: number }>();
 
   for (const m of finished) {
     const key = rk(m);
@@ -329,6 +346,21 @@ export function computeStats(input: {
       if (pick === '1') home.pickedWin++;
       if (pick === '2') away.pickedWin++;
     }
+    // Siamesismo: en este partido, ¿qué parejas pusieron lo mismo?
+    if (pm) {
+      for (let i = 0; i < players.length; i++) {
+        const pi = pm.get(players[i].id);
+        if (!pi) continue;
+        for (let j = i + 1; j < players.length; j++) {
+          const pj = pm.get(players[j].id);
+          if (!pj) continue;
+          const k = `${i}|${j}`;
+          const c = pairs.get(k) ?? pairs.set(k, { same: 0, n: 0 }).get(k)!;
+          c.n++;
+          if (pi === pj) c.same++;
+        }
+      }
+    }
     insights.push({
       matchId: m.id,
       round: roundByKey.get(key)!.label,
@@ -394,7 +426,7 @@ export function computeStats(input: {
       return { label: 'Forastero', detail: 'le da la victoria al visitante más que la media del grupo' };
     }
     const bravePlayRate = a.played ? a.brave.n / a.played : 0;
-    if (bravePlayRate > 0.3) return { label: 'Atrevido', detail: 'se va con frecuencia en contra de la mayoría del grupo' };
+    if (bravePlayRate > 0.3) return { label: 'La suegra', detail: 'se va con frecuencia en contra de la mayoría del grupo' };
     if (bravePlayRate < 0.08) return { label: 'De favoritos', detail: 'casi siempre pronostica lo mismo que la mayoría' };
     return { label: 'Equilibrado', detail: 'no se inclina especialmente hacia ningún patrón' };
   };
@@ -458,6 +490,22 @@ export function computeStats(input: {
     };
   });
 
+  const siamese: Pair[] = [...pairs.entries()]
+    .filter(([, c]) => c.n >= MIN_PAIR)
+    .map(([k, c]) => {
+      const [i, j] = k.split('|').map(Number);
+      return {
+        a: players[i].id,
+        b: players[j].id,
+        aName: players[i].name,
+        bName: players[j].name,
+        same: c.same,
+        n: c.n,
+        pct: (c.same / c.n) * 100,
+      };
+    })
+    .sort((x, y) => y.pct - x.pct || y.n - x.n || x.aName.localeCompare(y.aName, 'es'));
+
   const scored = insights.filter((i) => i.n >= 2);
   const ratio = (i: MatchInsight) => i.hits / i.n;
   const hardest = [...scored]
@@ -473,6 +521,7 @@ export function computeStats(input: {
     liga,
     teams: [...teams.values()],
     players: playerStats,
+    siamese,
     group: { results, picks: picksCount, hitByResult, byComp: groupComp, hardest, easiest },
     evolution: { rounds: doneRounds, series },
   };

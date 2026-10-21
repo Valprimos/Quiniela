@@ -637,3 +637,22 @@ select {
 .top { flex-wrap: wrap; row-gap: 10px; }
 .brand { white-space: nowrap; }
 .top-actions { flex-wrap: wrap; justify-content: flex-end; gap: 6px 16px; margin-left: auto; }
+
+/* ===== Siamesismo ===== */
+.siam-hero { text-align: center; margin-top: 4px; }
+.siam-svg { width: 100%; max-width: 300px; height: auto; display: block; margin: 0 auto; }
+.siam-pct { fill: var(--text); font-family: var(--font-display); font-size: 30px; font-weight: 700; }
+.siam-who { display: flex; justify-content: center; align-items: baseline; gap: 8px; font-size: 20px; flex-wrap: wrap; }
+.siam-who span { color: var(--muted); font-size: 15px; }
+.siam-sub { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.siam-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.siam-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 62px; gap: 10px; align-items: center; }
+.siam-names { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.siam-names i { font-style: normal; color: var(--muted); font-weight: 400; }
+.siam-row.me .siam-names { color: var(--foco); }
+.siam-track { height: 8px; background: var(--panel); border-radius: 999px; overflow: hidden; }
+.siam-track i { display: block; height: 100%; border-radius: 999px; background: #b79cff; }
+.siam-row.me .siam-track i { background: var(--foco); }
+.siam-val { text-align: right; line-height: 1.1; }
+.siam-val b { font-family: var(--font-display); font-size: 18px; }
+.siam-val small { display: block; font-size: 11px; color: var(--muted); }
