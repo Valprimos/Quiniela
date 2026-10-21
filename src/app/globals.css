@@ -107,6 +107,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .resultbadge { margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle; }
 .resultbadge.hit { background: var(--ok); color: #04231a; }
 .resultbadge.miss { background: var(--panel-2); border: 1px solid var(--ko); color: var(--ko); }
+/* En vivo: nunca el relleno sólido de un resultado ya cerrado, para que no parezca definitivo */
+.resultbadge.live { background: transparent; animation: pulse 1.4s ease-in-out infinite; }
+.resultbadge.live.hit { border: 1px solid var(--ok); color: var(--ok); }
+.resultbadge.live.miss { border: 1px solid var(--ko); color: var(--ko); }
+@media (prefers-reduced-motion: reduce) { .resultbadge.live { animation: none; } }
 
 .slip { display: flex; gap: 6px; justify-content: center; }
 .box {
@@ -292,7 +297,8 @@ select {
 
 /* Estadísticas: grupo */
 .sh { margin: 28px 0 8px; font-family: var(--font-display); font-size: 24px; font-weight: 700; }
-.ggrid { display: grid; grid-template-columns: 1fr 60px 84px 62px; gap: 0 8px; align-items: center; }
+.ggrid { display: grid; grid-template-columns: 1fr 44px 44px 58px 58px; gap: 0 4px; align-items: center; }
+.ggrid .gh { font-size: 10px; line-height: 1.15; text-align: center; }
 .gh { font-size: 12px; color: var(--muted); text-align: center; }
 .grow { display: contents; }
 .grow > * { padding: 8px 0; border-top: 1px dashed var(--line); }

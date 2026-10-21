@@ -58,6 +58,7 @@ export type StatsDTO = {
     results: Record<Pick, number>;
     picks: Record<Pick, number>;
     hitByResult: Record<Pick, Rec>;
+    hitByPick: Record<Pick, Rec>;
     hardest: MatchInsight[];
     easiest: MatchInsight[];
   };
@@ -148,6 +149,7 @@ export function computeStats(input: {
   const results: Record<Pick, number> = { '1': 0, X: 0, '2': 0 };
   const picksCount: Record<Pick, number> = { '1': 0, X: 0, '2': 0 };
   const hitByResult: Record<Pick, Rec> = { '1': rec(), X: rec(), '2': rec() };
+  const hitByPick: Record<Pick, Rec> = { '1': rec(), X: rec(), '2': rec() };
   const insights: MatchInsight[] = [];
 
   for (const m of finished) {
@@ -203,6 +205,7 @@ export function computeStats(input: {
       bump(a.byPick[pick], hit);
       picksCount[pick]++;
       bump(hitByResult[res], hit);
+      bump(hitByPick[pick], hit);
       for (const who of [pl.id, '*']) {
         bump(cellOf(home, who).total, hit);
         bump(cellOf(home, who).home, hit);
@@ -346,7 +349,7 @@ export function computeStats(input: {
     liga,
     teams: [...teams.values()],
     players: playerStats,
-    group: { results, picks: picksCount, hitByResult, hardest, easiest },
+    group: { results, picks: picksCount, hitByResult, hitByPick, hardest, easiest },
     evolution: { matchdays: mds, series },
   };
 }

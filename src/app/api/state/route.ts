@@ -154,23 +154,30 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // Puntos provisionales de la jornada actual, con los partidos en juego contando como si
-  // ya hubieran terminado (para que la clasificación de la jornada se pueda seguir en directo)
+  // Cuántos partidos de la jornada están ahora mismo en juego (para avisar de que la
+  // clasificación puede cambiar, sin inventar una proyección de puntos por jugador).
   const jornadaHasLive = matches.some((m) => m.provisional);
-  const provisionalPts = new Map<string, number>();
-  if (jornadaHasLive) {
-    for (const m of matches) {
-      if (!m.liveResult) continue;
-      for (const c of preds.filter((p) => p.match_id === m.id)) {
-        const gained = m.isPleno
-          ? c.pleno_home === m.homeScore && c.pleno_away === m.awayScore
-            ? 3
-            : 0
-          : c.pick === m.liveResult
-            ? 1
-            : 0;
-        if (gained) provisionalPts.set(c.player_id, (provisionalPts.get(c.player_id) ?? 0) + gained);
-      }
+  const liveCount = matches.filter((m) => m.provisional).length;
+
+  // Máximo de puntos que podía sacar cada jugador según sus PROPIOS pronósticos sobre
+  // partidos ya terminados (no el total de partidos de la competición, que puede incluir
+  // partidos de antes de que ese jugador empezara a jugar). Un pleno al 15 vale 3, el resto 1.
+  const jornadaMaxPts = new Map<string, number>();
+  for (const m of matches) {
+    if (!m.result) continue;
+    for (const c of preds.filter((p) => p.match_id === m.id)) {
+      jornadaMaxPts.set(c.player_id, (jornadaMaxPts.get(c.player_id) ?? 0) + (m.isPleno ? 3 : 1));
+    }
+  }
+
+  const finishedIds = allMatches.filter(isFinished).map((m) => m.id);
+  const plenoIdSet = new Set(allMatches.filter((m) => m.is_pleno).map((m) => m.id));
+  let generalMaxPts = new Map<string, number>();
+  if (finishedIds.length) {
+    const { data } = await supabase.from('predictions').select('player_id,match_id').in('match_id', finishedIds);
+    for (const p of data ?? []) {
+      if (!playerIds.has(p.player_id)) continue;
+      generalMaxPts.set(p.player_id, (generalMaxPts.get(p.player_id) ?? 0) + (plenoIdSet.has(p.match_id) ? 3 : 1));
     }
   }
 
@@ -196,7 +203,7 @@ export async function GET(req: NextRequest) {
   const prevPos = positions(before);
   const currentStarted = allMatches.some((m) => m.matchday === current && isFinished(m));
 
-  const rank = (scores: Map<string, number>, withDelta: boolean) =>
+  const rank = (scores: Map<string, number>, withDelta: boolean, maxPts: Map<string, number>) =>
     playerRows
       .map((p) => ({
         playerId: p.id,
@@ -204,6 +211,9 @@ export async function GET(req: NextRequest) {
         points: scores.get(p.id) ?? 0,
         // subida (+) o bajada (-) de puestos respecto a antes de la jornada actual
         delta: withDelta && currentStarted ? (prevPos.get(p.id) ?? 0) - (nowPos.get(p.id) ?? 0) : 0,
+        // máximo de puntos que podía sacar ESTE jugador según sus propios pronósticos,
+        // no el total de partidos de la competición (para el % individual)
+        maxPts: maxPts.get(p.id) ?? 0,
       }))
       .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
 
@@ -221,22 +231,40 @@ export async function GET(req: NextRequest) {
     if (!playerIds.has(r.player_id)) continue;
     combined.set(r.player_id, (combined.get(r.player_id) ?? 0) + r.points);
   }
-  const rankingCombinada = playerRows
-    .map((p) => ({ playerId: p.id, name: p.name, points: combined.get(p.id) ?? 0, delta: 0 }))
-    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
 
-  // Partidos terminados en TODAS las competiciones, para el % de la clasificación combinada
+  // Partidos terminados en TODAS las competiciones, para el máximo de puntos individual
+  // de la clasificación combinada (igual que generalMaxPts, pero sin filtrar por competición)
   const finishedByComp = await Promise.all(
     COMPETITIONS.map((c) =>
-      supabase
-        .from('matches')
-        .select('id', { count: 'exact', head: true })
-        .eq('competition', c.code)
-        .eq('season', season)
-        .eq('status', 'FINISHED')
+      supabase.from('matches').select('id,is_pleno').eq('competition', c.code).eq('season', season).eq('status', 'FINISHED')
     )
   );
-  const finishedTotalCombined = finishedByComp.reduce((sum, r) => sum + (r.count ?? 0), 0);
+  const finishedAllComp = finishedByComp.flatMap((r) => r.data ?? []);
+  const finishedTotalCombined = finishedAllComp.length;
+  const plenoIdSetCombined = new Set(finishedAllComp.filter((m) => m.is_pleno).map((m) => m.id));
+  const combinedMaxPts = new Map<string, number>();
+  if (finishedAllComp.length) {
+    const { data } = await supabase
+      .from('predictions')
+      .select('player_id,match_id')
+      .in(
+        'match_id',
+        finishedAllComp.map((m) => m.id)
+      );
+    for (const p of data ?? []) {
+      if (!playerIds.has(p.player_id)) continue;
+      combinedMaxPts.set(p.player_id, (combinedMaxPts.get(p.player_id) ?? 0) + (plenoIdSetCombined.has(p.match_id) ? 3 : 1));
+    }
+  }
+  const rankingCombinada = playerRows
+    .map((p) => ({
+      playerId: p.id,
+      name: p.name,
+      points: combined.get(p.id) ?? 0,
+      delta: 0,
+      maxPts: combinedMaxPts.get(p.id) ?? 0,
+    }))
+    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
 
   return NextResponse.json({
     me: { id: session.pid, name: session.name, admin: session.admin },
@@ -253,8 +281,9 @@ export async function GET(req: NextRequest) {
     finishedTotalCombined,
     jornadaComplete: matches.length > 0 && matches.every((m) => m.result),
     jornadaLive: jornadaHasLive,
-    rankingJornada: rank(jornada, false).map((r) => ({ ...r, provisional: provisionalPts.get(r.playerId) ?? 0 })),
-    rankingGeneral: rank(total, true),
+    liveCount,
+    rankingJornada: rank(jornada, false, jornadaMaxPts),
+    rankingGeneral: rank(total, true, generalMaxPts),
     rankingCombinada,
     syncNotice: syncResult.find((s) => s.error)?.error
       ? syncResult.filter((s) => s.error).map((s) => `${s.competition}: ${s.error}`)

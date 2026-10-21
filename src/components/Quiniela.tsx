@@ -29,7 +29,7 @@ type MatchDTO = {
   myPlenoGuess: { home: number; away: number } | null;
   picks: { name: string; pick: Pick; plenoGuess: { home: number; away: number } | null }[];
 };
-type RankRow = { playerId: string; name: string; points: number; delta: number; provisional?: number };
+type RankRow = { playerId: string; name: string; points: number; delta: number; maxPts: number };
 type CompetitionInfo = { code: string; name: string; short: string };
 type StateDTO = {
   me: { id: string; name: string; admin: boolean };
@@ -46,6 +46,7 @@ type StateDTO = {
   finishedTotalCombined: number;
   jornadaComplete: boolean;
   jornadaLive: boolean;
+  liveCount: number;
   rankingJornada: RankRow[];
   rankingGeneral: RankRow[];
   rankingCombinada: RankRow[];
@@ -142,9 +143,12 @@ function ResultBadge({ m }: { m: MatchDTO }) {
   const real = final ? m.result : m.provisional ? m.liveResult : null;
   if (real == null || m.myPick == null) return null;
   const hit = m.myPick === real;
-  return (
-    <span className={`resultbadge${hit ? ' hit' : ' miss'}`}>{hit ? `Acertaste${final ? ' +1' : ''}` : 'Fallaste'}</span>
-  );
+  if (!final) {
+    return (
+      <span className={`resultbadge live${hit ? ' hit' : ' miss'}`}>{hit ? 'Vas acertando' : 'Vas fallando'}</span>
+    );
+  }
+  return <span className={`resultbadge${hit ? ' hit' : ' miss'}`}>{hit ? 'Acertaste +1' : 'Fallaste'}</span>;
 }
 
 
@@ -345,15 +349,11 @@ function Ranking({
   meId,
   showDelta,
   crown,
-  provisional,
-  maxPossible,
 }: {
   rows: RankRow[];
   meId: string;
   showDelta: boolean;
   crown: boolean;
-  provisional: boolean;
-  maxPossible: number;
 }) {
   let pos = 0;
   let prev: number | null = null;
@@ -365,7 +365,10 @@ function Ranking({
           pos = i + 1;
           prev = r.points;
         }
-        const pct = maxPossible > 0 ? Math.round((r.points / maxPossible) * 100) : null;
+        // El % es sobre lo que ESTE jugador podía sacar según sus propios pronósticos,
+        // no sobre el total de partidos de la competición (si no, no cuadra si alguien
+        // se ha saltado algún pronóstico o empezó a jugar más tarde).
+        const pct = r.maxPts > 0 ? Math.round((r.points / r.maxPts) * 100) : null;
         const barWidth = (r.points / topPoints) * 100;
         return (
           <li key={r.playerId} className={r.playerId === meId ? 'me' : ''}>
@@ -384,10 +387,7 @@ function Ranking({
               {showDelta && r.delta < 0 && <span className="down">▼{-r.delta}</span>}
             </span>
             <span className="pctpts">{pct != null ? `${pct}%` : ''}</span>
-            <span className="pts">
-              {r.points}
-              {provisional && !!r.provisional && <small className="ptslive">+{r.provisional} en vivo</small>}
-            </span>
+            <span className="pts">{r.points}</span>
           </li>
         );
       })}
@@ -864,16 +864,13 @@ export default function Quiniela() {
               </button>
             </div>
             {scope === 'combinada' && <p className="hint">Suma los puntos de Primera y Champions esta temporada.</p>}
-            <Ranking
-              rows={rankRows}
-              meId={data.me.id}
-              showDelta={scope === 'general'}
-              crown={scope === 'jornada' && data.jornadaComplete}
-              provisional={scope === 'jornada' && data.jornadaLive}
-              maxPossible={
-                scope === 'jornada' ? data.finished : scope === 'general' ? data.finishedTotal : data.finishedTotalCombined
-              }
-            />
+            {scope === 'jornada' && data.liveCount > 0 && (
+              <p className="hint">
+                {data.liveCount === 1 ? 'Hay 1 partido en juego ahora mismo' : `Hay ${data.liveCount} partidos en juego ahora mismo`}.
+                La clasificación puede cambiar según acaben.
+              </p>
+            )}
+            <Ranking rows={rankRows} meId={data.me.id} showDelta={scope === 'general'} crown={scope === 'jornada' && data.jornadaComplete} />
             <div className="share">
               <button type="button" className="link" onClick={shareRanking}>
                 Compartir clasificación

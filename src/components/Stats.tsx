@@ -430,20 +430,28 @@ function Grupo({ stats, meId }: { stats: StatsDTO; meId: string }) {
       {totalRes === 0 ? (
         <p className="muted">Aún no hay partidos terminados.</p>
       ) : (
-        <div className="ggrid">
-          <span />
-          <span className="gh">Pasa</span>
-          <span className="gh">Pronosticáis</span>
-          <span className="gh">Acertáis</span>
-          {rows.map((r) => (
-            <div key={r.k} className="grow">
-              <span className="glabel">{r.label}</span>
-              <b>{share(g.results[r.k], totalRes)}</b>
-              <b>{share(g.picks[r.k], totalPicks)}</b>
-              <b>{fmt(pctOf(g.hitByResult[r.k]))}{g.hitByResult[r.k].n ? '%' : ''}</b>
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="ggrid">
+            <span />
+            <span className="gh">Pasa</span>
+            <span className="gh">Jugáis</span>
+            <span className="gh">Acierto si pasa</span>
+            <span className="gh">Acierto si jugáis</span>
+            {rows.map((r) => (
+              <div key={r.k} className="grow">
+                <span className="glabel">{r.label}</span>
+                <b>{share(g.results[r.k], totalRes)}</b>
+                <b>{share(g.picks[r.k], totalPicks)}</b>
+                <b>{fmt(pctOf(g.hitByResult[r.k]))}{g.hitByResult[r.k].n ? '%' : ''}</b>
+                <b>{fmt(pctOf(g.hitByPick[r.k]))}{g.hitByPick[r.k].n ? '%' : ''}</b>
+              </div>
+            ))}
+          </div>
+          <p className="hint">
+            "Acierto si pasa" es de las veces que ocurrió ese resultado, cuántas lo teníais puesto.
+            "Acierto si jugáis" es de las veces que pronosticasteis ese resultado, cuántas acertó.
+          </p>
+        </>
       )}
 
       <h2 className="sh">Evolución de aciertos</h2>
