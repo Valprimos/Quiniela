@@ -628,3 +628,12 @@ select {
 .pmore[open] summary { margin-bottom: 6px; }
 .pmore summary:hover { color: var(--text); }
 .pmore .pfacts { grid-template-columns: 1fr; }
+
+/* ===== Avisos push ===== */
+.notifypanel h3.sh.small { font-size: 18px; margin: 0; }
+.notifypanel .row { flex-wrap: wrap; }
+.notifypanel .primary.notify-btn { padding: 0 20px; }
+.notifypanel p { margin: 0; }
+.top { flex-wrap: wrap; row-gap: 10px; }
+.brand { white-space: nowrap; }
+.top-actions { flex-wrap: wrap; justify-content: flex-end; gap: 6px 16px; margin-left: auto; }

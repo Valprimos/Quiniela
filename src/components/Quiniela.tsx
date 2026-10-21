@@ -3,6 +3,8 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Stats from './Stats';
+import NotifyPanel from './NotifyPanel';
+import { unsubscribeBrowser } from '@/lib/pushClient';
 import TeamModal from './TeamModal';
 import H2HModal from './H2HModal';
 import Archive from './Archive';
@@ -477,6 +479,7 @@ export default function Quiniela() {
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [showPin, setShowPin] = useState(false);
+  const [showNotify, setShowNotify] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
   const [teamStack, setTeamStack] = useState<{ name: string; crest: string | null }[]>([]);
@@ -616,6 +619,19 @@ export default function Quiniela() {
   }
 
   async function logout() {
+    // Al salir, este dispositivo deja de recibir los avisos de este jugador
+    try {
+      const endpoint = await unsubscribeBrowser();
+      if (endpoint) {
+        await fetch('/api/push', {
+          method: 'DELETE',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ endpoint }),
+        });
+      }
+    } catch {
+      /* no bloquea la salida */
+    }
     await fetch('/api/logout', { method: 'POST' });
     router.replace('/login');
     router.refresh();
@@ -690,6 +706,9 @@ export default function Quiniela() {
               Admin
             </button>
           )}
+          <button type="button" className="link" onClick={() => setShowNotify((v) => !v)}>
+            Avisos
+          </button>
           <button type="button" className="link" onClick={() => setShowPin((v) => !v)}>
             Cambiar PIN
           </button>
@@ -712,6 +731,7 @@ export default function Quiniela() {
         ))}
       </div>
 
+      {showNotify && <NotifyPanel onClose={() => setShowNotify(false)} />}
       {showPin && <PinPanel onClose={() => setShowPin(false)} />}
       {showAdmin && (
         <AdminPanel

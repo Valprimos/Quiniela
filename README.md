@@ -78,6 +78,31 @@ temporada (normalmente uno o dos partidos), separado del historial normal de cad
 favoritos o Equilibrado) calculada comparando sus pronósticos con lo que pasa de verdad y con la
 mayoría del grupo; hace falta un mínimo de pronósticos para que salga.
 
+## Avisos de jornada (PWA)
+
+Cada jugador puede pulsar **Avisos** en la cabecera para activar notificaciones en ese dispositivo
+y elegir con cuánta antelación quiere el aviso (1 h, 3 h, 12 h o 1 día). Si se acerca un partido
+que no ha pronosticado, le llega una notificación; si ya lo tiene todo, no. Como mucho se avisa una
+vez por jornada y día de partidos, y no se avisa de jornadas bloqueadas por un admin. Al salir de
+sesión, ese dispositivo deja de recibir avisos de ese jugador.
+
+Puesta en marcha (una sola vez):
+
+1. Supabase > SQL Editor: ejecuta `supabase/migration-4-push.sql` (instalaciones nuevas: ya viene
+   en `schema.sql`).
+2. Genera las claves: `npx web-push generate-vapid-keys`.
+3. Variables de entorno en Vercel (y redeploy, porque la pública se incrusta al compilar):
+   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (por ejemplo `mailto:tu@correo.com`) y
+   `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (el mismo valor que `VAPID_PUBLIC_KEY`).
+4. El workflow `.github/workflows/notify.yml` llama cada 10 min a `/api/cron/notify` con los mismos
+   secretos `APP_URL` y `CRON_SECRET` que el de sincronización.
+
+Probar a mano qué se enviaría, sin enviar nada: `curl -H "Authorization: Bearer $CRON_SECRET"
+"$APP_URL/api/cron/notify?dry=1"`.
+
+En iPhone/iPad los avisos solo funcionan si la web está añadida a la pantalla de inicio (iOS 16.4
+o superior). En Android y ordenador funcionan directamente desde el navegador.
+
 ## Panel de admin
 
 Solo lo ve quien tiene `is_admin`. Desde ahí se puede:
