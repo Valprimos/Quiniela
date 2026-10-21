@@ -1,8 +1,24 @@
 import { LigaRow, MatchLite, isFinished } from './league';
 import { Pick, resultOf } from './scoring';
+import { STAGE_LABEL, competitionDef } from './competitions';
 
 export type Rec = { h: number; n: number }; // aciertos / pronósticos
 type Cell = { total: Rec; home: Rec; away: Rec };
+
+// Una "ronda" es una jornada de una competición. Cuando se mezclan Primera y Champions,
+// las rondas se ordenan por fecha para poder dibujarlas en una misma línea de tiempo.
+export type Round = {
+  key: number; // identificador interno (orden cronológico)
+  comp: string; // 'PD' | 'CL'
+  matchday: number;
+  label: string; // "J5", o "Champions J3" si hay varias competiciones
+  short: string; // "J5", "8º"...
+  done: number; // partidos terminados
+  total: number; // partidos de la ronda
+};
+
+export type CompTally = { hits: number; played: number; points: number };
+export type FormMark = 'H' | 'M' | '-'; // acierto, fallo, sin pronosticar
 
 export type TeamAcc = {
   team: string;
@@ -21,13 +37,16 @@ export type PlayerStat = {
   played: number;
   missed: number;
   pct: number | null;
+  // Puntos reales de la quiniela (1 por acierto; el pleno al 15 vale 3 si aciertas el marcador)
+  points: number;
   byPick: Record<Pick, Rec>;
   streak: number;
   bestStreak: number;
+  worstStreak: number; // mayor racha seguida de fallos
   wins: number;
   plenos: number;
-  best: { matchday: number; points: number } | null;
-  worst: { matchday: number; points: number } | null;
+  best: { round: string; points: number } | null;
+  worst: { round: string; points: number } | null;
   avg: number | null;
   // Cuántas veces se fue en contra de lo que votaba la mayoría del grupo, y cuántas acertó al hacerlo
   brave: Rec;
@@ -35,12 +54,16 @@ export type PlayerStat = {
   jinx: { team: string; pct: number } | null;
   // Pleno al 15: aciertos de marcador exacto (h) sobre cuántos ha jugado (n)
   pleno15: Rec;
+  // Desglose por competición (clave: 'PD', 'CL')
+  byComp: Record<string, CompTally>;
+  // Últimos 10 partidos terminados, del más antiguo al más reciente
+  form: FormMark[];
   style: { label: string; detail: string } | null;
 };
 
 export type MatchInsight = {
   matchId: number;
-  matchday: number;
+  round: string;
   home: string;
   away: string;
   homeScore: number;
@@ -51,6 +74,7 @@ export type MatchInsight = {
 
 export type StatsDTO = {
   finished: number;
+  comps: string[]; // competiciones incluidas
   liga: LigaRow[];
   teams: TeamAcc[];
   players: PlayerStat[];
@@ -58,13 +82,18 @@ export type StatsDTO = {
     results: Record<Pick, number>;
     picks: Record<Pick, number>;
     hitByResult: Record<Pick, Rec>;
-    hitByPick: Record<Pick, Rec>;
+    byComp: Record<string, Rec>;
     hardest: MatchInsight[];
     easiest: MatchInsight[];
   };
   evolution: {
-    matchdays: number[];
-    series: { playerId: string; name: string; values: number[] }[];
+    rounds: Round[]; // solo las que ya tienen partidos terminados
+    series: {
+      playerId: string;
+      name: string;
+      values: number[]; // puntos acumulados
+      per: (number | null)[]; // puntos en cada ronda (null = no pronosticó)
+    }[];
   };
 };
 
@@ -72,13 +101,19 @@ type Agg = {
   hits: number;
   played: number;
   missed: number;
+  points: number;
   byPick: Record<Pick, Rec>;
   cur: number;
   best: number;
-  md: Map<number, number>; // aciertos por jornada
-  pickedMds: Set<number>; // jornadas en las que pronosticó algo
+  lose: number;
+  worstLose: number;
+  md: Map<number, number>; // aciertos por ronda
+  pts: Map<number, number>; // puntos por ronda
+  pickedMds: Set<number>; // rondas en las que pronosticó algo
   brave: Rec;
   pleno15: Rec; // aciertos exactos del "pleno al 15" (h) sobre cuántos jugó (n)
+  comp: Record<string, CompTally>;
+  form: FormMark[];
 };
 
 const rec = (): Rec => ({ h: 0, n: 0 });
@@ -87,6 +122,51 @@ const bump = (r: Rec, hit: boolean) => {
   if (hit) r.h++;
 };
 
+const STAGE_SHORT: Record<string, string> = {
+  PLAYOFFS: 'PO',
+  LAST_16: '8º',
+  ROUND_OF_16: '8º',
+  QUARTER_FINALS: '4º',
+  SEMI_FINALS: 'SF',
+  FINAL: 'F',
+};
+
+function buildRounds(matches: MatchLite[], multi: boolean): Round[] {
+  const groups = new Map<string, MatchLite[]>();
+  for (const m of matches) {
+    const k = `${m.competition}|${m.matchday}`;
+    const g = groups.get(k);
+    if (g) g.push(m);
+    else groups.set(k, [m]);
+  }
+  const list = [...groups.values()].map((ms) => {
+    const times = ms.map((m) => new Date(m.utc_date).getTime()).sort((a, b) => a - b);
+    return { ms, median: times[Math.floor(times.length / 2)] };
+  });
+  // Con una sola competición se respeta el número de jornada; con varias, la fecha
+  list.sort((a, b) =>
+    multi
+      ? a.median - b.median ||
+        a.ms[0].competition.localeCompare(b.ms[0].competition) ||
+        a.ms[0].matchday - b.ms[0].matchday
+      : a.ms[0].matchday - b.ms[0].matchday
+  );
+  return list.map(({ ms }, i) => {
+    const { competition: comp, matchday, stage } = ms[0];
+    const ko = matchday >= 100;
+    const base = ko ? (stage && STAGE_LABEL[stage]) || `Eliminatoria ${matchday - 99}` : `J${matchday}`;
+    return {
+      key: i + 1,
+      comp,
+      matchday,
+      label: multi ? `${competitionDef(comp).short} ${base}` : base,
+      short: ko ? (stage && STAGE_SHORT[stage]) || 'E' : `J${matchday}`,
+      done: ms.filter(isFinished).length,
+      total: ms.length,
+    };
+  });
+}
+
 export function computeStats(input: {
   matches: MatchLite[];
   preds: { player_id: string; match_id: number; pick: string; pleno_home?: number | null; pleno_away?: number | null }[];
@@ -94,6 +174,13 @@ export function computeStats(input: {
   liga: LigaRow[];
 }): StatsDTO {
   const { matches, preds, players, liga } = input;
+  const comps = [...new Set(matches.map((m) => m.competition))].sort();
+  const multi = comps.length > 1;
+  const rounds = buildRounds(matches, multi);
+  const roundOf = new Map(rounds.map((r) => [`${r.comp}|${r.matchday}`, r]));
+  const rk = (m: MatchLite) => roundOf.get(`${m.competition}|${m.matchday}`)!.key;
+  const roundByKey = new Map(rounds.map((r) => [r.key, r]));
+
   const finished = matches
     .filter(isFinished)
     .sort((a, b) => new Date(a.utc_date).getTime() - new Date(b.utc_date).getTime() || a.id - b.id);
@@ -126,9 +213,9 @@ export function computeStats(input: {
 
   const mdTotal = new Map<number, number>();
   const mdDone = new Map<number, number>();
-  for (const m of matches) mdTotal.set(m.matchday, (mdTotal.get(m.matchday) ?? 0) + 1);
-  for (const m of finished) mdDone.set(m.matchday, (mdDone.get(m.matchday) ?? 0) + 1);
-  const complete = (md: number) => mdTotal.get(md) === mdDone.get(md);
+  for (const m of matches) mdTotal.set(rk(m), (mdTotal.get(rk(m)) ?? 0) + 1);
+  for (const m of finished) mdDone.set(rk(m), (mdDone.get(rk(m)) ?? 0) + 1);
+  const complete = (key: number) => mdTotal.get(key) === mdDone.get(key);
 
   const aggs = new Map<string, Agg>();
   for (const p of players) {
@@ -136,23 +223,30 @@ export function computeStats(input: {
       hits: 0,
       played: 0,
       missed: 0,
+      points: 0,
       byPick: { '1': rec(), X: rec(), '2': rec() },
       cur: 0,
       best: 0,
+      lose: 0,
+      worstLose: 0,
       md: new Map(),
+      pts: new Map(),
       pickedMds: new Set(),
       brave: rec(),
       pleno15: rec(),
+      comp: Object.fromEntries(comps.map((c) => [c, { hits: 0, played: 0, points: 0 }])),
+      form: [],
     });
   }
 
   const results: Record<Pick, number> = { '1': 0, X: 0, '2': 0 };
   const picksCount: Record<Pick, number> = { '1': 0, X: 0, '2': 0 };
   const hitByResult: Record<Pick, Rec> = { '1': rec(), X: rec(), '2': rec() };
-  const hitByPick: Record<Pick, Rec> = { '1': rec(), X: rec(), '2': rec() };
+  const groupComp: Record<string, Rec> = Object.fromEntries(comps.map((c) => [c, rec()]));
   const insights: MatchInsight[] = [];
 
   for (const m of finished) {
+    const key = rk(m);
     const res = resultOf(m.status, m.home_score, m.away_score) as Pick;
     results[res]++;
     const home = team(m.home_name, m.home_crest);
@@ -177,35 +271,53 @@ export function computeStats(input: {
 
     for (const pl of players) {
       const a = aggs.get(pl.id)!;
-      a.md.set(m.matchday, a.md.get(m.matchday) ?? 0);
+      a.md.set(key, a.md.get(key) ?? 0);
+      a.pts.set(key, a.pts.get(key) ?? 0);
       const pick = pm?.get(pl.id);
       if (!pick) {
         a.missed++;
         a.cur = 0;
+        a.form.push('-');
         continue;
       }
       const hit = pick === res;
       n++;
       if (hit) hits++;
       a.played++;
-      a.pickedMds.add(m.matchday);
+      a.pickedMds.add(key);
       if (majority && pick !== majority && tally[majority] > tally[pick]) bump(a.brave, hit);
-      if (pg?.has(pl.id)) {
-        const g = pg.get(pl.id)!;
-        bump(a.pleno15, g.home === m.home_score && g.away === m.away_score);
+
+      // Mismos puntos que la clasificación: 1 por acierto; en el pleno, 3 si clavas el marcador
+      let pts = hit ? 1 : 0;
+      if (m.is_pleno) {
+        const g = pg?.get(pl.id);
+        const exact = !!g && g.home === m.home_score && g.away === m.away_score;
+        if (g) bump(a.pleno15, exact);
+        pts = exact ? 3 : 0;
       }
+      a.points += pts;
+      a.pts.set(key, (a.pts.get(key) ?? 0) + pts);
+      const ct = a.comp[m.competition];
+      ct.played++;
+      ct.points += pts;
+      if (hit) ct.hits++;
+
       if (hit) {
         a.hits++;
         a.cur++;
         a.best = Math.max(a.best, a.cur);
-        a.md.set(m.matchday, (a.md.get(m.matchday) ?? 0) + 1);
+        a.lose = 0;
+        a.md.set(key, (a.md.get(key) ?? 0) + 1);
       } else {
         a.cur = 0;
+        a.lose++;
+        a.worstLose = Math.max(a.worstLose, a.lose);
       }
+      a.form.push(hit ? 'H' : 'M');
       bump(a.byPick[pick], hit);
       picksCount[pick]++;
       bump(hitByResult[res], hit);
-      bump(hitByPick[pick], hit);
+      bump(groupComp[m.competition], hit);
       for (const who of [pl.id, '*']) {
         bump(cellOf(home, who).total, hit);
         bump(cellOf(home, who).home, hit);
@@ -219,7 +331,7 @@ export function computeStats(input: {
     }
     insights.push({
       matchId: m.id,
-      matchday: m.matchday,
+      round: roundByKey.get(key)!.label,
       home: m.home_name,
       away: m.away_name,
       homeScore: m.home_score,
@@ -229,16 +341,17 @@ export function computeStats(input: {
     });
   }
 
-  // Jornadas ganadas y plenos: solo en jornadas completas
+  // Jornadas ganadas y plenos: solo en rondas completas
   const completed = [...mdTotal.keys()].filter(complete).sort((a, b) => a - b);
   const wins = new Map<string, number>();
   const plenos = new Map<string, number>();
-  for (const md of completed) {
-    const pts = players.map((p) => aggs.get(p.id)!.md.get(md) ?? 0);
+  for (const key of completed) {
+    const pts = players.map((p) => aggs.get(p.id)!.pts.get(key) ?? 0);
     const max = Math.max(0, ...pts);
     players.forEach((p, i) => {
       if (max > 0 && pts[i] === max) wins.set(p.id, (wins.get(p.id) ?? 0) + 1);
-      if (pts[i] > 0 && pts[i] === mdTotal.get(md)) plenos.set(p.id, (plenos.get(p.id) ?? 0) + 1);
+      const h = aggs.get(p.id)!.md.get(key) ?? 0;
+      if (h > 0 && h === mdTotal.get(key)) plenos.set(p.id, (plenos.get(p.id) ?? 0) + 1);
     });
   }
 
@@ -288,15 +401,16 @@ export function computeStats(input: {
 
   const playerStats: PlayerStat[] = players.map((p) => {
     const a = aggs.get(p.id)!;
-    const own = completed.filter((md) => a.pickedMds.has(md));
+    const own = completed.filter((key) => a.pickedMds.has(key));
     let best: PlayerStat['best'] = null;
     let worst: PlayerStat['worst'] = null;
     let sum = 0;
-    for (const md of own) {
-      const pts = a.md.get(md) ?? 0;
+    for (const key of own) {
+      const pts = a.pts.get(key) ?? 0;
+      const label = roundByKey.get(key)!.label;
       sum += pts;
-      if (!best || pts > best.points) best = { matchday: md, points: pts };
-      if (!worst || pts < worst.points) worst = { matchday: md, points: pts };
+      if (!best || pts > best.points) best = { round: label, points: pts };
+      if (!worst || pts < worst.points) worst = { round: label, points: pts };
     }
     return {
       playerId: p.id,
@@ -305,9 +419,11 @@ export function computeStats(input: {
       played: a.played,
       missed: a.missed,
       pct: a.played ? (a.hits / a.played) * 100 : null,
+      points: a.points,
       byPick: a.byPick,
       streak: a.cur,
       bestStreak: a.best,
+      worstStreak: a.worstLose,
       wins: wins.get(p.id) ?? 0,
       plenos: plenos.get(p.id) ?? 0,
       best,
@@ -316,40 +432,48 @@ export function computeStats(input: {
       brave: a.brave,
       jinx: jinxOf(p.id),
       pleno15: a.pleno15,
+      byComp: a.comp,
+      form: a.form.slice(-10),
       style: styleOf(a),
     };
   });
   playerStats.sort(
-    (a, b) => b.hits - a.hits || (b.pct ?? -1) - (a.pct ?? -1) || a.name.localeCompare(b.name, 'es')
+    (a, b) =>
+      b.points - a.points ||
+      b.hits - a.hits ||
+      (b.pct ?? -1) - (a.pct ?? -1) ||
+      a.name.localeCompare(b.name, 'es')
   );
 
-  // Evolución acumulada por jornada
-  const mds = [...mdDone.keys()].sort((a, b) => a - b);
-  const series = players.map((p) => {
-    const a = aggs.get(p.id)!;
+  // Evolución acumulada por ronda (en el mismo orden que la lista de jugadores)
+  const doneRounds = rounds.filter((r) => (mdDone.get(r.key) ?? 0) > 0);
+  const series = playerStats.map((ps) => {
+    const a = aggs.get(ps.playerId)!;
     let run = 0;
     return {
-      playerId: p.id,
-      name: p.name,
-      values: mds.map((md) => (run += a.md.get(md) ?? 0)),
+      playerId: ps.playerId,
+      name: ps.name,
+      values: doneRounds.map((r) => (run += a.pts.get(r.key) ?? 0)),
+      per: doneRounds.map((r) => (a.pickedMds.has(r.key) ? a.pts.get(r.key) ?? 0 : null)),
     };
   });
 
   const scored = insights.filter((i) => i.n >= 2);
   const ratio = (i: MatchInsight) => i.hits / i.n;
   const hardest = [...scored]
-    .sort((a, b) => ratio(a) - ratio(b) || b.n - a.n || b.matchday - a.matchday)
+    .sort((a, b) => ratio(a) - ratio(b) || b.n - a.n || b.matchId - a.matchId)
     .slice(0, 5);
   const easiest = [...scored]
-    .sort((a, b) => ratio(b) - ratio(a) || b.n - a.n || b.matchday - a.matchday)
+    .sort((a, b) => ratio(b) - ratio(a) || b.n - a.n || b.matchId - a.matchId)
     .slice(0, 5);
 
   return {
     finished: finished.length,
+    comps,
     liga,
     teams: [...teams.values()],
     players: playerStats,
-    group: { results, picks: picksCount, hitByResult, hitByPick, hardest, easiest },
-    evolution: { matchdays: mds, series },
+    group: { results, picks: picksCount, hitByResult, byComp: groupComp, hardest, easiest },
+    evolution: { rounds: doneRounds, series },
   };
 }

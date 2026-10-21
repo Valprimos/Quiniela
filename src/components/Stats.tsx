@@ -5,16 +5,15 @@ import type { CSSProperties } from 'react';
 import type { StatsDTO, Rec, TeamAcc, MatchInsight } from '@/lib/stats';
 import type { LigaRow, Rec5 } from '@/lib/league';
 import { H2HBody } from './H2HModal';
+import PlayersView from './PlayersView';
+import { compColor, compName, fmt, pctOf } from './statsUtil';
+import { COMPETITIONS } from '@/lib/competitions';
 
 type View = 'equipos' | 'jugadores' | 'liga' | 'grupo' | 'h2h';
 type Key = 'total' | 'home' | 'away';
 
 const MIN_TOTAL = 6; // mínimo de pronósticos para sacar conclusiones de un equipo
 const MIN_SIDE = 3;
-
-const pctOf = (r: Rec | undefined): number | null => (r && r.n > 0 ? (r.h / r.n) * 100 : null);
-const fmt = (n: number | null, d = 0) =>
-  n == null ? '–' : n.toLocaleString('es-ES', { maximumFractionDigits: d });
 
 function pickBy<T>(items: T[], f: (x: T) => number | null, dir: 1 | -1): T | null {
   let best: T | null = null;
@@ -184,85 +183,6 @@ function Equipos({ stats, onTeamClick }: { stats: StatsDTO; onTeamClick: (name: 
   );
 }
 
-/* ---------- Jugadores ---------- */
-function Jugadores({ stats, meId }: { stats: StatsDTO; meId: string }) {
-  if (!stats.players.length) return <p className="muted empty">Todavía no hay jugadores.</p>;
-  return (
-    <ul className="players">
-      {stats.players.map((p) => (
-        <li key={p.playerId} className={`pstat${p.playerId === meId ? ' me' : ''}`}>
-          <div className="phead">
-            <span className="pname">
-              {p.name}
-              {p.style && (
-                <span className="stylebadge" title={p.style.detail}>
-                  {p.style.label}
-                </span>
-              )}
-            </span>
-            <span className="ppct">{p.pct != null ? `${fmt(p.pct)}%` : '–'}</span>
-          </div>
-          <p className="pline">
-            {p.hits} aciertos de {p.played} pronósticos
-            {p.missed > 0 && `, ${p.missed} sin pronosticar`}
-          </p>
-          <div className="pboxes">
-            {(['1', 'X', '2'] as const).map((k) => (
-              <span key={k}>
-                <em>{k}</em>
-                <b>{fmt(pctOf(p.byPick[k]))}{p.byPick[k].n ? '%' : ''}</b>
-                <small>{p.byPick[k].n} veces</small>
-              </span>
-            ))}
-          </div>
-          <dl className="pfacts">
-            <div>
-              <dt>Racha actual</dt>
-              <dd>{p.streak}</dd>
-            </div>
-            <div>
-              <dt>Mejor racha</dt>
-              <dd>{p.bestStreak}</dd>
-            </div>
-            <div>
-              <dt>Jornadas ganadas</dt>
-              <dd>{p.wins}</dd>
-            </div>
-            <div>
-              <dt>Plenos</dt>
-              <dd>{p.plenos}</dd>
-            </div>
-            <div>
-              <dt>Mejor jornada</dt>
-              <dd>{p.best ? `${p.best.points} (J${p.best.matchday})` : '–'}</dd>
-            </div>
-            <div>
-              <dt>Peor jornada</dt>
-              <dd>{p.worst ? `${p.worst.points} (J${p.worst.matchday})` : '–'}</dd>
-            </div>
-            <div>
-              <dt>Media por jornada</dt>
-              <dd>{fmt(p.avg, 1)}</dd>
-            </div>
-            <div>
-              <dt>Valentía (contra el grupo)</dt>
-              <dd>{p.brave.n ? `${fmt(pctOf(p.brave))}% de ${p.brave.n}` : '–'}</dd>
-            </div>
-            <div>
-              <dt>Equipo gafe</dt>
-              <dd>{p.jinx ? `${p.jinx.team} (${fmt(p.jinx.pct)}%)` : '–'}</dd>
-            </div>
-            <div>
-              <dt>Pleno al 15</dt>
-              <dd>{p.pleno15.n ? `${p.pleno15.h} de ${p.pleno15.n}` : '–'}</dd>
-            </div>
-          </dl>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 /* ---------- Clasificación real de la Liga ---------- */
 function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: string, crest: string | null) => void }) {
   const [scope, setScope] = useState<Key>('total');
@@ -326,8 +246,8 @@ function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: stri
 /* ---------- Evolución (gráfica) ---------- */
 const PALETTE = ['#45d89c', '#5ab1ff', '#ff8fab', '#b79cff', '#ff9f5a', '#7fe0e6', '#c5e063', '#f2a6ff', '#9aa9ff', '#e0b48a'];
 
-function Evolution({ ev, meId }: { ev: StatsDTO['evolution']; meId: string }) {
-  if (ev.matchdays.length < 2) {
+function Evolution({ ev, meId, comps }: { ev: StatsDTO['evolution']; meId: string; comps: number }) {
+  if (ev.rounds.length < 2) {
     return (
       <p className="muted">La gráfica aparece cuando se hayan jugado partidos de dos jornadas.</p>
     );
@@ -335,7 +255,7 @@ function Evolution({ ev, meId }: { ev: StatsDTO['evolution']; meId: string }) {
   const W = 480;
   const H = 230;
   const pad = { l: 30, r: 10, t: 10, b: 26 };
-  const n = ev.matchdays.length;
+  const n = ev.rounds.length;
   const maxY = Math.max(1, ...ev.series.flatMap((s) => s.values));
   const x = (i: number) => pad.l + (i * (W - pad.l - pad.r)) / (n - 1);
   const y = (v: number) => pad.t + (H - pad.t - pad.b) * (1 - v / maxY);
@@ -352,7 +272,7 @@ function Evolution({ ev, meId }: { ev: StatsDTO['evolution']; meId: string }) {
 
   return (
     <>
-      <svg viewBox={`0 0 ${W} ${H}`} className="evo" role="img" aria-label="Evolución de aciertos acumulados por jornada">
+      <svg viewBox={`0 0 ${W} ${H}`} className="evo" role="img" aria-label="Evolución de puntos acumulados por jornada">
         {ticks.map((t, k) => (
           <g key={k}>
             <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} className="evo-grid" />
@@ -361,10 +281,17 @@ function Evolution({ ev, meId }: { ev: StatsDTO['evolution']; meId: string }) {
             </text>
           </g>
         ))}
-        {ev.matchdays.map((md, i) =>
+        {ev.rounds.map((r, i) =>
           i % step === 0 || i === n - 1 ? (
-            <text key={md} x={x(i)} y={H - 6} textAnchor="middle" className="evo-txt">
-              J{md}
+            <text
+              key={r.key}
+              x={x(i)}
+              y={H - 6}
+              textAnchor="middle"
+              className="evo-txt"
+              style={comps > 1 ? { fill: compColor(r.comp) } : undefined}
+            >
+              {r.short}
             </text>
           ) : null
         )}
@@ -399,7 +326,7 @@ function InsightList({ items }: { items: MatchInsight[] }) {
     <ul className="ilist">
       {items.map((m) => (
         <li key={m.matchId}>
-          <span className="imd">J{m.matchday}</span>
+          <span className="imd">{m.round}</span>
           <span className="imatch">
             {m.home} {m.homeScore}-{m.awayScore} {m.away}
           </span>
@@ -430,32 +357,50 @@ function Grupo({ stats, meId }: { stats: StatsDTO; meId: string }) {
       {totalRes === 0 ? (
         <p className="muted">Aún no hay partidos terminados.</p>
       ) : (
+        <div className="ggrid">
+          <span />
+          <span className="gh">Pasa</span>
+          <span className="gh">Pronosticáis</span>
+          <span className="gh">Acertáis</span>
+          {rows.map((r) => (
+            <div key={r.k} className="grow">
+              <span className="glabel">{r.label}</span>
+              <b>{share(g.results[r.k], totalRes)}</b>
+              <b>{share(g.picks[r.k], totalPicks)}</b>
+              <b>{fmt(pctOf(g.hitByResult[r.k]))}{g.hitByResult[r.k].n ? '%' : ''}</b>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {stats.comps.length > 1 && (
         <>
-          <div className="ggrid">
-            <span />
-            <span className="gh">Pasa</span>
-            <span className="gh">Jugáis</span>
-            <span className="gh">Acierto si pasa</span>
-            <span className="gh">Acierto si jugáis</span>
-            {rows.map((r) => (
-              <div key={r.k} className="grow">
-                <span className="glabel">{r.label}</span>
-                <b>{share(g.results[r.k], totalRes)}</b>
-                <b>{share(g.picks[r.k], totalPicks)}</b>
-                <b>{fmt(pctOf(g.hitByResult[r.k]))}{g.hitByResult[r.k].n ? '%' : ''}</b>
-                <b>{fmt(pctOf(g.hitByPick[r.k]))}{g.hitByPick[r.k].n ? '%' : ''}</b>
-              </div>
-            ))}
-          </div>
-          <p className="hint">
-            "Acierto si pasa" es de las veces que ocurrió ese resultado, cuántas lo teníais puesto.
-            "Acierto si jugáis" es de las veces que pronosticasteis ese resultado, cuántas acertó.
-          </p>
+          <h2 className="sh">Acierto por competición</h2>
+          <ul className="csplit grpsplit">
+            {stats.comps.map((c) => {
+              const pc = pctOf(g.byComp[c]);
+              return (
+                <li key={c}>
+                  <span className="cs-name">
+                    <i style={{ background: compColor(c) }} />
+                    {compName(c)}
+                  </span>
+                  <span className="cs-track">
+                    <i style={{ width: `${pc ?? 0}%`, background: compColor(c) }} />
+                  </span>
+                  <span className="cs-val">
+                    {pc == null ? '–' : `${fmt(pc)}%`}
+                    <small>{g.byComp[c]?.n ? ` · ${g.byComp[c].h}/${g.byComp[c].n}` : ''}</small>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </>
       )}
 
-      <h2 className="sh">Evolución de aciertos</h2>
-      <Evolution ev={stats.evolution} meId={meId} />
+      <h2 className="sh">Evolución de puntos</h2>
+      <Evolution ev={stats.evolution} meId={meId} comps={stats.comps.length} />
 
       <h2 className="sh">Los partidos que más engañaron</h2>
       <InsightList items={g.hardest} />
@@ -506,23 +451,16 @@ function H2H({ teams }: { teams: { team: string; crest: string | null }[] }) {
 }
 
 /* ---------- Contenedor ---------- */
-export default function Stats({
-  meId,
-  competition,
-  version,
-  onTeamClick,
-}: {
-  meId: string;
-  competition: string;
-  version: number;
-  onTeamClick: (name: string, crest: string | null) => void;
-}) {
+type Scope = 'comp' | 'all';
+const SCOPED: View[] = ['equipos', 'jugadores', 'grupo'];
+
+function useStats(competition: string, version: number, enabled: boolean) {
   const [stats, setStats] = useState<StatsDTO | null>(null);
   const [failed, setFailed] = useState(false);
-  const [view, setView] = useState<View>('equipos');
-
   useEffect(() => {
+    if (!enabled) return;
     let alive = true;
+    setStats(null);
     fetch(`/api/stats?competition=${competition}`, { cache: 'no-store' })
       .then((r) => {
         if (!r.ok) throw new Error();
@@ -538,18 +476,39 @@ export default function Stats({
     return () => {
       alive = false;
     };
-  }, [version, competition]);
+  }, [version, competition, enabled]);
+  return { stats, failed };
+}
 
-  if (failed && !stats) return <p className="notice">No se pudieron cargar las estadísticas.</p>;
-  if (!stats) return <p className="muted empty">Calculando estadísticas…</p>;
+export default function Stats({
+  meId,
+  competition,
+  version,
+  onTeamClick,
+}: {
+  meId: string;
+  competition: string;
+  version: number;
+  onTeamClick: (name: string, crest: string | null) => void;
+}) {
+  const [view, setView] = useState<View>('jugadores');
+  const [scope, setScope] = useState<Scope>('all');
+
+  const wantAll = scope === 'all' && SCOPED.includes(view);
+  const one = useStats(competition, version, !wantAll);
+  const all = useStats('ALL', version, wantAll);
+  const cur = wantAll ? all : one;
+  const stats = cur.stats;
 
   const views: [View, string][] = [
-    ['equipos', 'Equipos'],
     ['jugadores', 'Jugadores'],
-    ['liga', 'Liga'],
     ['grupo', 'Grupo'],
+    ['equipos', 'Equipos'],
+    ['liga', 'Liga'],
     ['h2h', 'Cara a cara'],
   ];
+  const compShort = COMPETITIONS.find((c) => c.code === competition)?.short ?? '';
+  const scoped = SCOPED.includes(view);
 
   return (
     <>
@@ -560,13 +519,42 @@ export default function Stats({
           </button>
         ))}
       </div>
-      <p className="hint">{stats.finished} partidos terminados en la temporada.</p>
-      {view === 'equipos' && <Equipos stats={stats} onTeamClick={onTeamClick} />}
-      {view === 'jugadores' && <Jugadores stats={stats} meId={meId} />}
-      {view === 'liga' && <Liga liga={stats.liga} onTeamClick={onTeamClick} />}
-      {view === 'grupo' && <Grupo stats={stats} meId={meId} />}
-      {view === 'h2h' && (
-        <H2H teams={[...stats.teams].sort((a, b) => a.team.localeCompare(b.team, 'es')).map((t) => ({ team: t.team, crest: t.crest }))} />
+
+      {scoped && (
+        <div className="scope" role="group" aria-label="Qué competiciones incluir">
+          <button type="button" aria-pressed={scope === 'all'} onClick={() => setScope('all')}>
+            <span className="scope-dots">
+              {COMPETITIONS.map((c) => (
+                <i key={c.code} style={{ background: compColor(c.code) }} />
+              ))}
+            </span>
+            Primera + Champions
+          </button>
+          <button type="button" aria-pressed={scope === 'comp'} onClick={() => setScope('comp')}>
+            <span className="scope-dots">
+              <i style={{ background: compColor(competition) }} />
+            </span>
+            Solo {compShort}
+          </button>
+        </div>
+      )}
+
+      {cur.failed && !stats && <p className="notice">No se pudieron cargar las estadísticas.</p>}
+      {!stats && !cur.failed && <p className="muted empty">Calculando estadísticas…</p>}
+      {stats && (
+        <>
+          <p className="hint">
+            {stats.finished} partidos terminados en la temporada
+            {stats.comps.length > 1 ? ` (${stats.comps.map(compName).join(' y ')}).` : '.'}
+          </p>
+          {view === 'jugadores' && <PlayersView stats={stats} meId={meId} />}
+          {view === 'equipos' && <Equipos stats={stats} onTeamClick={onTeamClick} />}
+          {view === 'liga' && <Liga liga={stats.liga} onTeamClick={onTeamClick} />}
+          {view === 'grupo' && <Grupo stats={stats} meId={meId} />}
+          {view === 'h2h' && (
+            <H2H teams={[...stats.teams].sort((a, b) => a.team.localeCompare(b.team, 'es')).map((t) => ({ team: t.team, crest: t.crest }))} />
+          )}
+        </>
       )}
     </>
   );

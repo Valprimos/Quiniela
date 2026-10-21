@@ -65,6 +65,13 @@ botón de la esquina.
 
 ## Estadísticas
 
+La pestaña abre en **Jugadores**, con un selector para ver **Primera + Champions** juntas (por
+defecto) o solo la competición elegida arriba. Jugadores incluye: premios (líder, más acertador,
+mejor y peor racha, más atrevido, rey del pleno...), puntos apilados por competición, un mapa de
+calor jornada a jornada, un comparador de dos jugadores con gráfico de radar, y una tarjeta por
+jugador con anillo de acierto, últimos 10 partidos, puntos por jornada y reparto 1/X/2. Los
+"puntos" son los mismos de la clasificación (el pleno al 15 vale 3).
+
 Dentro de "Cara a cara" se eligen dos equipos y se ven solo sus enfrentamientos directos de esta
 temporada (normalmente uno o dos partidos), separado del historial normal de cada equipo. En
 "Jugadores", cada uno lleva una etiqueta de estilo (Localista, Empatador, Forastero, Atrevido, De

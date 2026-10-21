@@ -5,7 +5,7 @@ import { currentSeason } from '@/lib/season';
 import { fetchAll } from '@/lib/paging';
 import { MatchLite, buildLiga, isFinished } from '@/lib/league';
 import { computeStats } from '@/lib/stats';
-import { isCompetitionCode } from '@/lib/competitions';
+import { COMPETITIONS, isCompetitionCode } from '@/lib/competitions';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,16 +16,18 @@ export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
-  const competition = isCompetitionCode(req.nextUrl.searchParams.get('competition'))
-    ? req.nextUrl.searchParams.get('competition')!
-    : 'PD';
+  // competition=ALL junta todas las competiciones (Primera + Champions) para las estadísticas combinadas
+  const asked = req.nextUrl.searchParams.get('competition');
+  const combined = asked === 'ALL';
+  const competition = isCompetitionCode(asked) ? asked : 'PD';
+  const codes: string[] = combined ? COMPETITIONS.map((c) => c.code) : [competition];
 
   const supabase = db();
   const matches = await fetchAll<MatchLite>((from, to) =>
     supabase
       .from('matches')
       .select(COLS)
-      .eq('competition', competition)
+      .in('competition', codes)
       .eq('season', currentSeason())
       .order('id')
       .range(from, to)
@@ -59,7 +61,8 @@ export async function GET(req: NextRequest) {
       matches,
       preds: groupPreds,
       players: playerRows,
-      liga: buildLiga(matches.filter((m) => m.matchday < 100)),
+      // La clasificación real solo tiene sentido dentro de una competición
+      liga: combined ? [] : buildLiga(matches.filter((m) => m.matchday < 100)),
     })
   );
 }
