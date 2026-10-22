@@ -5,12 +5,12 @@ export type CompetitionDef = {
   apiCode: string; // código en football-data.org
   name: string;
   short: string;
-  logo: string; // emblema de la competición (mismo origen que los escudos de los equipos)
+  logo: string; // emblema de la competición (archivo propio en /public/logos)
 };
 
 export const COMPETITIONS: CompetitionDef[] = [
-  { code: 'PD', apiCode: 'PD', name: 'La Liga', short: 'La Liga', logo: 'https://crests.football-data.org/PD.png' },
-  { code: 'CL', apiCode: 'CL', name: 'Champions League', short: 'Champions', logo: 'https://crests.football-data.org/CL.png' },
+  { code: 'PD', apiCode: 'PD', name: 'La Liga', short: 'La Liga', logo: '/logos/laliga.png' },
+  { code: 'CL', apiCode: 'CL', name: 'Champions League', short: 'Champions', logo: '/logos/champions.png' },
 ];
 
 export function competitionDef(code: string): CompetitionDef {
