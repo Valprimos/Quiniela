@@ -6,6 +6,7 @@ import { syncIfStale } from '@/lib/sync';
 import { isLocked, liveResultOf, resultOf } from '@/lib/scoring';
 import { MatchLite, buildLiga, isFinished } from '@/lib/league';
 import { COMPETITIONS, isCompetitionCode, STAGE_LABEL } from '@/lib/competitions';
+import { soonestCompetition } from '@/lib/defaultCompetition';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,9 +24,10 @@ export async function GET(req: NextRequest) {
 
   const supabase = db();
   const season = currentSeason();
-  const competition = isCompetitionCode(req.nextUrl.searchParams.get('competition'))
-    ? req.nextUrl.searchParams.get('competition')!
-    : 'PD';
+  // Sin competición en la petición (al abrir la app), se elige la que tenga antes su próximo partido:
+  // si juega antes la Champions que La Liga, se abre en Champions.
+  const askedComp = req.nextUrl.searchParams.get('competition');
+  const competition = isCompetitionCode(askedComp) ? askedComp : await soonestCompetition(supabase, season);
 
   // Toda la temporada de esta competición en una sola consulta
   const { data: all, error: matchesError } = await supabase

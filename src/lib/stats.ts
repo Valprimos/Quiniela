@@ -42,6 +42,7 @@ export type PlayerStat = {
   byPick: Record<Pick, Rec>;
   streak: number;
   bestStreak: number;
+  bestStreakNoPleno: number; // mejor racha sin contar el partido del pleno al 15 (ni suma ni corta)
   worstStreak: number; // mayor racha seguida de fallos
   wins: number;
   plenos: number;
@@ -117,6 +118,8 @@ type Agg = {
   byPick: Record<Pick, Rec>;
   cur: number;
   best: number;
+  curNP: number; // racha actual sin contar los partidos del pleno al 15
+  bestNP: number;
   lose: number;
   worstLose: number;
   md: Map<number, number>; // aciertos por ronda
@@ -247,6 +250,8 @@ export function computeStats(input: {
       byPick: { '1': rec(), X: rec(), '2': rec() },
       cur: 0,
       best: 0,
+      curNP: 0,
+      bestNP: 0,
       lose: 0,
       worstLose: 0,
       md: new Map(),
@@ -299,6 +304,7 @@ export function computeStats(input: {
       if (!pick) {
         a.missed++;
         a.cur = 0;
+        if (!m.is_pleno) a.curNP = 0;
         a.form.push('-');
         continue;
       }
@@ -328,10 +334,15 @@ export function computeStats(input: {
         a.hits++;
         a.cur++;
         a.best = Math.max(a.best, a.cur);
+        if (!m.is_pleno) {
+          a.curNP++;
+          a.bestNP = Math.max(a.bestNP, a.curNP);
+        }
         a.lose = 0;
         a.md.set(key, (a.md.get(key) ?? 0) + 1);
       } else {
         a.cur = 0;
+        if (!m.is_pleno) a.curNP = 0;
         a.lose++;
         a.worstLose = Math.max(a.worstLose, a.lose);
       }
@@ -460,6 +471,7 @@ export function computeStats(input: {
       byPick: a.byPick,
       streak: a.cur,
       bestStreak: a.best,
+      bestStreakNoPleno: a.bestNP,
       worstStreak: a.worstLose,
       wins: wins.get(p.id) ?? 0,
       plenos: plenos.get(p.id) ?? 0,

@@ -472,7 +472,9 @@ export default function Quiniela() {
   const router = useRouter();
   const cache = useRef(new Map<string, StateDTO>());
   const [data, setData] = useState<StateDTO | null>(null);
-  const [competition, setCompetition] = useState('PD');
+  // Vacío = automático: el servidor elige la competición con el partido más próximo
+  const [competition, setCompetition] = useState('');
+  const resolved = useRef<string | null>(null);
   const [md, setMd] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<'pronosticos' | 'clasificacion' | 'estadisticas'>('pronosticos');
@@ -492,7 +494,10 @@ export default function Quiniela() {
 
   const fetchState = useCallback(
     async (comp: string, matchday: number | null): Promise<StateDTO | null> => {
-      const qs = matchday ? `?competition=${comp}&matchday=${matchday}` : `?competition=${comp}`;
+      const params = new URLSearchParams();
+      if (comp) params.set('competition', comp);
+      if (matchday) params.set('matchday', String(matchday));
+      const qs = params.size ? `?${params}` : '';
       const res = await fetch(`/api/state${qs}`, { cache: 'no-store' });
       if (res.status === 401) {
         router.replace('/login');
@@ -510,6 +515,11 @@ export default function Quiniela() {
   const load = useCallback(
     async (comp: string, matchday: number | null) => {
       const key = keyOf(comp, matchday);
+      // La primera carga ya dejó los datos en pantalla al descubrir la competición: no repetirla
+      if (resolved.current === key) {
+        resolved.current = null;
+        return;
+      }
       const cached = cache.current.get(key);
       if (cached) {
         setData(cached);
@@ -520,7 +530,13 @@ export default function Quiniela() {
       try {
         const fresh = await fetchState(comp, matchday);
         if (!fresh) return;
-        cache.current.set(key, fresh);
+        if (!comp) {
+          // Apertura de la app: el servidor ha elegido la competición
+          comp = fresh.competition;
+          resolved.current = keyOf(comp, null);
+          setCompetition(comp);
+        }
+        cache.current.set(keyOf(comp, matchday), fresh);
         // Solo pisar la pantalla si seguimos mirando lo mismo (evita carreras al cambiar rápido)
         setData((prev) => (prev && prev !== fresh ? fresh : fresh));
         setError(null);

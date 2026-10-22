@@ -666,3 +666,28 @@ select {
 .scope-logos { display: inline-flex; gap: 4px; }
 .scope button:first-child { flex: 1.5; }
 .complist button { display: inline-flex; align-items: center; gap: 10px; padding: 6px 18px 6px 12px; }
+
+/* ===== Admin: editar pronósticos ===== */
+.pedit { display: grid; gap: 10px; }
+.pedit > select { width: 100%; }
+.pedit-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pedit-row { display: grid; gap: 6px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.pedit-teams { display: grid; gap: 2px; }
+.pedit-teams b { font-size: 15px; }
+.pedit-teams small { font-size: 12px; color: var(--muted); }
+.pedit-teams small.pedit-closed { color: var(--foco); }
+.pedit-picks { display: flex; gap: 6px; }
+.pedit-picks button {
+  flex: 1; padding: 8px 0; background: var(--panel-2); border: 1.5px solid var(--line); border-radius: 4px;
+  font-family: var(--font-display); font-size: 20px; cursor: pointer; color: var(--muted);
+}
+.pedit-picks button[aria-pressed='true'] { border-color: var(--foco); color: var(--foco); background: rgba(255, 210, 63, 0.1); }
+.pedit-picks button:disabled { opacity: 0.5; cursor: default; }
+.pedit-score { display: flex; align-items: center; gap: 8px; }
+.pedit-score input { width: 56px; text-align: center; }
+.pedit-info { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+
+.pedit-score input {
+  background: var(--panel-2); border: 1.5px solid var(--line); color: var(--text);
+  border-radius: 4px; padding: 8px 4px; font-size: 16px;
+}

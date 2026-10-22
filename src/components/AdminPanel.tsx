@@ -145,6 +145,207 @@ function PlayerRow({
   );
 }
 
+type EditMatch = {
+  id: number;
+  home: string;
+  away: string;
+  status: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  isPleno: boolean;
+  locked: boolean;
+  pick: string | null;
+  plenoHome: number | null;
+  plenoAway: number | null;
+};
+
+function stateLabel(m: EditMatch): string {
+  if (m.status === 'FINISHED') return `Terminado ${m.homeScore}-${m.awayScore}`;
+  return m.locked ? 'Cerrado' : 'Abierto';
+}
+
+// Permite al admin poner, cambiar o quitar el pronóstico de cualquier jugador, aunque el partido esté cerrado.
+function PredictionEditor({
+  competition,
+  matchday,
+  players,
+  onChanged,
+}: {
+  competition: string;
+  matchday: number;
+  players: Player[];
+  onChanged: () => void;
+}) {
+  const [playerId, setPlayerId] = useState('');
+  const [list, setList] = useState<EditMatch[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
+  const [draft, setDraft] = useState<Record<number, { h: string; a: string }>>({});
+
+  // Al abrir, el primer jugador de la lista
+  useEffect(() => {
+    if (!playerId && players.length) setPlayerId(players[0].id);
+  }, [players, playerId]);
+
+  useEffect(() => {
+    if (!playerId) return;
+    let alive = true;
+    setList(null);
+    setError(null);
+    setSaved(null);
+    fetch(`/api/admin/predictions?playerId=${playerId}&competition=${competition}&matchday=${matchday}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive) return;
+        if (j.error) return setError(j.error);
+        setList(j.matches);
+        setDraft(
+          Object.fromEntries(
+            (j.matches as EditMatch[])
+              .filter((m) => m.isPleno)
+              .map((m) => [m.id, { h: m.plenoHome != null ? String(m.plenoHome) : '', a: m.plenoAway != null ? String(m.plenoAway) : '' }])
+          )
+        );
+      })
+      .catch(() => alive && setError('No se pudieron cargar los pronósticos.'));
+    return () => {
+      alive = false;
+    };
+  }, [playerId, competition, matchday]);
+
+  const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? '';
+
+  function patch(id: number, changes: Partial<EditMatch>) {
+    setList((l) => l && l.map((m) => (m.id === id ? { ...m, ...changes } : m)));
+  }
+
+  async function save(m: EditMatch, body: { pick?: string; plenoHome?: number; plenoAway?: number }) {
+    setBusy(m.id);
+    setError(null);
+    setSaved(null);
+    const r = await call('/api/admin/predictions', { playerId, matchId: m.id, ...body });
+    setBusy(null);
+    if (!r.ok) return setError((r.error as string) ?? 'No se pudo guardar.');
+    patch(m.id, {
+      pick: r.pick as string,
+      plenoHome: (r.plenoHome as number | null) ?? null,
+      plenoAway: (r.plenoAway as number | null) ?? null,
+    });
+    setSaved(`Guardado: ${m.home} - ${m.away} para ${nameOf(playerId)}.`);
+    onChanged();
+  }
+
+  async function clear(m: EditMatch) {
+    setBusy(m.id);
+    setError(null);
+    setSaved(null);
+    const res = await fetch('/api/admin/predictions', {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ playerId, matchId: m.id }),
+    });
+    const j = await res.json().catch(() => ({}));
+    setBusy(null);
+    if (!res.ok) return setError(j.error ?? 'No se pudo quitar.');
+    patch(m.id, { pick: null, plenoHome: null, plenoAway: null });
+    if (m.isPleno) setDraft((d) => ({ ...d, [m.id]: { h: '', a: '' } }));
+    setSaved(`Quitado: ${m.home} - ${m.away} para ${nameOf(playerId)}.`);
+    onChanged();
+  }
+
+  function savePleno(m: EditMatch) {
+    const d = draft[m.id] ?? { h: '', a: '' };
+    if (d.h === '' || d.a === '') return setError('Pon los dos goles del marcador.');
+    save(m, { plenoHome: Number(d.h), plenoAway: Number(d.a) });
+  }
+
+  return (
+    <div className="pedit">
+      <select value={playerId} onChange={(e) => setPlayerId(e.target.value)} aria-label="Jugador">
+        {players.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+      {error && <p className="notice">{error}</p>}
+      {saved && <p className="okmsg">{saved}</p>}
+      {!list && !error && <p className="muted">Cargando…</p>}
+      {list && list.length === 0 && <p className="muted">Esta jornada no tiene partidos.</p>}
+      {list && list.length > 0 && (
+        <ul className="pedit-list">
+          {list.map((m) => (
+            <li key={m.id} className="pedit-row">
+              <div className="pedit-teams">
+                <b>
+                  {m.home} - {m.away}
+                </b>
+                <small className={m.locked ? 'pedit-closed' : undefined}>
+                  {stateLabel(m)}
+                  {m.isPleno && ' · pleno al 15'}
+                </small>
+              </div>
+              {m.isPleno ? (
+                <div className="pedit-score">
+                  <input
+                    inputMode="numeric"
+                    aria-label={`Goles de ${m.home}`}
+                    value={draft[m.id]?.h ?? ''}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, [m.id]: { h: e.target.value.replace(/\D/g, '').slice(0, 2), a: d[m.id]?.a ?? '' } }))
+                    }
+                  />
+                  <span>-</span>
+                  <input
+                    inputMode="numeric"
+                    aria-label={`Goles de ${m.away}`}
+                    value={draft[m.id]?.a ?? ''}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, [m.id]: { a: e.target.value.replace(/\D/g, '').slice(0, 2), h: d[m.id]?.h ?? '' } }))
+                    }
+                  />
+                  <button type="button" className="seg-btn" disabled={busy === m.id} onClick={() => savePleno(m)}>
+                    Guardar
+                  </button>
+                </div>
+              ) : (
+                <div className="pedit-picks" role="group" aria-label={`Pronóstico de ${m.home} - ${m.away}`}>
+                  {['1', 'X', '2'].map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      aria-pressed={m.pick === k}
+                      disabled={busy === m.id}
+                      onClick={() => m.pick !== k && save(m, { pick: k })}
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="pedit-info">
+                <span className="muted">
+                  {m.pick
+                    ? m.isPleno && m.plenoHome != null
+                      ? `Tiene puesto ${m.plenoHome}-${m.plenoAway}`
+                      : `Tiene puesto ${m.pick}`
+                    : 'Sin pronóstico'}
+                </span>
+                {m.pick && (
+                  <button type="button" className="link danger" disabled={busy === m.id} onClick={() => clear(m)}>
+                    Quitar
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPanel({
   competition,
   matchday,
@@ -275,6 +476,13 @@ export default function AdminPanel({
           Corregir
         </button>
       </form>
+
+      <h3 className="sh small">Editar pronósticos (jornada {matchday})</h3>
+      <p className="hint">
+        Pon, cambia o quita el pronóstico de cualquier jugador, aunque el partido ya esté cerrado o
+        terminado. Los puntos y las estadísticas se recalculan solos.
+      </p>
+      <PredictionEditor competition={competition} matchday={matchday} players={players ?? []} onChanged={onChanged} />
 
       <h3 className="sh small">Esta jornada</h3>
       <div className="row">

@@ -43,6 +43,10 @@ clasificación de Liga y estadísticas. En la Champions, las eliminatorias (sin 
 en los datos de origen) se agrupan por fase con un número de jornada interno; se ve la fase con
 una etiqueta ("Octavos de final", etc.) debajo del número de jornada.
 
+Al abrir la app se elige sola la competición que tenga antes su próximo partido (o uno en juego):
+si juega antes la Champions que La Liga, se abre en Champions. Si luego cambias de competición a
+mano, se respeta durante la sesión.
+
 La Clasificación tiene tres vistas: por jornada, general de la competición elegida, y combinada
 (la suma de La Liga y Champions). Cada fila muestra también el % de los puntos posibles que lleva
 cada uno (puntos entre partidos terminados en ese ámbito), con una barra para verlo de un vistazo.
@@ -67,7 +71,7 @@ botón de la esquina.
 
 La pestaña abre en **Jugadores**, con un selector para ver **La Liga + Champions** juntas (por
 defecto) o solo la competición elegida arriba. Jugadores incluye: premios (líder, más acertador,
-mejor y peor racha, más atrevido, rey del pleno...), puntos apilados por competición, un mapa de
+mejor racha (también sin contar el pleno al 15) y peor racha, la suegra, rey del pleno...), puntos apilados por competición, un mapa de
 calor jornada a jornada, un comparador de dos jugadores con gráfico de radar, y una tarjeta por
 jugador con anillo de acierto, últimos 10 partidos, puntos por jornada y reparto 1/X/2. El
 **Siamesismo** mide qué parejas de jugadores piensan más parecido (porcentaje de partidos en los que
@@ -115,6 +119,9 @@ Solo lo ve quien tiene `is_admin`. Desde ahí se puede:
   ningún admin por error).
 - Expulsar a un jugador de la pandilla (borra también sus pronósticos). Si esa persona tiene la
   web abierta en ese momento, se le cierra la sesión sola la próxima vez que se actualice.
+- Editar los pronósticos de cualquier jugador: poner uno que falta, cambiar el que tenía o quitarlo,
+  incluso en partidos ya cerrados o terminados (en el pleno al 15 se pone el marcador exacto). Es
+  para corregir errores; los puntos y las estadísticas se recalculan solos.
 - Corregir a mano el resultado de un partido (queda marcado para que la próxima sincronización
   con football-data.org no lo vuelva a pisar).
 - Bloquear o desbloquear a mano los pronósticos de una jornada entera.
