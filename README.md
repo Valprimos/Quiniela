@@ -112,7 +112,11 @@ o superior). En Android y ordenador funcionan directamente desde el navegador.
 
 ## Panel de admin
 
-Solo lo ve quien tiene `is_admin`. Desde ahí se puede:
+Solo lo ve quien tiene `is_admin`. Se abre plegado, con un botón por herramienta (Jugadores y PIN,
+Resultados, Pronósticos, Bloquear jornada, Archivar temporada, Historial y Equipos guardados). Las
+herramientas de Resultados, Pronósticos y Bloquear jornada llevan su propio selector de competición
+y jornada, así que se puede corregir cualquier jornada sin salir del panel ni cambiar la que se ve
+en la app. Desde ahí se puede:
 
 - Resetear el PIN de un colega que lo haya olvidado.
 - Dar o quitar el rol de admin a otro jugador (no al propio, para no dejar la pandilla sin
@@ -123,7 +127,7 @@ Solo lo ve quien tiene `is_admin`. Desde ahí se puede:
   incluso en partidos ya cerrados o terminados (en el pleno al 15 se pone el marcador exacto). Es
   para corregir errores; los puntos y las estadísticas se recalculan solos.
 - Corregir a mano el resultado de un partido (queda marcado para que la próxima sincronización
-  con football-data.org no lo vuelva a pisar).
+  con football-data.org no lo vuelva a pisar), o devolverlo a la actualización automática.
 - Bloquear o desbloquear a mano los pronósticos de una jornada entera.
 - Archivar la clasificación final de la temporada actual, para consultarla luego en "Archivo de
   temporadas" dentro de Clasificación.

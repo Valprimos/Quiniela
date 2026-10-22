@@ -526,14 +526,14 @@ export default function Stats({
           <button type="button" aria-pressed={scope === 'all'} onClick={() => setScope('all')}>
             <span className="scope-logos">
               {COMPETITIONS.map((c) => (
-                <CompLogo key={c.code} code={c.code} size={28} />
+                <CompLogo key={c.code} code={c.code} size={24} />
               ))}
             </span>
             {COMPETITIONS.map((c) => c.short).join(' + ')}
           </button>
           <button type="button" aria-pressed={scope === 'comp'} onClick={() => setScope('comp')}>
             <span className="scope-logos">
-              <CompLogo code={competition} size={28} />
+              <CompLogo code={competition} size={24} />
             </span>
             Solo {compShort}
           </button>

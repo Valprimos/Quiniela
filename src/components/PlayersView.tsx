@@ -46,7 +46,6 @@ function buildAwards(stats: StatsDTO, meId: string): Award[][] {
   add('lider', 'Líder', leaders(ps, (p) => p.points, 1), String, 'puntos');
   add('acertador', 'Más acertador', leaders(ps, (p) => (p.played >= 8 ? p.pct : null), 0), (v) => `${fmt(v)}%`, 'de acierto');
   add('racha', 'Mejor racha', leaders(ps, (p) => p.bestStreak, 2), String, 'aciertos seguidos');
-  add('rachaSP', 'Racha sin pleno', leaders(ps, (p) => p.bestStreakNoPleno, 2), String, 'sin el pleno al 15');
   add('mala', 'Mala racha', leaders(ps, (p) => p.worstStreak, 3), String, 'fallos seguidos');
   const top = stats.siamese[0];
   if (top) {
@@ -68,10 +67,9 @@ function buildAwards(stats: StatsDTO, meId: string): Award[][] {
   add('pleno', 'Rey del pleno', leaders(ps, (p) => p.pleno15.h, 1), String, 'plenos al 15');
   add('jornadas', 'Jornadas ganadas', leaders(ps, (p) => p.wins, 1), String, 'jornadas');
   const rows: string[][] = [
-    ['lider'],
-    ['acertador', 'jornadas'],
+    ['lider', 'acertador'],
+    ['jornadas', 'pleno'],
     ['racha', 'mala'],
-    ['rachaSP', 'pleno'],
     ['siamesismo', 'suegra'],
   ];
   if (stats.comps.length > 1) {
@@ -120,7 +118,9 @@ function PointsBars({ stats, meId }: { stats: StatsDTO; meId: string }) {
                 return (
                   <i
                     key={c}
-                    title={`${compName(c)}: ${v} puntos`}
+                    tabIndex={0}
+                    data-tip={`${compName(c)}: ${v} ${v === 1 ? 'punto' : 'puntos'}`}
+                    aria-label={`${p.name}, ${compName(c)}: ${v} ${v === 1 ? 'punto' : 'puntos'}`}
                     style={{ width: `${(v / max) * 100}%`, background: compColor(c) }}
                   />
                 );
@@ -293,7 +293,6 @@ function Versus({ stats, meId }: { stats: StatsDTO; meId: string }) {
     { label: 'Acierto', a: A.pct, b: B.pct, show: (v) => (v == null ? '–' : `${fmt(v)}%`) },
     { label: 'Media por jornada', a: A.avg, b: B.avg, show: (v) => fmt(v, 1) },
     { label: 'Mejor racha', a: A.bestStreak, b: B.bestStreak, show: (v) => fmt(v) },
-    { label: 'Racha sin pleno al 15', a: A.bestStreakNoPleno, b: B.bestStreakNoPleno, show: (v) => fmt(v) },
     { label: 'Mala racha', a: A.worstStreak, b: B.worstStreak, show: (v) => fmt(v), lowerBetter: true },
     { label: 'Jornadas ganadas', a: A.wins, b: B.wins, show: (v) => fmt(v) },
     { label: 'Plenos al 15', a: A.pleno15.h, b: B.pleno15.h, show: (v) => fmt(v) },

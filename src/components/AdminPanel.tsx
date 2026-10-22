@@ -1,6 +1,8 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { COMPETITIONS } from '@/lib/competitions';
+import CompLogo from './CompLogo';
 
 type TeamNameGroup = { key: string; names: string[]; seasons: number[]; matches: number };
 
@@ -346,30 +348,225 @@ function PredictionEditor({
   );
 }
 
+type Round = { matchday: number; label: string };
+type RoundMatch = {
+  id: number;
+  utcDate: string;
+  status: string;
+  home: string;
+  away: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  isPleno: boolean;
+  adminLocked: boolean;
+  manualOverride: boolean;
+};
+type RoundData = { rounds: Round[]; matchday: number | null; matches: RoundMatch[] };
+
+// Elige competición y jornada dentro del propio panel, sin tocar lo que se ve en la app
+function RoundPicker({
+  comp,
+  round,
+  onComp,
+  onMatchday,
+}: {
+  comp: string;
+  round: RoundData | null;
+  onComp: (c: string) => void;
+  onMatchday: (md: number) => void;
+}) {
+  const rounds = round?.rounds ?? [];
+  const idx = rounds.findIndex((r) => r.matchday === round?.matchday);
+  const go = (i: number) => rounds[i] && onMatchday(rounds[i].matchday);
+  return (
+    <div className="rpick">
+      <div className="seg rpick-comps" role="group" aria-label="Competición">
+        {COMPETITIONS.map((c) => (
+          <button key={c.code} type="button" aria-pressed={comp === c.code} onClick={() => onComp(c.code)}>
+            <CompLogo code={c.code} size={20} />
+            {c.short}
+          </button>
+        ))}
+      </div>
+      <div className="rpick-row">
+        <button type="button" className="seg-btn" aria-label="Jornada anterior" disabled={idx <= 0} onClick={() => go(idx - 1)}>
+          ‹
+        </button>
+        <select
+          value={round?.matchday ?? ''}
+          onChange={(e) => onMatchday(Number(e.target.value))}
+          aria-label="Jornada"
+          disabled={!rounds.length}
+        >
+          {!round && <option value="">Cargando…</option>}
+          {rounds.map((r) => (
+            <option key={r.matchday} value={r.matchday}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="seg-btn"
+          aria-label="Jornada siguiente"
+          disabled={idx < 0 || idx >= rounds.length - 1}
+          onClick={() => go(idx + 1)}
+        >
+          ›
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function scoreText(m: RoundMatch): string {
+  if (m.homeScore == null || m.awayScore == null) return 'Sin resultado';
+  return `${m.homeScore}-${m.awayScore}${m.status === 'FINISHED' ? '' : ' (no terminado)'}`;
+}
+
+// Corregir el resultado de cualquier partido de la jornada elegida
+function ResultsEditor({ round, onSaved }: { round: RoundData | null; onSaved: () => void }) {
+  const [draft, setDraft] = useState<Record<number, { h: string; a: string }>>({});
+  const [busy, setBusy] = useState<number | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Los cuadros se rellenan con el resultado actual cada vez que llegan datos nuevos
+  useEffect(() => {
+    setDraft(
+      Object.fromEntries(
+        (round?.matches ?? []).map((m) => [
+          m.id,
+          { h: m.homeScore != null ? String(m.homeScore) : '', a: m.awayScore != null ? String(m.awayScore) : '' },
+        ])
+      )
+    );
+  }, [round]);
+
+  // El aviso solo se borra al cambiar de jornada (no al recargar tras guardar)
+  const shownMatchday = round?.matchday ?? null;
+  useEffect(() => {
+    setMsg(null);
+  }, [shownMatchday]);
+
+  async function save(m: RoundMatch) {
+    const d = draft[m.id] ?? { h: '', a: '' };
+    if (d.h === '' || d.a === '') return setMsg({ ok: false, text: 'Pon los dos goles del resultado.' });
+    setBusy(m.id);
+    const r = await call('/api/admin/fix-result', {
+      matchId: m.id,
+      homeScore: Number(d.h),
+      awayScore: Number(d.a),
+      status: 'FINISHED',
+    });
+    setBusy(null);
+    setMsg(
+      r.ok
+        ? { ok: true, text: `Corregido: ${m.home} ${d.h}-${d.a} ${m.away}.` }
+        : { ok: false, text: (r.error as string) ?? 'No se pudo corregir.' }
+    );
+    if (r.ok) onSaved();
+  }
+
+  async function auto(m: RoundMatch) {
+    setBusy(m.id);
+    const r = await call('/api/admin/fix-result', { matchId: m.id, clearOverride: true });
+    setBusy(null);
+    setMsg(
+      r.ok
+        ? { ok: true, text: `${m.home} - ${m.away} volverá a actualizarse solo con la próxima sincronización.` }
+        : { ok: false, text: (r.error as string) ?? 'No se pudo cambiar.' }
+    );
+    if (r.ok) onSaved();
+  }
+
+  const set = (id: number, key: 'h' | 'a', v: string) =>
+    setDraft((d) => ({ ...d, [id]: { h: d[id]?.h ?? '', a: d[id]?.a ?? '', [key]: v.replace(/\D/g, '').slice(0, 2) } }));
+
+  if (!round) return <p className="muted">Cargando…</p>;
+  if (!round.matches.length) return <p className="muted">No hay partidos en esta jornada.</p>;
+  return (
+    <>
+      {msg && <p className={msg.ok ? 'okmsg' : 'notice'}>{msg.text}</p>}
+      <ul className="pedit-list">
+        {round.matches.map((m) => (
+          <li key={m.id} className="pedit-row">
+            <div className="pedit-teams">
+              <b>
+                {m.home} - {m.away}
+              </b>
+              <small>
+                Ahora: {scoreText(m)}
+                {m.manualOverride && ' · ajustado a mano'}
+              </small>
+            </div>
+            <div className="pedit-score">
+              <input
+                inputMode="numeric"
+                aria-label={`Goles de ${m.home}`}
+                value={draft[m.id]?.h ?? ''}
+                onChange={(e) => set(m.id, 'h', e.target.value)}
+              />
+              <span>-</span>
+              <input
+                inputMode="numeric"
+                aria-label={`Goles de ${m.away}`}
+                value={draft[m.id]?.a ?? ''}
+                onChange={(e) => set(m.id, 'a', e.target.value)}
+              />
+              <button type="button" className="seg-btn" disabled={busy === m.id} onClick={() => save(m)}>
+                Corregir
+              </button>
+            </div>
+            {m.manualOverride && (
+              <div className="pedit-info">
+                <span className="muted">Se ha puesto a mano</span>
+                <button type="button" className="link" disabled={busy === m.id} onClick={() => auto(m)}>
+                  Volver a automático
+                </button>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'jornada' | 'temporada' | 'historial' | 'equipos';
+const TOOLS: { id: Tool; title: string; hint: string }[] = [
+  { id: 'jugadores', title: 'Jugadores y PIN', hint: 'Cambiar PIN, dar admin, expulsar' },
+  { id: 'resultados', title: 'Resultados', hint: 'Corregir el resultado de un partido' },
+  { id: 'pronosticos', title: 'Pronósticos', hint: 'Poner o cambiar lo de un jugador' },
+  { id: 'jornada', title: 'Bloquear jornada', hint: 'Cerrar o abrir los pronósticos' },
+  { id: 'temporada', title: 'Archivar temporada', hint: 'Guardar la clasificación final' },
+  { id: 'historial', title: 'Historial', hint: 'Traer temporadas anteriores' },
+  { id: 'equipos', title: 'Equipos guardados', hint: 'Revisar nombres de equipos' },
+];
+
 export default function AdminPanel({
   competition,
   matchday,
-  matches,
   meId,
   onClose,
   onChanged,
 }: {
   competition: string;
   matchday: number;
-  matches: MatchOpt[];
+  matches?: MatchOpt[];
   meId: string;
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const [tool, setTool] = useState<Tool | null>(null);
   const [players, setPlayers] = useState<Player[] | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-
-  const [fixMatch, setFixMatch] = useState('');
-  const [fixHome, setFixHome] = useState('');
-  const [fixAway, setFixAway] = useState('');
-
-  const [locked, setLocked] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+
+  // Competición y jornada que se eligen dentro del panel (empiezan en las de la app, pero son independientes)
+  const [pc, setPc] = useState(competition);
+  const [pm, setPm] = useState<number | null>(matchday);
+  const [round, setRound] = useState<RoundData | null>(null);
+  const needsRound = tool === 'resultados' || tool === 'pronosticos' || tool === 'jornada';
 
   const loadPlayers = () => {
     fetch('/api/admin/players')
@@ -378,28 +575,52 @@ export default function AdminPanel({
   };
   useEffect(loadPlayers, []);
 
+  const loadRound = useCallback(() => {
+    const qs = `competition=${pc}${pm != null ? `&matchday=${pm}` : ''}`;
+    return fetch(`/api/admin/round?${qs}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => {
+        setRound(j.error ? { rounds: [], matchday: null, matches: [] } : j);
+        // Se fija la jornada que eligió el servidor: así no cambia sola al corregir un resultado
+        if (!j.error && pm == null && j.matchday != null) setPm(j.matchday);
+      })
+      .catch(() => setRound({ rounds: [], matchday: null, matches: [] }));
+  }, [pc, pm]);
+  useEffect(() => {
+    if (needsRound) loadRound();
+  }, [needsRound, loadRound]);
+
+  function pickComp(c: string) {
+    if (c === pc) return;
+    setPc(c);
+    setPm(null); // el servidor elige la primera jornada con partidos pendientes
+    setRound(null);
+  }
+  function pickMatchday(md: number) {
+    setPm(md);
+    setRound(null);
+  }
+
+  function open(t: Tool | null) {
+    setMsg(null);
+    setTool(t);
+  }
+
   function playersChanged() {
     loadPlayers();
     onChanged();
   }
 
-  async function fixResultSubmit(e: FormEvent) {
-    e.preventDefault();
-    const r = await call('/api/admin/fix-result', {
-      matchId: Number(fixMatch),
-      homeScore: Number(fixHome),
-      awayScore: Number(fixAway),
-      status: 'FINISHED',
-    });
-    setMsg(r.ok ? 'Resultado corregido.' : (r.error as string) ?? 'No se pudo corregir.');
-    if (r.ok) onChanged();
-  }
+  const resolvedMd = round?.matchday ?? null;
+  const lockedAll = !!round && round.matches.length > 0 && round.matches.every((m) => m.adminLocked);
+  const lockedAny = !!round && round.matches.some((m) => m.adminLocked);
 
   async function toggleLock(next: boolean) {
-    const r = await call('/api/admin/lock-matchday', { competition, matchday, locked: next });
+    if (resolvedMd == null) return;
+    const r = await call('/api/admin/lock-matchday', { competition: pc, matchday: resolvedMd, locked: next });
     setMsg(r.ok ? (next ? 'Jornada bloqueada.' : 'Jornada desbloqueada.') : (r.error as string) ?? 'No se pudo cambiar.');
     if (r.ok) {
-      setLocked(next);
+      loadRound();
       onChanged();
     }
   }
@@ -425,99 +646,129 @@ export default function AdminPanel({
     );
   }
 
+  const compName = COMPETITIONS.find((c) => c.code === competition)?.short ?? competition;
+  const current = TOOLS.find((t) => t.id === tool);
+
   return (
     <div className="pinpanel admin">
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2 className="sh" style={{ margin: 0 }}>
-          Panel de admin
-        </h2>
+        {tool ? (
+          <button type="button" className="link" onClick={() => open(null)}>
+            ‹ Panel de admin
+          </button>
+        ) : (
+          <h2 className="sh" style={{ margin: 0 }}>
+            Panel de admin
+          </h2>
+        )}
         <button type="button" className="link" onClick={onClose}>
           Cerrar
         </button>
       </div>
       {msg && <p className="okmsg">{msg}</p>}
 
-      <h3 className="sh small">Jugadores</h3>
-      <ul className="adminplayers">
-        {(players ?? []).map((p) => (
-          <PlayerRow key={p.id} player={p} isSelf={p.id === meId} onChanged={playersChanged} />
-        ))}
-      </ul>
-
-      <h3 className="sh small">Corregir un resultado (jornada {matchday})</h3>
-      <form className="row" onSubmit={fixResultSubmit}>
-        <select value={fixMatch} onChange={(e) => setFixMatch(e.target.value)} required>
-          <option value="" disabled>
-            Elige un partido
-          </option>
-          {matches.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.home.name} - {m.away.name}
-            </option>
+      {!tool && (
+        <div className="admin-tiles">
+          {TOOLS.map((t) => (
+            <button key={t.id} type="button" className="admin-tile" onClick={() => open(t.id)}>
+              <b>{t.title}</b>
+              <small>{t.hint}</small>
+            </button>
           ))}
-        </select>
-        <input
-          placeholder="Local"
-          inputMode="numeric"
-          value={fixHome}
-          onChange={(e) => setFixHome(e.target.value.replace(/\D/g, ''))}
-          style={{ width: 56 }}
-          required
+        </div>
+      )}
+
+      {current && <h3 className="sh small">{current.title}</h3>}
+
+      {tool === 'jugadores' && (
+        <ul className="adminplayers">
+          {(players ?? []).map((p) => (
+            <PlayerRow key={p.id} player={p} isSelf={p.id === meId} onChanged={playersChanged} />
+          ))}
+        </ul>
+      )}
+
+      {needsRound && <RoundPicker comp={pc} round={round} onComp={pickComp} onMatchday={pickMatchday} />}
+
+      {tool === 'resultados' && (
+        <ResultsEditor
+          key={pc}
+          round={round}
+          onSaved={() => {
+            loadRound();
+            onChanged();
+          }}
         />
-        <input
-          placeholder="Visit."
-          inputMode="numeric"
-          value={fixAway}
-          onChange={(e) => setFixAway(e.target.value.replace(/\D/g, ''))}
-          style={{ width: 56 }}
-          required
-        />
-        <button className="primary" type="submit">
-          Corregir
-        </button>
-      </form>
+      )}
 
-      <h3 className="sh small">Editar pronósticos (jornada {matchday})</h3>
-      <p className="hint">
-        Pon, cambia o quita el pronóstico de cualquier jugador, aunque el partido ya esté cerrado o
-        terminado. Los puntos y las estadísticas se recalculan solos.
-      </p>
-      <PredictionEditor competition={competition} matchday={matchday} players={players ?? []} onChanged={onChanged} />
+      {tool === 'pronosticos' && (
+        <>
+          <p className="hint">
+            Pon, cambia o quita el pronóstico de cualquier jugador, aunque el partido ya esté cerrado o
+            terminado. Los puntos y las estadísticas se recalculan solos.
+          </p>
+          {resolvedMd != null && (
+            <PredictionEditor competition={pc} matchday={resolvedMd} players={players ?? []} onChanged={onChanged} />
+          )}
+          {round && resolvedMd == null && <p className="muted">No hay partidos en esta competición.</p>}
+        </>
+      )}
 
-      <h3 className="sh small">Esta jornada</h3>
-      <div className="row">
-        <button type="button" className="seg-btn" onClick={() => toggleLock(true)} disabled={locked}>
-          Bloquear
-        </button>
-        <button type="button" className="seg-btn" onClick={() => toggleLock(false)} disabled={!locked}>
-          Desbloquear
-        </button>
-      </div>
+      {tool === 'jornada' && (
+        <>
+          <p className="hint">
+            {!round
+              ? 'Cargando…'
+              : lockedAll
+                ? 'Esta jornada está bloqueada: nadie puede cambiar sus pronósticos.'
+                : lockedAny
+                  ? 'Algunos partidos de esta jornada están bloqueados a mano.'
+                  : 'Esta jornada está abierta (se cierra sola partido a partido).'}
+          </p>
+          <div className="row">
+            <button type="button" className="seg-btn" onClick={() => toggleLock(true)} disabled={!round || lockedAll}>
+              Bloquear
+            </button>
+            <button type="button" className="seg-btn" onClick={() => toggleLock(false)} disabled={!round || !lockedAny}>
+              Desbloquear
+            </button>
+          </div>
+        </>
+      )}
 
-      <h3 className="sh small">Temporada</h3>
-      <button type="button" className="primary" onClick={archiveSeason}>
-        Archivar temporada actual
-      </button>
-      <p className="hint">
-        Guarda la clasificación de hoy en el archivo. Hazlo cuando termine la temporada, antes de que
-        empiece la siguiente.
-      </p>
+      {tool === 'temporada' && (
+        <>
+          <button type="button" className="primary" onClick={archiveSeason}>
+            Archivar temporada actual ({compName})
+          </button>
+          <p className="hint">
+            Guarda la clasificación de hoy en el archivo. Hazlo cuando termine la temporada, antes de que
+            empiece la siguiente. Se archiva la competición que estás viendo en la app.
+          </p>
+        </>
+      )}
 
-      <h3 className="sh small">Historial de temporadas anteriores</h3>
-      <button type="button" className="primary" onClick={backfillHistory} disabled={backfilling}>
-        {backfilling ? 'Trayendo...' : 'Traer historial (últimas 4 temporadas)'}
-      </button>
-      <p className="hint">
-        Rellena el "Cara a cara" entre equipos con temporadas pasadas, usando una clave gratuita de
-        api-football.com (variable de entorno <code>API_FOOTBALL_KEY</code>). No toca la
-        sincronización en directo de esta temporada.
-      </p>
+      {tool === 'historial' && (
+        <>
+          <button type="button" className="primary" onClick={backfillHistory} disabled={backfilling}>
+            {backfilling ? 'Trayendo...' : `Traer historial de ${compName} (últimas 4 temporadas)`}
+          </button>
+          <p className="hint">
+            Rellena el "Cara a cara" entre equipos con temporadas pasadas, usando una clave gratuita de
+            api-football.com (variable de entorno <code>API_FOOTBALL_KEY</code>). No toca la
+            sincronización en directo de esta temporada.
+          </p>
+        </>
+      )}
 
-      <h3 className="sh small">Equipos guardados ({competition})</h3>
-      <p className="hint">
-        Para comprobar si un equipo falta o está guardado con dos nombres distintos sin agrupar.
-      </p>
-      <TeamNamesDebug competition={competition} />
+      {tool === 'equipos' && (
+        <>
+          <p className="hint">
+            Para comprobar si un equipo falta o está guardado con dos nombres distintos sin agrupar ({compName}).
+          </p>
+          <TeamNamesDebug competition={competition} />
+        </>
+      )}
     </div>
   );
 }
