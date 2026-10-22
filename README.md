@@ -1,6 +1,6 @@
 # Quiniela
 
-Quiniela entre colegas para Primera División y Champions League. Los partidos y resultados se
+Quiniela entre colegas para La Liga y Champions League. Los partidos y resultados se
 sincronizan solos, con modo en vivo, clasificación por competición y combinada, estadísticas
 detalladas, varias pandillas independientes y panel de admin.
 
@@ -38,13 +38,13 @@ jugadores, pronósticos y clasificaciones, pero comparten los mismos partidos y 
 
 ## Competiciones
 
-Un selector arriba cambia entre Primera y Champions. Cada una tiene su propia jornada,
+Un selector arriba cambia entre La Liga y Champions. Cada una tiene su propia jornada,
 clasificación de Liga y estadísticas. En la Champions, las eliminatorias (sin número de jornada
 en los datos de origen) se agrupan por fase con un número de jornada interno; se ve la fase con
 una etiqueta ("Octavos de final", etc.) debajo del número de jornada.
 
 La Clasificación tiene tres vistas: por jornada, general de la competición elegida, y combinada
-(la suma de Primera y Champions). Cada fila muestra también el % de los puntos posibles que lleva
+(la suma de La Liga y Champions). Cada fila muestra también el % de los puntos posibles que lleva
 cada uno (puntos entre partidos terminados en ese ámbito), con una barra para verlo de un vistazo.
 
 ## Modo en vivo
@@ -65,7 +65,7 @@ botón de la esquina.
 
 ## Estadísticas
 
-La pestaña abre en **Jugadores**, con un selector para ver **Primera + Champions** juntas (por
+La pestaña abre en **Jugadores**, con un selector para ver **La Liga + Champions** juntas (por
 defecto) o solo la competición elegida arriba. Jugadores incluye: premios (líder, más acertador,
 mejor y peor racha, más atrevido, rey del pleno...), puntos apilados por competición, un mapa de
 calor jornada a jornada, un comparador de dos jugadores con gráfico de radar, y una tarjeta por

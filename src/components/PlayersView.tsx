@@ -28,12 +28,14 @@ function leaders(
   return { who, value: best };
 }
 
-function buildAwards(stats: StatsDTO, meId: string): Award[] {
+// Los premios parecidos van en la misma fila (rachas, siamesismo con la suegra...), así quedan alineados.
+// Si falta uno de la pareja, el otro ocupa la fila entera.
+function buildAwards(stats: StatsDTO, meId: string): Award[][] {
   const ps = stats.players;
-  const out: Award[] = [];
-  const add = (label: string, l: ReturnType<typeof leaders>, num: (v: number) => string, unit: string) => {
+  const all = new Map<string, Award>();
+  const add = (key: string, label: string, l: ReturnType<typeof leaders>, num: (v: number) => string, unit: string) => {
     if (!l) return;
-    out.push({
+    all.set(key, {
       label,
       who: l.who.map((p) => p.name),
       num: num(l.value),
@@ -41,19 +43,13 @@ function buildAwards(stats: StatsDTO, meId: string): Award[] {
       mine: l.who.some((p) => p.playerId === meId),
     });
   };
-  add('Líder', leaders(ps, (p) => p.points, 1), String, 'puntos');
-  add('Más acertador', leaders(ps, (p) => (p.played >= 8 ? p.pct : null), 0), (v) => `${fmt(v)}%`, 'de acierto');
-  add('Mejor racha', leaders(ps, (p) => p.bestStreak, 2), String, 'aciertos seguidos');
-  add(
-    'La suegra',
-    leaders(ps, (p) => (p.played >= 8 && p.brave.n >= 3 ? p.brave.n / p.played : null), 0),
-    (v) => `${fmt(v * 100)}%`,
-    'a la contra del grupo'
-  );
-  add('Rey del pleno', leaders(ps, (p) => p.pleno15.h, 1), String, 'plenos al 15');
+  add('lider', 'Líder', leaders(ps, (p) => p.points, 1), String, 'puntos');
+  add('acertador', 'Más acertador', leaders(ps, (p) => (p.played >= 8 ? p.pct : null), 0), (v) => `${fmt(v)}%`, 'de acierto');
+  add('racha', 'Mejor racha', leaders(ps, (p) => p.bestStreak, 2), String, 'aciertos seguidos');
+  add('mala', 'Mala racha', leaders(ps, (p) => p.worstStreak, 3), String, 'fallos seguidos');
   const top = stats.siamese[0];
   if (top) {
-    out.push({
+    all.set('siamesismo', {
       label: 'Siamesismo',
       who: [top.aName, top.bName],
       num: `${fmt(top.pct)}%`,
@@ -61,31 +57,47 @@ function buildAwards(stats: StatsDTO, meId: string): Award[] {
       mine: top.a === meId || top.b === meId,
     });
   }
-  add('Jornadas ganadas', leaders(ps, (p) => p.wins, 1), String, 'jornadas');
-  add('Mala racha', leaders(ps, (p) => p.worstStreak, 3), String, 'fallos seguidos');
+  add(
+    'suegra',
+    'La suegra',
+    leaders(ps, (p) => (p.played >= 8 && p.brave.n >= 3 ? p.brave.n / p.played : null), 0),
+    (v) => `${fmt(v * 100)}%`,
+    'a la contra del grupo'
+  );
+  add('pleno', 'Rey del pleno', leaders(ps, (p) => p.pleno15.h, 1), String, 'plenos al 15');
+  add('jornadas', 'Jornadas ganadas', leaders(ps, (p) => p.wins, 1), String, 'jornadas');
+  const rows: string[][] = [
+    ['lider', 'acertador'],
+    ['racha', 'mala'],
+    ['siamesismo', 'suegra'],
+    ['pleno', 'jornadas'],
+  ];
   if (stats.comps.length > 1) {
     for (const c of stats.comps) {
-      add(`Rey de ${compName(c)}`, leaders(ps, (p) => p.byComp[c]?.points ?? 0, 1), String, 'puntos');
+      add(`rey:${c}`, `Rey de ${compName(c)}`, leaders(ps, (p) => p.byComp[c]?.points ?? 0, 1), String, 'puntos');
     }
+    rows.push(stats.comps.map((c) => `rey:${c}`));
   }
-  return out;
+  return rows
+    .map((keys) => keys.map((k) => all.get(k)).filter((x): x is Award => !!x))
+    .filter((row) => row.length > 0);
 }
 
 function Awards({ stats, meId }: { stats: StatsDTO; meId: string }) {
-  const awards = useMemo(() => buildAwards(stats, meId), [stats, meId]);
-  if (!awards.length) return null;
+  const rows = useMemo(() => buildAwards(stats, meId), [stats, meId]);
+  if (!rows.length) return null;
   return (
     <ul className="awards">
-      {awards.map((a) => (
-        <li key={a.label} className={a.mine ? 'award mine' : 'award'}>
-          <span className="award-label">{a.label}</span>
-          <span className="award-val">
-            <b>{a.num}</b>
-            <small>{a.unit}</small>
-          </span>
-          <span className="award-who">{a.who.join(' y ')}</span>
-        </li>
-      ))}
+      {rows.flatMap((row) =>
+        row.map((a) => (
+          <li key={a.label} className={`${a.mine ? 'award mine' : 'award'}${row.length === 1 ? ' wide' : ''}`}>
+            <span className="award-label">{a.label}</span>
+            <b className="award-num">{a.num}</b>
+            <small className="award-unit">{a.unit}</small>
+            <span className="award-who">{a.who.join(' y ')}</span>
+          </li>
+        ))
+      )}
     </ul>
   );
 }
@@ -602,19 +614,19 @@ function PlayerCards({ stats, meId }: { stats: StatsDTO; meId: string }) {
                 <Fact label="Racha actual" value={String(p.streak)} />
                 <Fact label="Mejor racha" value={String(p.bestStreak)} />
                 <Fact label="Mala racha (fallos)" value={String(p.worstStreak)} />
-                <Fact label="Jornadas ganadas" value={String(p.wins)} />
-                <Fact label="Plenos (jornada perfecta)" value={String(p.plenos)} />
-                <Fact label="Pleno al 15" value={p.pleno15.n ? `${p.pleno15.h} de ${p.pleno15.n}` : '–'} />
                 <Fact label="Mejor jornada" value={p.best ? `${p.best.points} (${p.best.round})` : '–'} />
                 <Fact label="Peor jornada" value={p.worst ? `${p.worst.points} (${p.worst.round})` : '–'} />
                 <Fact label="Media por jornada" value={fmt(p.avg, 1)} />
+                <Fact label="Jornadas ganadas" value={String(p.wins)} />
+                <Fact label="Plenos (jornada perfecta)" value={String(p.plenos)} />
+                <Fact label="Pleno al 15" value={p.pleno15.n ? `${p.pleno15.h} de ${p.pleno15.n}` : '–'} />
+                <Fact label="Su siamés" value={twin(stats.siamese, p.playerId, 'most')} />
+                <Fact label="Su opuesto" value={twin(stats.siamese, p.playerId, 'least')} />
                 <Fact
                   label="La suegra (contra el grupo)"
                   value={p.brave.n ? `${fmt(pctOf(p.brave))}% de ${p.brave.n}` : '–'}
                 />
                 <Fact label="Equipo gafe" value={p.jinx ? `${p.jinx.team} (${fmt(p.jinx.pct)}%)` : '–'} />
-                <Fact label="Su siamés" value={twin(stats.siamese, p.playerId, 'most')} />
-                <Fact label="Su opuesto" value={twin(stats.siamese, p.playerId, 'least')} />
               </dl>
             </details>
           </li>

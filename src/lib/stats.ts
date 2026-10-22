@@ -1,11 +1,11 @@
 import { LigaRow, MatchLite, isFinished } from './league';
 import { Pick, resultOf } from './scoring';
-import { STAGE_LABEL, competitionDef } from './competitions';
+import { COMPETITIONS, STAGE_LABEL, competitionDef } from './competitions';
 
 export type Rec = { h: number; n: number }; // aciertos / pronósticos
 type Cell = { total: Rec; home: Rec; away: Rec };
 
-// Una "ronda" es una jornada de una competición. Cuando se mezclan Primera y Champions,
+// Una "ronda" es una jornada de una competición. Cuando se mezclan La Liga y Champions,
 // las rondas se ordenan por fecha para poder dibujarlas en una misma línea de tiempo.
 export type Round = {
   key: number; // identificador interno (orden cronológico)
@@ -189,7 +189,12 @@ export function computeStats(input: {
   liga: LigaRow[];
 }): StatsDTO {
   const { matches, preds, players, liga } = input;
-  const comps = [...new Set(matches.map((m) => m.competition))].sort();
+  // Mismo orden que el menú de competiciones (La Liga, Champions)
+  const present = new Set(matches.map((m) => m.competition));
+  const comps = [
+    ...COMPETITIONS.map((c) => c.code as string).filter((c) => present.has(c)),
+    ...[...present].filter((c) => !COMPETITIONS.some((d) => d.code === c)).sort(),
+  ];
   const multi = comps.length > 1;
   const rounds = buildRounds(matches, multi);
   const roundOf = new Map(rounds.map((r) => [`${r.comp}|${r.matchday}`, r]));

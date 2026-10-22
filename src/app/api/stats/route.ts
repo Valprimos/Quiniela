@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
-  // competition=ALL junta todas las competiciones (Primera + Champions) para las estadísticas combinadas
+  // competition=ALL junta todas las competiciones (La Liga + Champions) para las estadísticas combinadas
   const asked = req.nextUrl.searchParams.get('competition');
   const combined = asked === 'ALL';
   const competition = isCompetitionCode(asked) ? asked : 'PD';

@@ -6,6 +6,7 @@ import type { StatsDTO, Rec, TeamAcc, MatchInsight } from '@/lib/stats';
 import type { LigaRow, Rec5 } from '@/lib/league';
 import { H2HBody } from './H2HModal';
 import PlayersView from './PlayersView';
+import CompLogo from './CompLogo';
 import { compColor, compName, fmt, pctOf } from './statsUtil';
 import { COMPETITIONS } from '@/lib/competitions';
 
@@ -523,16 +524,16 @@ export default function Stats({
       {scoped && (
         <div className="scope" role="group" aria-label="Qué competiciones incluir">
           <button type="button" aria-pressed={scope === 'all'} onClick={() => setScope('all')}>
-            <span className="scope-dots">
+            <span className="scope-logos">
               {COMPETITIONS.map((c) => (
-                <i key={c.code} style={{ background: compColor(c.code) }} />
+                <CompLogo key={c.code} code={c.code} size={20} />
               ))}
             </span>
-            Primera + Champions
+            {COMPETITIONS.map((c) => c.short).join(' + ')}
           </button>
           <button type="button" aria-pressed={scope === 'comp'} onClick={() => setScope('comp')}>
-            <span className="scope-dots">
-              <i style={{ background: compColor(competition) }} />
+            <span className="scope-logos">
+              <CompLogo code={competition} size={20} />
             </span>
             Solo {compShort}
           </button>

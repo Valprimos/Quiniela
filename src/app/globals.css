@@ -519,7 +519,7 @@ select {
 .teamnames { list-style: none; margin: 8px 0 0; padding: 0; max-height: 320px; overflow-y: auto; }
 .teamnames li { padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
 
-/* ===== Estadísticas: jugadores (Primera + Champions) ===== */
+/* ===== Estadísticas: jugadores (La Liga + Champions) ===== */
 :root { --c-pd: #ff9f5a; --c-cl: #5ab1ff; }
 
 .scope { display: flex; gap: 6px; margin-top: 10px; }
@@ -540,9 +540,6 @@ select {
 }
 .award.mine { border-color: var(--foco); background: linear-gradient(180deg, rgba(255, 210, 63, 0.12), var(--panel)); }
 .award-label { font-size: 12px; color: var(--muted); font-weight: 600; }
-.award-val { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-.award-val b { font-family: var(--font-display); font-size: 32px; line-height: 1; }
-.award-val small { font-size: 11px; color: var(--muted); }
 .award-who { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
 
 /* Puntos: barras apiladas por competición */
@@ -656,3 +653,19 @@ select {
 .siam-val { text-align: right; line-height: 1.1; }
 .siam-val b { font-family: var(--font-display); font-size: 18px; }
 .siam-val small { display: block; font-size: 11px; color: var(--muted); }
+
+/* ===== Premios alineados y logos de competición ===== */
+.award.wide { grid-column: 1 / -1; }
+.award-num { font-family: var(--font-display); font-size: 32px; line-height: 1.05; }
+.award-unit { font-size: 11px; color: var(--muted); }
+.award-who { margin-top: 4px; }
+
+.clogo {
+  display: inline-grid; place-items: center; flex: none; padding: 2px; box-sizing: border-box;
+  background: #fff; border-radius: 50%; overflow: hidden;
+}
+.clogo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cdot { display: inline-block; border-radius: 50%; flex: none; }
+.scope-logos { display: inline-flex; gap: 4px; }
+.scope button:first-child { flex: 1.5; }
+.complist button { display: inline-flex; align-items: center; gap: 8px; }

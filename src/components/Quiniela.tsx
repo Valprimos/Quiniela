@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Stats from './Stats';
+import CompLogo from './CompLogo';
 import NotifyPanel from './NotifyPanel';
 import { unsubscribeBrowser } from '@/lib/pushClient';
 import TeamModal from './TeamModal';
@@ -726,6 +727,7 @@ export default function Quiniela() {
             aria-pressed={competition === c.code}
             onClick={() => changeCompetition(c.code)}
           >
+            <CompLogo code={c.code} />
             {c.short}
           </button>
         ))}
@@ -883,7 +885,7 @@ export default function Quiniela() {
                 Combinada
               </button>
             </div>
-            {scope === 'combinada' && <p className="hint">Suma los puntos de Primera y Champions esta temporada.</p>}
+            {scope === 'combinada' && <p className="hint">Suma los puntos de La Liga y Champions esta temporada.</p>}
             {scope === 'jornada' && data.liveCount > 0 && (
               <p className="hint">
                 {data.liveCount === 1 ? 'Hay 1 partido en juego ahora mismo' : `Hay ${data.liveCount} partidos en juego ahora mismo`}.

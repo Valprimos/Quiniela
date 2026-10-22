@@ -22,7 +22,7 @@ type Row = {
 };
 type Summary = { winsA: number; winsB: number; draws: number; goalsA: number; goalsB: number; played: number };
 
-const COMP_LABEL: Record<string, string> = { PD: 'Primera', CL: 'Champions' };
+const COMP_LABEL: Record<string, string> = { PD: 'La Liga', CL: 'Champions' };
 const fmt = (n: number, d = 0) => n.toLocaleString('es-ES', { maximumFractionDigits: d });
 
 function Crest({ src, size = 20 }: { src: string | null; size?: number }) {
