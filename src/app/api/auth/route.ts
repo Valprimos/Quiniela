@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
-import { setSession } from '@/lib/session';
+import { rememberAccount, setSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       }
 
       await setSession(data.id, data.name, group.id, false);
+      await rememberAccount({ pid: data.id, gid: group.id, name: data.name, group: group.name, admin: false });
       return NextResponse.json({ ok: true, created: false, groupName: group.name });
     }
 
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('groups').update({ created_by: player.id }).eq('id', newGroup.id);
     await setSession(player.id, player.name, newGroup.id, true);
+    await rememberAccount({ pid: player.id, gid: newGroup.id, name: player.name, group: newGroup.name, admin: true });
     return NextResponse.json({ ok: true, created: true, groupName: newGroup.name });
   }
 
@@ -84,5 +86,6 @@ export async function POST(req: NextRequest) {
   if (!player || !valid) return fail('Nombre o PIN incorrectos.', 401);
 
   await setSession(player.id, player.name, group.id, player.is_admin);
+  await rememberAccount({ pid: player.id, gid: group.id, name: player.name, group: group.name, admin: !!player.is_admin });
   return NextResponse.json({ ok: true, groupName: group.name });
 }

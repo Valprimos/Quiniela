@@ -85,6 +85,27 @@ temporada (normalmente uno o dos partidos), separado del historial normal de cad
 favoritos o Equilibrado) calculada comparando sus pronósticos con lo que pasa de verdad y con la
 mayoría del grupo; hace falta un mínimo de pronósticos para que salga.
 
+## Perfil y varias ligas
+
+Arriba a la derecha cada persona tiene su **menú de usuario** (con su foto y su nombre):
+
+- **Mis ligas:** las pandillas en las que ya has entrado desde este dispositivo. Un toque en una de
+  ellas cambia de liga sin escribir el código, el nombre ni el PIN. "Añadir otra liga" abre el
+  formulario de entrada (o de creación) sin salir de la actual.
+- **Editar perfil:** foto de perfil y nombre. La foto se recorta en cuadrado y se reduce en el propio
+  móvil (unos pocos KB) y se ve en la clasificación y junto a los pronósticos de los demás. Si hay
+  varias ligas guardadas se puede usar la misma foto en todas. El nombre cambia solo en esa liga y
+  tiene que ser único dentro de la pandilla.
+- **Avisos, Cambiar PIN y Panel de admin** (este último solo para admins).
+- **Salir de esta liga:** la quita de las guardadas y entra en otra si queda alguna.
+
+Cómo funciona: las ligas guardadas van en una cookie firmada solo para el servidor (no se ve desde
+JavaScript), igual que la sesión. Cambiar de liga equivale a tener la sesión abierta en cada una, por
+eso no pide PIN; quien salga de una liga la borra de ese dispositivo. Si alguien es expulsado de una
+pandilla, desaparece solo de la lista. Las fotos se guardan en la columna `avatar` de `players`:
+ejecuta `supabase/migration-5-perfil.sql` una vez (hasta entonces la app funciona igual, pero sin
+fotos). Los avisos del móvil van a un solo perfil por dispositivo: el último que los active.
+
 ## Avisos de jornada (PWA)
 
 Cada jugador puede pulsar **Avisos** en la cabecera para activar notificaciones en ese dispositivo

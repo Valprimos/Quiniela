@@ -85,15 +85,26 @@ export async function GET(req: NextRequest) {
     plenoMatch.is_pleno = true;
   }
 
-  const [{ data: players }, { data: points }] = await Promise.all([
-    supabase.from('players').select('id,name,is_admin').eq('group_id', session.gid),
+  // La foto de perfil es opcional: si aún no se ha ejecutado la migración, se piden los jugadores sin ella
+  const playersQuery = async () => {
+    const withAvatar = await supabase.from('players').select('id,name,is_admin,avatar_updated_at').eq('group_id', session.gid);
+    if (!withAvatar.error) return withAvatar;
+    return supabase.from('players').select('id,name,is_admin').eq('group_id', session.gid);
+  };
+  const [{ data: players }, { data: points }, { data: groupRow }] = await Promise.all([
+    playersQuery(),
     supabase
       .from('player_points')
       .select('player_id,matchday,points')
       .eq('competition', competition)
       .eq('season', season),
+    supabase.from('groups').select('name').eq('id', session.gid).maybeSingle(),
   ]);
-  const playerRows: { id: string; name: string }[] = players ?? [];
+  const playerRows: { id: string; name: string; avatar_updated_at?: string | null }[] = players ?? [];
+  const avatarOf = (id: string): number | null => {
+    const ts = playerRows.find((p) => p.id === id)?.avatar_updated_at;
+    return ts ? new Date(ts).getTime() : null;
+  };
   const playerIds = new Set(playerRows.map((p) => p.id));
   if (!playerIds.has(session.pid)) {
     // Un admin te ha expulsado de la pandilla: se cierra la sesión en vez de dejarla a medias.
@@ -148,7 +159,9 @@ export async function GET(req: NextRequest) {
       // Los pronósticos de los demás solo se ven cuando el partido ha empezado
       picks: started
         ? forMatch.map((p) => ({
+            playerId: p.player_id,
             name: nameById.get(p.player_id) ?? '?',
+            avatar: avatarOf(p.player_id),
             pick: p.pick,
             plenoGuess: p.pleno_home != null && p.pleno_away != null ? { home: p.pleno_home, away: p.pleno_away } : null,
           }))
@@ -210,6 +223,7 @@ export async function GET(req: NextRequest) {
       .map((p) => ({
         playerId: p.id,
         name: p.name,
+        avatar: avatarOf(p.id),
         points: scores.get(p.id) ?? 0,
         // subida (+) o bajada (-) de puestos respecto a antes de la jornada actual
         delta: withDelta && currentStarted ? (prevPos.get(p.id) ?? 0) - (nowPos.get(p.id) ?? 0) : 0,
@@ -262,6 +276,7 @@ export async function GET(req: NextRequest) {
     .map((p) => ({
       playerId: p.id,
       name: p.name,
+      avatar: avatarOf(p.id),
       points: combined.get(p.id) ?? 0,
       delta: 0,
       maxPts: combinedMaxPts.get(p.id) ?? 0,
@@ -269,7 +284,14 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
 
   return NextResponse.json({
-    me: { id: session.pid, name: session.name, admin: session.admin },
+    // El nombre sale de la base de datos (no de la cookie) para reflejar al instante un cambio de nombre
+    me: {
+      id: session.pid,
+      name: nameById.get(session.pid) ?? session.name,
+      admin: session.admin,
+      avatar: avatarOf(session.pid),
+      group: groupRow?.name ?? '',
+    },
     season,
     competition,
     competitions: COMPETITIONS.map((c) => ({ code: c.code, name: c.name, short: c.short })),

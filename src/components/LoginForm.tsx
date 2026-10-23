@@ -1,10 +1,14 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function LoginForm() {
+type Saved = { pid: string; name: string; group: string };
+
+// `embedded`: dentro del menú de usuario, para añadir otra liga sin salir de la actual.
+export default function LoginForm({ embedded = false, onDone }: { embedded?: boolean; onDone?: () => void } = {}) {
   const router = useRouter();
+  const [saved, setSaved] = useState<Saved[]>([]);
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
@@ -12,6 +16,31 @@ export default function LoginForm() {
   const [groupName, setGroupName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // En la pantalla de entrada, ofrecer volver a las ligas guardadas en este dispositivo
+  useEffect(() => {
+    if (embedded) return;
+    fetch('/api/accounts', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => setSaved(j.accounts ?? []))
+      .catch(() => {});
+  }, [embedded]);
+
+  async function enterSaved(pid: string) {
+    setBusy(true);
+    const res = await fetch('/api/accounts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'switch', pid }),
+    }).catch(() => null);
+    if (res?.ok) {
+      router.replace('/');
+      router.refresh();
+    } else {
+      setBusy(false);
+      setError('No se pudo entrar. Usa tu código, nombre y PIN.');
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -28,21 +57,42 @@ export default function LoginForm() {
       setBusy(false);
       return;
     }
+    if (onDone) {
+      onDone();
+      return;
+    }
     router.replace('/');
     router.refresh();
   }
 
   const registering = mode === 'register';
 
-  return (
-    <main className="login">
-      <form className="login-form" onSubmit={submit}>
-        <h1 className="login-title">Quiniela</h1>
+  const form = (
+      <form className={embedded ? 'login-form embedded' : 'login-form'} onSubmit={submit}>
+        {embedded ? (
+          <h3 className="sh small">Añadir otra liga</h3>
+        ) : (
+          <h1 className="login-title">Quiniela</h1>
+        )}
         <p className="muted">
           {registering
             ? 'Únete a la pandilla de tus colegas, o crea una nueva con un código que te inventes.'
-            : 'Entra con el código de tu pandilla, tu nombre y tu PIN.'}
+            : embedded
+              ? 'Entra en otra pandilla con su código, tu nombre en ella y tu PIN. Quedará guardada para cambiar con un toque.'
+              : 'Entra con el código de tu pandilla, tu nombre y tu PIN.'}
         </p>
+
+        {!embedded && saved.length > 0 && (
+          <div className="saved-leagues">
+            <span className="muted">Tus ligas guardadas</span>
+            {saved.map((a) => (
+              <button key={a.pid} type="button" className="saved-league" disabled={busy} onClick={() => enterSaved(a.pid)}>
+                <b>{a.group}</b>
+                <small>{a.name}</small>
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="field">
           <label htmlFor="code">Código de pandilla</label>
@@ -113,6 +163,7 @@ export default function LoginForm() {
           {registering ? 'Ya tengo jugador' : 'Soy nuevo o quiero crear una pandilla'}
         </button>
       </form>
-    </main>
   );
+
+  return embedded ? <section className="pinpanel loginpanel">{form}</section> : <main className="login">{form}</main>;
 }

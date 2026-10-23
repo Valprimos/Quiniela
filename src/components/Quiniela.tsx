@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import Stats from './Stats';
 import CompLogo from './CompLogo';
 import NotifyPanel from './NotifyPanel';
+import UserMenu from './UserMenu';
+import ProfilePanel from './ProfilePanel';
+import LoginForm from './LoginForm';
+import Avatar from './Avatar';
 import { unsubscribeBrowser } from '@/lib/pushClient';
 import TeamModal from './TeamModal';
 import H2HModal from './H2HModal';
@@ -30,12 +34,12 @@ type MatchDTO = {
   isPleno: boolean;
   myPick: Pick | null;
   myPlenoGuess: { home: number; away: number } | null;
-  picks: { name: string; pick: Pick; plenoGuess: { home: number; away: number } | null }[];
+  picks: { playerId: string; name: string; avatar: number | null; pick: Pick; plenoGuess: { home: number; away: number } | null }[];
 };
-type RankRow = { playerId: string; name: string; points: number; delta: number; maxPts: number };
+type RankRow = { playerId: string; name: string; avatar: number | null; points: number; delta: number; maxPts: number };
 type CompetitionInfo = { code: string; name: string; short: string };
 type StateDTO = {
-  me: { id: string; name: string; admin: boolean };
+  me: { id: string; name: string; admin: boolean; avatar: number | null; group: string };
   season: number;
   competition: string;
   competitions: CompetitionInfo[];
@@ -122,7 +126,11 @@ function TeamLine({
   onOpen: (name: string, crest: string | null) => void;
 }) {
   return (
-    <button type="button" className="team teambtn" onClick={() => onOpen(team.name, team.crest)}>
+    <button
+      type="button"
+      className={`team teambtn${score != null ? ' hasscore' : ''}`}
+      onClick={() => onOpen(team.name, team.crest)}
+    >
       {team.crest ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={team.crest} alt="" loading="lazy" />
@@ -130,12 +138,14 @@ function TeamLine({
         <span className="crest-empty" />
       )}
       <span className={`name${chipWon ? ' name-won' : ''}`}>{team.name}</span>
-      {team.pos != null && (
-        <span className="tpos" title="Puesto en la Liga">
-          {team.pos}º
-        </span>
-      )}
-      <FormDots form={team.form} />
+      <span className="tmeta">
+        {team.pos != null && (
+          <span className="tpos" title="Puesto en la Liga">
+            {team.pos}º
+          </span>
+        )}
+        <FormDots form={team.form} />
+      </span>
       {score != null && <span className={`scorechip${chipWon ? ' scorechip-won' : ''}`}>{score}</span>}
     </button>
   );
@@ -327,6 +337,7 @@ function MatchRow({
               const state = m.result ? (c.plenoGuess ? (hit ? 'hit' : 'miss') : '') : '';
               return (
                 <li key={i} className={`chip ${state}`}>
+                  <Avatar id={c.playerId} name={c.name} v={c.avatar} size={18} />
                   {c.name}
                   <b>{c.plenoGuess ? `${c.plenoGuess.home}-${c.plenoGuess.away}` : '–'}</b>
                 </li>
@@ -336,6 +347,7 @@ function MatchRow({
             const state = real ? (c.pick === real ? 'hit' : 'miss') : '';
             return (
               <li key={i} className={`chip ${state}`}>
+                <Avatar id={c.playerId} name={c.name} v={c.avatar} size={18} />
                 {c.name}
                 <b>{c.pick}</b>
               </li>
@@ -382,7 +394,8 @@ function Ranking({
             />
             <span className="pos">{pos}</span>
             <span className="who">
-              {r.name}
+              <Avatar id={r.playerId} name={r.name} v={r.avatar} size={26} />
+              <span className="whoname">{r.name}</span>
               {crown && pos === 1 && r.points > 0 && <span className="badge">Ganó la jornada</span>}
             </span>
             <span className="delta">
@@ -481,9 +494,15 @@ export default function Quiniela() {
   const [scope, setScope] = useState<'jornada' | 'general' | 'combinada'>('jornada');
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [showPin, setShowPin] = useState(false);
-  const [showNotify, setShowNotify] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
+  // Solo un panel abierto a la vez (los abre el menú de usuario)
+  const [panel, setPanel] = useState<'pin' | 'notify' | 'admin' | 'profile' | 'league' | null>(null);
+  const [menuKey, setMenuKey] = useState(0);
+  const showPin = panel === 'pin';
+  const showNotify = panel === 'notify';
+  const showAdmin = panel === 'admin';
+  const showProfile = panel === 'profile';
+  const showLeague = panel === 'league';
+  const openPanel = (p: NonNullable<typeof panel>) => setPanel((cur) => (cur === p ? null : p));
   const [showArchive, setShowArchive] = useState(false);
   const [teamStack, setTeamStack] = useState<{ name: string; crest: string | null }[]>([]);
   const openTeamModal = (name: string, crest: string | null) => setTeamStack([{ name, crest }]);
@@ -649,7 +668,17 @@ export default function Quiniela() {
     } catch {
       /* no bloquea la salida */
     }
-    await fetch('/api/logout', { method: 'POST' });
+    // Sale de esta liga; si hay otra guardada en el dispositivo, entra en ella sin pedir nada
+    const res = await fetch('/api/accounts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'leave' }),
+    }).catch(() => null);
+    const out = await res?.json().catch(() => ({}));
+    if (out?.switched) {
+      window.location.reload();
+      return;
+    }
     router.replace('/login');
     router.refresh();
   }
@@ -717,22 +746,16 @@ export default function Quiniela() {
     <main className="wrap">
       <header className="top">
         <span className="brand">Quiniela {seasonLabel}</span>
-        <div className="top-actions">
-          {data.me.admin && (
-            <button type="button" className="link" onClick={() => setShowAdmin((v) => !v)}>
-              Admin
-            </button>
-          )}
-          <button type="button" className="link" onClick={() => setShowNotify((v) => !v)}>
-            Avisos
-          </button>
-          <button type="button" className="link" onClick={() => setShowPin((v) => !v)}>
-            Cambiar PIN
-          </button>
-          <button type="button" className="link" onClick={logout}>
-            Salir ({data.me.name})
-          </button>
-        </div>
+        <UserMenu
+          me={data.me}
+          refreshKey={menuKey}
+          onProfile={() => openPanel('profile')}
+          onNotify={() => openPanel('notify')}
+          onPin={() => openPanel('pin')}
+          onAdmin={() => openPanel('admin')}
+          onAddLeague={() => openPanel('league')}
+          onLeave={logout}
+        />
       </header>
 
       <div className="seg complist" role="group" aria-label="Competición">
@@ -749,15 +772,26 @@ export default function Quiniela() {
         ))}
       </div>
 
-      {showNotify && <NotifyPanel onClose={() => setShowNotify(false)} />}
-      {showPin && <PinPanel onClose={() => setShowPin(false)} />}
+      {showProfile && (
+        <ProfilePanel
+          me={data.me}
+          onClose={() => setPanel(null)}
+          onSaved={() => {
+            setMenuKey((k) => k + 1);
+            refreshNow();
+          }}
+        />
+      )}
+      {showLeague && <LoginForm embedded onDone={() => window.location.reload()} />}
+      {showNotify && <NotifyPanel onClose={() => setPanel(null)} />}
+      {showPin && <PinPanel onClose={() => setPanel(null)} />}
       {showAdmin && (
         <AdminPanel
           competition={competition}
           matchday={data.matchday}
           matches={data.matches}
           meId={data.me.id}
-          onClose={() => setShowAdmin(false)}
+          onClose={() => setPanel(null)}
           onChanged={refreshNow}
         />
       )}

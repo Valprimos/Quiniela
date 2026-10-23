@@ -135,3 +135,7 @@ create table if not exists push_sent (
 
 alter table push_subscriptions enable row level security;
 alter table push_sent enable row level security;
+
+-- Foto de perfil: ver migration-5-perfil.sql
+alter table players add column if not exists avatar text;
+alter table players add column if not exists avatar_updated_at timestamptz;
