@@ -886,3 +886,39 @@ select {
 .whotxt { display: grid; gap: 3px; justify-items: start; min-width: 0; }
 .hm .hm-name { height: 28px; padding: 0; }
 .hm .hm-name .plink { height: 28px; }
+
+/* ===== Perfil de jugador más compacto y con scroll; menú de usuario con scroll; etiquetas de los puntos ===== */
+.pmodal {
+  width: min(360px, 100%); max-height: min(78dvh, 560px); padding: 14px 16px 16px; gap: 10px;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+.pmodal-close {
+  position: sticky; top: 0; right: auto; align-self: start; justify-self: end; z-index: 3;
+  width: 32px; height: 32px; font-size: 22px; margin: 0 -4px -42px 0;
+}
+.pmodal-photo { padding: 3px; margin-bottom: 2px; }
+.pmodal-name { font-size: 30px; }
+.pmodal-sub { font-size: 13px; }
+.ptiles { gap: 6px; }
+.ptile { padding: 7px 8px; }
+.ptile-val { font-size: 22px; }
+.pcomps li { padding: 6px 8px; }
+.pcomps b { font-size: 20px; }
+.pmodal-facts { gap: 4px; }
+.pmodal-facts div { font-size: 13px; padding-bottom: 4px; }
+
+.usermenu-pop { max-height: calc(100dvh - 96px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; width: min(300px, calc(100vw - 32px)); padding: 8px; }
+.um-item { padding: 8px; }
+
+.fd[data-tip] { position: relative; cursor: default; outline: none; }
+.fd[data-tip]:hover, .fd[data-tip]:focus { filter: brightness(1.25); }
+.fd[data-tip]::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 9px); left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: 230px; white-space: pre-line; text-align: left;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 6px;
+  padding: 6px 9px; font-size: 12px; font-weight: 600; line-height: 1.35; font-style: normal;
+  opacity: 0; pointer-events: none; z-index: 30; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+.fd[data-tip].tip-l::after { left: -4px; transform: none; }
+.fd[data-tip].tip-r::after { left: auto; right: -4px; transform: none; }
+.fd[data-tip]:hover::after, .fd[data-tip]:focus::after { opacity: 1; }

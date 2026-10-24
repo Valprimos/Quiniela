@@ -5,6 +5,7 @@ import type { PlayerStat, StatsDTO } from '@/lib/stats';
 import { COMPETITIONS } from '@/lib/competitions';
 import Avatar from './Avatar';
 import CompLogo from './CompLogo';
+import FormDotsTip from './FormDotsTip';
 import { fmt, pctOf } from './statsUtil';
 
 export type ProfileTarget = { id: string; name: string; avatar: number | null };
@@ -87,7 +88,7 @@ export default function PlayerProfileModal({
 
         <div className="pmodal-head">
           <span className={`pmodal-photo${mine ? ' me' : ''}`}>
-            <Avatar id={target.id} name={target.name} v={target.avatar} size={160} />
+            <Avatar id={target.id} name={target.name} v={target.avatar} size={112} />
           </span>
           <h2 className="pmodal-name">{target.name}</h2>
           <p className="pmodal-sub">
@@ -137,16 +138,7 @@ export default function PlayerProfileModal({
               </ul>
             )}
 
-            {p.form.length > 0 && (
-              <div className="pform pmodal-form" aria-label="Últimos partidos">
-                <span className="pcap">Últimos {p.form.length}</span>
-                <span className="pform-dots">
-                  {p.form.map((m, i) => (
-                    <i key={i} className={`fd fd-${m === '-' ? 'n' : m}`} />
-                  ))}
-                </span>
-              </div>
-            )}
+            <FormDotsTip marks={p.form} info={p.formInfo} />
 
             <dl className="pmodal-facts">
               <div>

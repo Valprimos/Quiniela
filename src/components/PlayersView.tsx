@@ -2,9 +2,10 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { StatsDTO, PlayerStat, Round, FormMark, Pair } from '@/lib/stats';
+import type { StatsDTO, PlayerStat, Round, Pair } from '@/lib/stats';
 import { COMP_COLOR, compColor, compName, fmt, pctOf } from './statsUtil';
 import Avatar from './Avatar';
+import FormDotsTip from './FormDotsTip';
 import { useProfile, type ProfileTarget } from './PlayerProfile';
 
 type Players = PlayerStat[];
@@ -531,21 +532,6 @@ function Ring({ pct }: { pct: number | null }) {
   );
 }
 
-function FormDots({ marks }: { marks: FormMark[] }) {
-  if (!marks.length) return null;
-  const word: Record<FormMark, string> = { H: 'acierto', M: 'fallo', '-': 'sin pronóstico' };
-  return (
-    <div className="pform" aria-label="Últimos partidos">
-      <span className="pcap">Últimos {marks.length}</span>
-      <span className="pform-dots">
-        {marks.map((m, i) => (
-          <i key={i} className={`fd fd-${m === '-' ? 'n' : m}`} title={word[m]} />
-        ))}
-      </span>
-    </div>
-  );
-}
-
 function Spark({ per, rounds, max }: { per: (number | null)[]; rounds: Round[]; max: number }) {
   if (!rounds.length) return null;
   return (
@@ -671,7 +657,7 @@ function PlayerCards({ stats, meId }: { stats: StatsDTO; meId: string }) {
               <Ring pct={p.pct} />
             </div>
 
-            <FormDots marks={p.form} />
+            <FormDotsTip marks={p.form} info={p.formInfo} />
             <Spark per={perOf.get(p.playerId) ?? []} rounds={rounds} max={sparkMax} />
             {multi && <CompSplit p={p} comps={stats.comps} />}
 

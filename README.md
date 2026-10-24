@@ -104,6 +104,12 @@ puntos, porcentaje de acierto, mejor racha y racha actual, jornadas ganadas, ple
 competición, sus últimos 10 partidos, con quién piensa más parecido y con quién menos, La suegra y su
 equipo gafe. En Estadísticas también salen las fotos en los premios, en puntos por competición, en el
 mapa de jornadas, en el cara a cara, en el Siamesismo y en las tarjetas de cada jugador.
+
+En los puntos de colores de "Últimos 10" (en el perfil y en las tarjetas de Estadísticas), pasar el
+ratón o tocar un punto muestra el partido, cómo acabó y lo que había pronosticado esa persona (con ✓ o
+✗; en el pleno al 15, el marcador exacto). El perfil es compacto y se desliza si el contenido no cabe.
+Los submenús del menú de usuario (perfil, añadir liga, avisos, PIN y admin) se cierran al tocar en
+cualquier sitio de fuera, o con Escape; desplazarse por la página no los cierra.
 - **Salir de esta liga:** la quita de las guardadas y entra en otra si queda alguna.
 
 Cómo funciona: las ligas guardadas van en una cookie firmada solo para el servidor (no se ve desde

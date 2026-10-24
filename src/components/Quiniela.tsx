@@ -531,6 +531,32 @@ export default function Quiniela() {
   const showProfile = panel === 'profile';
   const showLeague = panel === 'league';
   const openPanel = (p: NonNullable<typeof panel>) => setPanel((cur) => (cur === p ? null : p));
+
+  // Un submenú abierto (perfil, añadir liga, avisos, PIN, admin) se cierra al tocar en cualquier sitio de fuera.
+  // Se usa el final del toque (no el inicio) para que desplazarse por la página no lo cierre.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!panel) return;
+    const openedAt = performance.now(); // ignora el propio toque que lo abrió
+    let startedOutside = false;
+    const outside = (t: EventTarget | null) => !!panelRef.current && !panelRef.current.contains(t as Node);
+    const down = (e: PointerEvent) => {
+      startedOutside = e.timeStamp > openedAt && outside(e.target);
+    };
+    const up = (e: PointerEvent) => {
+      if (startedOutside && e.timeStamp > openedAt && outside(e.target)) setPanel(null);
+      startedOutside = false;
+    };
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setPanel(null);
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('pointerup', up, true);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerdown', down, true);
+      document.removeEventListener('pointerup', up, true);
+      document.removeEventListener('keydown', key);
+    };
+  }, [panel]);
   const [showArchive, setShowArchive] = useState(false);
   const [teamStack, setTeamStack] = useState<{ name: string; crest: string | null }[]>([]);
   const openTeamModal = (name: string, crest: string | null) => setTeamStack([{ name, crest }]);
@@ -801,6 +827,7 @@ export default function Quiniela() {
         ))}
       </div>
 
+      <div ref={panelRef}>
       {showProfile && (
         <ProfilePanel
           me={data.me}
@@ -824,6 +851,7 @@ export default function Quiniela() {
           onChanged={refreshNow}
         />
       )}
+      </div>
       {teamStack.length > 0 && (
         <TeamModal
           team={teamStack[teamStack.length - 1]}

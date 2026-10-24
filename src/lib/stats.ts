@@ -20,6 +20,18 @@ export type Round = {
 export type CompTally = { hits: number; played: number; points: number };
 export type FormMark = 'H' | 'M' | '-'; // acierto, fallo, sin pronosticar
 
+// Detalle de cada punto del historial: el partido, cómo acabó y qué había puesto el jugador
+export type FormEntry = {
+  round: string; // "La Liga J12"
+  home: string;
+  away: string;
+  homeScore: number;
+  awayScore: number;
+  result: Pick; // 1, X o 2
+  pick: Pick | null; // null = no pronosticó
+  plenoGuess: { home: number; away: number } | null; // marcador exacto, si era el pleno al 15
+};
+
 export type TeamAcc = {
   team: string;
   crest: string | null;
@@ -60,6 +72,7 @@ export type PlayerStat = {
   byComp: Record<string, CompTally>;
   // Últimos 10 partidos terminados, del más antiguo al más reciente
   form: FormMark[];
+  formInfo: FormEntry[]; // mismo orden y longitud que `form`
   style: { label: string; detail: string } | null;
 };
 
@@ -130,6 +143,7 @@ type Agg = {
   pleno15: Rec; // aciertos exactos del "pleno al 15" (h) sobre cuántos jugó (n)
   comp: Record<string, CompTally>;
   form: FormMark[];
+  formInfo: FormEntry[];
 };
 
 // Mínimo de partidos pronosticados por los dos para que una pareja cuente
@@ -262,6 +276,7 @@ export function computeStats(input: {
       pleno15: rec(),
       comp: Object.fromEntries(comps.map((c) => [c, { hits: 0, played: 0, points: 0 }])),
       form: [],
+      formInfo: [],
     });
   }
 
@@ -302,11 +317,22 @@ export function computeStats(input: {
       a.md.set(key, a.md.get(key) ?? 0);
       a.pts.set(key, a.pts.get(key) ?? 0);
       const pick = pm?.get(pl.id);
+      const entry: FormEntry = {
+        round: roundByKey.get(key)!.label,
+        home: m.home_name,
+        away: m.away_name,
+        homeScore: m.home_score,
+        awayScore: m.away_score,
+        result: res,
+        pick: pick ?? null,
+        plenoGuess: pg?.get(pl.id) ?? null,
+      };
       if (!pick) {
         a.missed++;
         a.cur = 0;
         if (!m.is_pleno) a.curNP = 0;
         a.form.push('-');
+        a.formInfo.push(entry);
         continue;
       }
       const hit = pick === res;
@@ -348,6 +374,7 @@ export function computeStats(input: {
         a.worstLose = Math.max(a.worstLose, a.lose);
       }
       a.form.push(hit ? 'H' : 'M');
+      a.formInfo.push(entry);
       bump(a.byPick[pick], hit);
       picksCount[pick]++;
       bump(hitByResult[res], hit);
@@ -485,6 +512,7 @@ export function computeStats(input: {
       pleno15: a.pleno15,
       byComp: a.comp,
       form: a.form.slice(-10),
+      formInfo: a.formInfo.slice(-10),
       style: styleOf(a),
     };
   });
