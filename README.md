@@ -92,6 +92,15 @@ empatados comparten color) y un azul grisáceo para el resto. Quien gana una jor
 la etiqueta 🏆 con la jornada (`🏆 J12`, o `🏆 Octavos` en las eliminatorias) y tu propia fila lleva
 la marca "tú".
 
+## Carga y peticiones
+
+La app abre con una sola petición (la jornada actual). Las jornadas vecinas solo se traen cuando
+acercas el dedo o el ratón a una flecha, y la petición se comparte si ya estaba en curso. Estadísticas,
+perfil de jugador y ligas guardadas se guardan en memoria: se ven al instante y solo se piden de nuevo
+pasado un minuto, si termina un partido o si cambias algo (foto, nombre, pronósticos). La jornada se
+refresca cada 20 s si hay partidos en juego, cada 5 min si ya está cerrada y cada minuto en el resto,
+y al volver a la pestaña. Mientras llegan los datos se ven esqueletos con la forma de lo que viene.
+
 ## Perfil y varias ligas
 
 Arriba a la derecha cada persona tiene su **menú de usuario** (con su foto y su nombre):

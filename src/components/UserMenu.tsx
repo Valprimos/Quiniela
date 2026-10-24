@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Avatar from './Avatar';
+import { RowsSkeleton } from './Skeleton';
+import { fetchJson, load, peek } from '@/lib/clientCache';
 
 type Me = { id: string; name: string; admin: boolean; avatar: number | null; group: string };
 type Saved = { pid: string; name: string; group: string; admin: boolean; current: boolean; avatar: number | null };
@@ -27,20 +29,25 @@ export default function UserMenu({
   onLeave: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [accounts, setAccounts] = useState<Saved[] | null>(null);
+  // Las ligas guardadas se piden una vez y se reutilizan (se actualizan si cambias tu perfil)
+  const key = `accounts:${me.id}`;
+  const [accounts, setAccounts] = useState<Saved[] | null>(() => peek<Saved[]>(key) ?? null);
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(() => {
-    fetch('/api/accounts', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((j) => setAccounts(j.accounts ?? []))
-      .catch(() => setAccounts([]));
-  }, []);
+  const loadAccounts = useCallback(() => {
+    setAccounts(peek<Saved[]>(key) ?? null);
+    load(key, () => fetchJson<{ accounts?: Saved[] }>('/api/accounts').then((j) => j.accounts ?? []), {
+      ttl: 5 * 60_000,
+      tag: refreshKey,
+    })
+      .then(setAccounts)
+      .catch(() => setAccounts((cur) => cur ?? []));
+  }, [key, refreshKey]);
 
   useEffect(() => {
-    if (open) load();
-  }, [open, load, refreshKey]);
+    if (open) loadAccounts();
+  }, [open, loadAccounts]);
 
   // Se cierra al pulsar fuera o con Escape
   useEffect(() => {
@@ -121,7 +128,11 @@ export default function UserMenu({
                 </button>
               </li>
             ))}
-            {accounts === null && <li className="um-loading">Cargando…</li>}
+            {accounts === null && (
+              <li className="um-loading">
+                <RowsSkeleton rows={2} avatar />
+              </li>
+            )}
           </ul>
           <button type="button" role="menuitem" className="um-item" onClick={pick(onAddLeague)}>
             + Añadir otra liga

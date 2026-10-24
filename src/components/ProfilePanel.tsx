@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Avatar from './Avatar';
+import { fetchJson, load, peek } from '@/lib/clientCache';
 
 type Me = { id: string; name: string; avatar: number | null };
 
@@ -41,13 +42,13 @@ async function toSquareJpeg(file: File): Promise<string> {
 
 // Foto de perfil y nombre
 export default function ProfilePanel({ me, onClose, onSaved }: { me: Me; onClose: () => void; onSaved: () => void }) {
-  const [leagues, setLeagues] = useState(1);
+  const key = `accounts:${me.id}`;
+  const [leagues, setLeagues] = useState(() => peek<unknown[]>(key)?.length || 1);
   useEffect(() => {
-    fetch('/api/accounts', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((j) => setLeagues((j.accounts ?? []).length || 1))
+    load(key, () => fetchJson<{ accounts?: unknown[] }>('/api/accounts').then((j) => j.accounts ?? []), { ttl: 5 * 60_000 })
+      .then((list) => setLeagues(list.length || 1))
       .catch(() => {});
-  }, []);
+  }, [key]);
   const [name, setName] = useState(me.name);
   const [photo, setPhoto] = useState<string | null>(null); // foto nueva elegida, aún sin guardar
   const [applyAll, setApplyAll] = useState(true);

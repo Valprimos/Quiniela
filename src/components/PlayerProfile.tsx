@@ -6,6 +6,8 @@ import { COMPETITIONS } from '@/lib/competitions';
 import Avatar from './Avatar';
 import CompLogo from './CompLogo';
 import FormDotsTip from './FormDotsTip';
+import { ProfileSkeleton } from './Skeleton';
+import { fetchJson, load, peek } from '@/lib/clientCache';
 import { fmt, pctOf } from './statsUtil';
 
 export type ProfileTarget = { id: string; name: string; avatar: number | null };
@@ -35,32 +37,32 @@ export default function PlayerProfileModal({
   target,
   meId,
   group,
+  version,
   onClose,
   onEdit,
 }: {
   target: ProfileTarget;
   meId: string;
   group: string;
+  version: number;
   onClose: () => void;
   onEdit: () => void;
 }) {
-  const [stats, setStats] = useState<StatsDTO | null>(null);
+  // Usa las estadísticas que ya se cargaron (pestaña Estadísticas u otro perfil): se ven al instante
+  const key = `stats:${meId}:ALL`;
+  const [stats, setStats] = useState<StatsDTO | null>(() => peek<StatsDTO>(key) ?? null);
   const [failed, setFailed] = useState(false);
   const closeBtn = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let alive = true;
-    fetch('/api/stats?competition=ALL', { cache: 'no-store' })
-      .then((r) => {
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then((j: StatsDTO) => alive && setStats(j))
-      .catch(() => alive && setFailed(true));
+    load(key, () => fetchJson<StatsDTO>('/api/stats?competition=ALL'), { ttl: 60_000, tag: version })
+      .then((j) => alive && setStats(j))
+      .catch(() => alive && !peek(key) && setFailed(true));
     return () => {
       alive = false;
     };
-  }, [target.id]);
+  }, [key, version]);
 
   useEffect(() => {
     closeBtn.current?.focus();
@@ -102,7 +104,7 @@ export default function PlayerProfileModal({
           )}
         </div>
 
-        {!stats && !failed && <p className="muted">Cargando estadísticas…</p>}
+        {!stats && !failed && <ProfileSkeleton />}
         {failed && <p className="notice">No se pudieron cargar las estadísticas.</p>}
         {stats && !p && <p className="muted">Todavía no hay estadísticas de este jugador.</p>}
         {stats && p && stats.finished === 0 && <p className="muted">Aún no hay partidos terminados.</p>}

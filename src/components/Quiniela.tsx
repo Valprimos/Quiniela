@@ -9,6 +9,8 @@ import UserMenu from './UserMenu';
 import ProfilePanel from './ProfilePanel';
 import LoginForm from './LoginForm';
 import Avatar from './Avatar';
+import { AppSkeleton, MatchesSkeleton, RankingSkeleton } from './Skeleton';
+import { clear as clearCache } from '@/lib/clientCache';
 import PlayerProfileModal, { ProfileCtx, useProfile, type ProfileTarget } from './PlayerProfile';
 import { unsubscribeBrowser } from '@/lib/pushClient';
 import TeamModal from './TeamModal';
@@ -579,6 +581,10 @@ export default function Quiniela() {
   const openTeamModal = (name: string, crest: string | null) => setTeamStack([{ name, crest }]);
   const [h2h, setH2h] = useState<{ a: Team; b: Team } | null>(null);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+  // Qué jornada se está mostrando de verdad (para saber cuándo poner el esqueleto al cambiar de jornada)
+  const [shownKey, setShownKey] = useState('');
+  const cacheAt = useRef(new Map<string, number>());
+  const inflight = useRef(new Map<string, Promise<StateDTO | null>>());
 
   const keyOf = (comp: string, matchday: number | null) => `${comp}:${matchday ?? 'current'}`;
 
@@ -602,6 +608,36 @@ export default function Quiniela() {
     [router]
   );
 
+  // Si ya hay una petición igual en curso, se comparte en vez de lanzar otra
+  const fetchShared = useCallback(
+    (comp: string, matchday: number | null) => {
+      const k = keyOf(comp, matchday);
+      const running = inflight.current.get(k);
+      if (running) return running;
+      const p = fetchState(comp, matchday).finally(() => inflight.current.delete(k));
+      inflight.current.set(k, p);
+      return p;
+    },
+    [fetchState]
+  );
+
+  // Precarga de una jornada vecina, solo cuando el usuario está a punto de pulsar la flecha
+  const prefetch = useCallback(
+    (comp: string, md: number | null) => {
+      if (md == null) return;
+      const k = keyOf(comp, md);
+      if (cache.current.has(k) || inflight.current.has(k)) return;
+      fetchShared(comp, md)
+        .then((s) => {
+          if (!s) return;
+          cache.current.set(k, s);
+          cacheAt.current.set(k, Date.now());
+        })
+        .catch(() => {});
+    },
+    [fetchShared]
+  );
+
   const load = useCallback(
     async (comp: string, matchday: number | null) => {
       const key = keyOf(comp, matchday);
@@ -613,12 +649,15 @@ export default function Quiniela() {
       const cached = cache.current.get(key);
       if (cached) {
         setData(cached);
+        setShownKey(key);
         setError(null);
+        // Datos de hace pocos segundos (por ejemplo, recién precargados): no se piden otra vez
+        if (Date.now() - (cacheAt.current.get(key) ?? 0) < 15_000) return;
       } else {
         setLoading(true);
       }
       try {
-        const fresh = await fetchState(comp, matchday);
+        const fresh = await fetchShared(comp, matchday);
         if (!fresh) return;
         if (!comp) {
           // Apertura de la app: el servidor ha elegido la competición
@@ -626,46 +665,38 @@ export default function Quiniela() {
           resolved.current = keyOf(comp, null);
           setCompetition(comp);
         }
-        cache.current.set(keyOf(comp, matchday), fresh);
-        // Solo pisar la pantalla si seguimos mirando lo mismo (evita carreras al cambiar rápido)
-        setData((prev) => (prev && prev !== fresh ? fresh : fresh));
+        const k = keyOf(comp, matchday);
+        cache.current.set(k, fresh);
+        cacheAt.current.set(k, Date.now());
+        setData(fresh);
+        setShownKey(k);
         setError(null);
-        // Precarga silenciosa de las jornadas vecinas, para que las flechas respondan al instante
-        const idx = fresh.matchdays.indexOf(fresh.matchday);
-        const neighbors = [fresh.matchdays[idx - 1], fresh.matchdays[idx + 1]].filter(
-          (n): n is number => n != null
-        );
-        for (const n of neighbors) {
-          const nk = keyOf(comp, n);
-          if (!cache.current.has(nk)) {
-            fetchState(comp, n)
-              .then((s) => s && cache.current.set(nk, s))
-              .catch(() => {});
-          }
-        }
       } catch (e) {
         if (!cached) setError(e instanceof Error && e.message ? e.message : 'No se pudo cargar la jornada. Reintentando en un minuto.');
       } finally {
         setLoading(false);
       }
     },
-    [fetchState]
+    [fetchShared]
   );
 
   useEffect(() => {
     load(competition, md);
   }, [competition, md, load]);
 
-  // Refresco automático: más seguido si hay algo en juego
+  // Refresco automático: cada 20 s si hay algo en juego, cada 5 min en una jornada ya cerrada y cada
+  // minuto en el resto. Al volver a la pestaña se actualiza al momento (si los datos tienen más de 15 s).
   useEffect(() => {
-    const t = setInterval(
-      () => {
-        if (!document.hidden) load(competition, md);
-      },
-      data?.jornadaLive ? 20_000 : 60_000
-    );
-    return () => clearInterval(t);
-  }, [competition, md, load, data?.jornadaLive]);
+    const refresh = () => {
+      if (!document.hidden) load(competition, md);
+    };
+    const t = setInterval(refresh, data?.jornadaLive ? 20_000 : data?.jornadaComplete ? 300_000 : 60_000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [competition, md, load, data?.jornadaLive, data?.jornadaComplete]);
 
   // Reloj para las cuentas atrás
   useEffect(() => {
@@ -726,6 +757,7 @@ export default function Quiniela() {
   }
 
   async function logout() {
+    clearCache(); // no dejar datos de esta persona en memoria
     // Al salir, este dispositivo deja de recibir los avisos de este jugador
     try {
       const endpoint = await unsubscribeBrowser();
@@ -755,21 +787,35 @@ export default function Quiniela() {
   }
 
   function refreshNow() {
+    // Tras un cambio (foto, nombre, pronóstico editado por el admin...) lo guardado en memoria ya no vale
+    clearCache(`stats:${data?.me.id ?? ''}`);
     cache.current.delete(keyOf(competition, md));
+    cacheAt.current.delete(keyOf(competition, md));
     load(competition, md);
   }
 
   if (!data) {
-    return (
-      <main className="wrap">
-        <p className="muted">{error ?? 'Cargando jornada…'}</p>
-      </main>
-    );
+    if (error) {
+      return (
+        <main className="wrap">
+          <p className="muted">{error}</p>
+        </main>
+      );
+    }
+    return <AppSkeleton />;
   }
 
   const idx = data.matchdays.indexOf(data.matchday);
   const prevMd = idx > 0 ? data.matchdays[idx - 1] : null;
   const nextMd = idx >= 0 && idx < data.matchdays.length - 1 ? data.matchdays[idx + 1] : null;
+  // Al acercar el dedo o el ratón a una flecha ya se empieza a traer esa jornada
+  const hint = (n: number | null) => ({
+    onPointerEnter: () => prefetch(competition, n),
+    onPointerDown: () => prefetch(competition, n),
+    onFocus: () => prefetch(competition, n),
+  });
+  // Solo hay esqueleto si lo que se pide no es lo que se está mostrando (no al refrescar la misma jornada)
+  const showSk = loading && shownKey !== keyOf(competition, md) && tab !== 'estadisticas';
   const seasonLabel = `${String(data.season).slice(2)}/${String(data.season + 1).slice(2)}`;
   const myPoints = data.rankingJornada.find((r) => r.playerId === data.me.id)?.points ?? 0;
 
@@ -893,6 +939,7 @@ export default function Quiniela() {
           type="button"
           className="arrow"
           disabled={prevMd == null}
+          {...hint(prevMd)}
           onClick={() => prevMd != null && setMd(prevMd)}
           aria-label="Jornada anterior"
         >
@@ -921,6 +968,7 @@ export default function Quiniela() {
           type="button"
           className="arrow"
           disabled={nextMd == null}
+          {...hint(nextMd)}
           onClick={() => nextMd != null && setMd(nextMd)}
           aria-label="Jornada siguiente"
         >
@@ -974,7 +1022,8 @@ export default function Quiniela() {
         ))}
       </div>
 
-      <div className={`fadebox${loading ? ' loading' : ''}`}>
+      <div className={`fadebox${loading ? ' loading' : ''}${showSk ? ' showsk' : ''}`}>
+        {showSk && (tab === 'clasificacion' ? <RankingSkeleton /> : <MatchesSkeleton />)}
         {tab === 'pronosticos' &&
           (data.matches.length ? (
             <>
@@ -1043,6 +1092,7 @@ export default function Quiniela() {
           target={profile}
           meId={data.me.id}
           group={data.me.group}
+          version={data.finishedTotal}
           onClose={() => setProfile(null)}
           onEdit={() => {
             setProfile(null);

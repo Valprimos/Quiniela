@@ -938,3 +938,26 @@ select {
   margin: 0; padding: 1px 8px; font-size: 12px; font-weight: 700; line-height: 1.5; white-space: nowrap;
   background: rgba(255, 210, 63, 0.14); border: 1px solid rgba(255, 210, 63, 0.6); color: var(--foco);
 }
+
+/* ===== Esqueletos de carga ===== */
+.sk {
+  display: block; flex: none; border-radius: 6px;
+  background: linear-gradient(90deg, #1a323c 0%, #29505d 45%, #1a323c 90%);
+  background-size: 220% 100%; animation: sk-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes sk-shimmer { 0% { background-position: 120% 0; } 100% { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+.sk-wrap { display: block; }
+.sk-row { display: flex; align-items: center; }
+.sk-match { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px dashed var(--line); }
+.sk-match-teams { display: grid; gap: 10px; }
+.sk-team { display: flex; align-items: center; gap: 10px; }
+.sk-slip { display: flex; gap: 8px; }
+.sk-rank { display: flex; align-items: center; gap: 14px; padding: 12px 10px; border-bottom: 1px dashed var(--line); }
+.sk-awards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sk-award { display: grid; gap: 8px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.sk-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.sk-tile { display: grid; gap: 6px; padding: 9px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
+/* Al cambiar de jornada sin datos guardados, el esqueleto sustituye al contenido anterior */
+.fadebox.showsk > :not(.sk-wrap) { display: none; }
+.fadebox.showsk { opacity: 1; }

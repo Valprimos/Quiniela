@@ -7,6 +7,8 @@ import type { LigaRow, Rec5 } from '@/lib/league';
 import { H2HBody } from './H2HModal';
 import PlayersView from './PlayersView';
 import CompLogo from './CompLogo';
+import { StatsSkeleton } from './Skeleton';
+import { fetchJson, load, peek } from '@/lib/clientCache';
 import { compColor, compName, fmt, pctOf } from './statsUtil';
 import { COMPETITIONS } from '@/lib/competitions';
 
@@ -449,29 +451,24 @@ function H2H({ teams }: { teams: { team: string; crest: string | null }[] }) {
 type Scope = 'comp' | 'all';
 const SCOPED: View[] = ['equipos', 'jugadores', 'grupo'];
 
-function useStats(competition: string, version: number, enabled: boolean) {
-  const [stats, setStats] = useState<StatsDTO | null>(null);
+// Las estadísticas se guardan en memoria: al volver a una vista (o abrir el perfil de un jugador) se ven
+// al instante y solo se piden de nuevo si han pasado más de 60 s o ha terminado algún partido.
+function useStats(meId: string, competition: string, version: number, enabled: boolean) {
+  const key = `stats:${meId}:${competition}`;
+  const [stats, setStats] = useState<StatsDTO | null>(() => (enabled ? peek<StatsDTO>(key) ?? null : null));
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
-    setStats(null);
-    fetch(`/api/stats?competition=${competition}`, { cache: 'no-store' })
-      .then((r) => {
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then((j: StatsDTO) => {
-        if (alive) {
-          setStats(j);
-          setFailed(false);
-        }
-      })
-      .catch(() => alive && setFailed(true));
+    setStats(peek<StatsDTO>(key) ?? null);
+    setFailed(false);
+    load(key, () => fetchJson<StatsDTO>(`/api/stats?competition=${competition}`), { ttl: 60_000, tag: version })
+      .then((j) => alive && setStats(j))
+      .catch(() => alive && !peek(key) && setFailed(true));
     return () => {
       alive = false;
     };
-  }, [version, competition, enabled]);
+  }, [key, version, enabled, competition]);
   return { stats, failed };
 }
 
@@ -490,8 +487,8 @@ export default function Stats({
   const [scope, setScope] = useState<Scope>('all');
 
   const wantAll = scope === 'all' && SCOPED.includes(view);
-  const one = useStats(competition, version, !wantAll);
-  const all = useStats('ALL', version, wantAll);
+  const one = useStats(meId, competition, version, !wantAll);
+  const all = useStats(meId, 'ALL', version, wantAll);
   const cur = wantAll ? all : one;
   const stats = cur.stats;
 
@@ -535,7 +532,7 @@ export default function Stats({
       )}
 
       {cur.failed && !stats && <p className="notice">No se pudieron cargar las estadísticas.</p>}
-      {!stats && !cur.failed && <p className="muted empty">Calculando estadísticas…</p>}
+      {!stats && !cur.failed && <StatsSkeleton />}
       {stats && (
         <>
           {view === 'jugadores' && <PlayersView stats={stats} meId={meId} />}

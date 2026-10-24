@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { COMPETITIONS } from '@/lib/competitions';
 import CompLogo from './CompLogo';
+import { RowsSkeleton } from './Skeleton';
 
 type TeamNameGroup = { key: string; names: string[]; seasons: number[]; matches: number };
 
@@ -273,7 +274,7 @@ function PredictionEditor({
       </select>
       {error && <p className="notice">{error}</p>}
       {saved && <p className="okmsg">{saved}</p>}
-      {!list && !error && <p className="muted">Cargando…</p>}
+      {!list && !error && <RowsSkeleton rows={3} />}
       {list && list.length === 0 && <p className="muted">Esta jornada no tiene partidos.</p>}
       {list && list.length > 0 && (
         <ul className="pedit-list">
@@ -482,7 +483,7 @@ function ResultsEditor({ round, onSaved }: { round: RoundData | null; onSaved: (
   const set = (id: number, key: 'h' | 'a', v: string) =>
     setDraft((d) => ({ ...d, [id]: { h: d[id]?.h ?? '', a: d[id]?.a ?? '', [key]: v.replace(/\D/g, '').slice(0, 2) } }));
 
-  if (!round) return <p className="muted">Cargando…</p>;
+  if (!round) return <RowsSkeleton rows={3} />;
   if (!round.matches.length) return <p className="muted">No hay partidos en esta jornada.</p>;
   return (
     <>
