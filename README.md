@@ -97,6 +97,13 @@ Arriba a la derecha cada persona tiene su **menú de usuario** (con su foto y su
   varias ligas guardadas se puede usar la misma foto en todas. El nombre cambia solo en esa liga y
   tiene que ser único dentro de la pandilla.
 - **Avisos, Cambiar PIN y Panel de admin** (este último solo para admins).
+
+**Perfil de cada jugador:** tocar el nombre o la foto de cualquier jugador (en la clasificación, junto
+a los pronósticos de los demás o en la pestaña Estadísticas) abre su perfil: foto grande, puesto y
+puntos, porcentaje de acierto, mejor racha y racha actual, jornadas ganadas, pleno al 15, puntos por
+competición, sus últimos 10 partidos, con quién piensa más parecido y con quién menos, La suegra y su
+equipo gafe. En Estadísticas también salen las fotos en los premios, en puntos por competición, en el
+mapa de jornadas, en el cara a cara, en el Siamesismo y en las tarjetas de cada jugador.
 - **Salir de esta liga:** la quita de las guardadas y entra en otra si queda alguna.
 
 Cómo funciona: las ligas guardadas van en una cookie firmada solo para el servidor (no se ve desde

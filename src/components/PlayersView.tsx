@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { StatsDTO, PlayerStat, Round, FormMark, Pair } from '@/lib/stats';
 import { COMP_COLOR, compColor, compName, fmt, pctOf } from './statsUtil';
+import Avatar from './Avatar';
+import { useProfile, type ProfileTarget } from './PlayerProfile';
 
 type Players = PlayerStat[];
 
 /* ---------- Premios ---------- */
-type Award = { label: string; who: string[]; num: string; unit: string; mine: boolean };
+type Award = { label: string; people: ProfileTarget[]; num: string; unit: string; mine: boolean };
 
 function leaders(
   players: Players,
@@ -37,7 +39,7 @@ function buildAwards(stats: StatsDTO, meId: string): Award[][] {
     if (!l) return;
     all.set(key, {
       label,
-      who: l.who.map((p) => p.name),
+      people: l.who.map((p) => ({ id: p.playerId, name: p.name, avatar: p.avatar })),
       num: num(l.value),
       unit,
       mine: l.who.some((p) => p.playerId === meId),
@@ -51,7 +53,10 @@ function buildAwards(stats: StatsDTO, meId: string): Award[][] {
   if (top) {
     all.set('siamesismo', {
       label: 'Siamesismo',
-      who: [top.aName, top.bName],
+      people: [top.a, top.b].map((id) => {
+        const p = ps.find((x) => x.playerId === id);
+        return { id, name: p?.name ?? '?', avatar: p?.avatar ?? null };
+      }),
       num: `${fmt(top.pct)}%`,
       unit: 'de pronósticos iguales',
       mine: top.a === meId || top.b === meId,
@@ -84,6 +89,7 @@ function buildAwards(stats: StatsDTO, meId: string): Award[][] {
 }
 
 function Awards({ stats, meId }: { stats: StatsDTO; meId: string }) {
+  const openProfile = useProfile();
   const rows = useMemo(() => buildAwards(stats, meId), [stats, meId]);
   if (!rows.length) return null;
   return (
@@ -94,7 +100,14 @@ function Awards({ stats, meId }: { stats: StatsDTO; meId: string }) {
             <span className="award-label">{a.label}</span>
             <b className="award-num">{a.num}</b>
             <small className="award-unit">{a.unit}</small>
-            <span className="award-who">{a.who.join(' y ')}</span>
+            <span className="award-who">
+              {a.people.map((p) => (
+                <button key={p.id} type="button" className="plink" aria-label={`Ver perfil de ${p.name}`} onClick={() => openProfile(p)}>
+                  <Avatar id={p.id} name={p.name} v={p.avatar} size={30} />
+                  {p.name}
+                </button>
+              ))}
+            </span>
           </li>
         ))
       )}
@@ -104,13 +117,22 @@ function Awards({ stats, meId }: { stats: StatsDTO; meId: string }) {
 
 /* ---------- Puntos por competición (barras apiladas) ---------- */
 function PointsBars({ stats, meId }: { stats: StatsDTO; meId: string }) {
+  const openProfile = useProfile();
   const max = Math.max(1, ...stats.players.map((p) => p.points));
   return (
     <>
       <ul className="pbars">
         {stats.players.map((p) => (
           <li key={p.playerId} className={p.playerId === meId ? 'me' : ''}>
-            <span className="pbname">{p.name}</span>
+            <button
+              type="button"
+              className="pbname plink"
+              aria-label={`Ver perfil de ${p.name}`}
+              onClick={() => openProfile({ id: p.playerId, name: p.name, avatar: p.avatar })}
+            >
+              <Avatar id={p.playerId} name={p.name} v={p.avatar} size={32} />
+              <span>{p.name}</span>
+            </button>
             <span className="pbbar">
               {stats.comps.map((c) => {
                 const v = p.byComp[c]?.points ?? 0;
@@ -156,6 +178,7 @@ function cellStyle(v: number | null, max: number): CSSProperties | undefined {
 }
 
 function Heatmap({ stats, meId }: { stats: StatsDTO; meId: string }) {
+  const openProfile = useProfile();
   const { rounds, series } = stats.evolution;
   const scroller = useRef<HTMLDivElement>(null);
   const multi = stats.comps.length > 1;
@@ -191,7 +214,20 @@ function Heatmap({ stats, meId }: { stats: StatsDTO; meId: string }) {
           <tbody>
             {series.map((s) => (
               <tr key={s.playerId} className={s.playerId === meId ? 'me' : undefined}>
-                <th className="hm-name">{s.name}</th>
+                <th className="hm-name">
+                  <button
+                    type="button"
+                    className="plink"
+                    aria-label={`Ver perfil de ${s.name}`}
+                    onClick={() => {
+                      const pl = stats.players.find((x) => x.playerId === s.playerId);
+                      openProfile({ id: s.playerId, name: s.name, avatar: pl?.avatar ?? null });
+                    }}
+                  >
+                    <Avatar id={s.playerId} name={s.name} v={stats.players.find((x) => x.playerId === s.playerId)?.avatar ?? null} size={22} />
+                    <span>{s.name}</span>
+                  </button>
+                </th>
                 {s.per.map((v, i) => (
                   <td
                     key={rounds[i].key}
@@ -273,6 +309,7 @@ function Radar({ a, b }: { a: number[]; b: number[] }) {
 }
 
 function Versus({ stats, meId }: { stats: StatsDTO; meId: string }) {
+  const openProfile = useProfile();
   const ps = stats.players;
   const [idA, setIdA] = useState(() => (ps.some((p) => p.playerId === meId) ? meId : ps[0]?.playerId ?? ''));
   const [idB, setIdB] = useState(() => ps.find((p) => p.playerId !== (ps.some((q) => q.playerId === meId) ? meId : ps[0]?.playerId))?.playerId ?? '');
@@ -304,6 +341,20 @@ function Versus({ stats, meId }: { stats: StatsDTO; meId: string }) {
 
   return (
     <>
+      <div className="vs-faces">
+        <button type="button" className="plink vsface" aria-label={`Ver perfil de ${A.name}`} onClick={() => openProfile({ id: A.playerId, name: A.name, avatar: A.avatar })}>
+          <span className="vsring" style={{ borderColor: COLOR_A }}>
+            <Avatar id={A.playerId} name={A.name} v={A.avatar} size={64} />
+          </span>
+          <b>{A.name}</b>
+        </button>
+        <button type="button" className="plink vsface" aria-label={`Ver perfil de ${B.name}`} onClick={() => openProfile({ id: B.playerId, name: B.name, avatar: B.avatar })}>
+          <span className="vsring" style={{ borderColor: COLOR_B }}>
+            <Avatar id={B.playerId} name={B.name} v={B.avatar} size={64} />
+          </span>
+          <b>{B.name}</b>
+        </button>
+      </div>
       <div className="h2hpick vs-pick">
         <select value={A.playerId} onChange={(e) => setIdA(e.target.value)} aria-label="Primer jugador" style={{ borderColor: COLOR_A }}>
           {ps.map((p) => (
@@ -362,12 +413,15 @@ function Overlap({ pct, a, b }: { pct: number; a: string; b: string }) {
   );
 }
 
-function PairRow({ p, meId }: { p: Pair; meId: string }) {
+function PairRow({ p, meId, avOf }: { p: Pair; meId: string; avOf: Map<string, number | null> }) {
   const mine = p.a === meId || p.b === meId;
   return (
     <li className={mine ? 'siam-row me' : 'siam-row'}>
       <span className="siam-names">
-        {p.aName} <i>y</i> {p.bName}
+        <Avatar id={p.a} name={p.aName} v={avOf.get(p.a) ?? null} size={26} />
+        <span className="siam-n">{p.aName}</span> <i>y</i>
+        <Avatar id={p.b} name={p.bName} v={avOf.get(p.b) ?? null} size={26} />
+        <span className="siam-n">{p.bName}</span>
       </span>
       <span className="siam-track">
         <i style={{ width: `${p.pct}%` }} />
@@ -383,6 +437,8 @@ function PairRow({ p, meId }: { p: Pair; meId: string }) {
 }
 
 function Siamesismo({ stats, meId }: { stats: StatsDTO; meId: string }) {
+  const openProfile = useProfile();
+  const avOf = new Map(stats.players.map((p) => [p.playerId, p.avatar] as const));
   const pairs = stats.siamese;
   if (!pairs.length) {
     return (
@@ -400,9 +456,25 @@ function Siamesismo({ stats, meId }: { stats: StatsDTO; meId: string }) {
       <div className="siam-hero">
         <Overlap pct={top.pct} a={top.aName} b={top.bName} />
         <div className="siam-who">
-          <b style={{ color: 'var(--ok)' }}>{top.aName}</b>
-          <span>y</span>
-          <b style={{ color: '#b79cff' }}>{top.bName}</b>
+          {[
+            { id: top.a, name: top.aName, color: 'var(--ok)' },
+            { id: top.b, name: top.bName, color: '#b79cff' },
+          ].map((x, i) => (
+            <Fragment key={x.id}>
+              {i > 0 && <span>y</span>}
+              <button
+                type="button"
+                className="plink siam-face"
+                aria-label={`Ver perfil de ${x.name}`}
+                onClick={() => openProfile({ id: x.id, name: x.name, avatar: avOf.get(x.id) ?? null })}
+              >
+                <span className="vsring" style={{ borderColor: x.color }}>
+                  <Avatar id={x.id} name={x.name} v={avOf.get(x.id) ?? null} size={64} />
+                </span>
+                <b style={{ color: x.color }}>{x.name}</b>
+              </button>
+            </Fragment>
+          ))}
         </div>
         <p className="siam-sub">
           Los más siameses: pusieron lo mismo en {top.same} de {top.n} partidos.
@@ -412,7 +484,7 @@ function Siamesismo({ stats, meId }: { stats: StatsDTO; meId: string }) {
       {shown.length > 0 && (
         <ul className="siam-list">
           {shown.map((p) => (
-            <PairRow key={`${p.a}|${p.b}`} p={p} meId={meId} />
+            <PairRow key={`${p.a}|${p.b}`} p={p} meId={meId} avOf={avOf} />
           ))}
         </ul>
       )}
@@ -421,7 +493,7 @@ function Siamesismo({ stats, meId }: { stats: StatsDTO; meId: string }) {
           <summary>Todas las parejas ({pairs.length})</summary>
           <ul className="siam-list">
             {rest.map((p) => (
-              <PairRow key={`${p.a}|${p.b}`} p={p} meId={meId} />
+              <PairRow key={`${p.a}|${p.b}`} p={p} meId={meId} avOf={avOf} />
             ))}
           </ul>
         </details>
@@ -541,6 +613,7 @@ function twin(pairs: Pair[], id: string, which: 'most' | 'least'): string {
 }
 
 function PlayerCards({ stats, meId }: { stats: StatsDTO; meId: string }) {
+  const openProfile = useProfile();
   const [sort, setSort] = useState<SortKey>('points');
   const { rounds, series } = stats.evolution;
   const perOf = useMemo(() => new Map(series.map((s) => [s.playerId, s.per])), [series]);
@@ -569,7 +642,14 @@ function PlayerCards({ stats, meId }: { stats: StatsDTO; meId: string }) {
         {list.map((p, idx) => (
           <li key={p.playerId} className={`pstat pcard${p.playerId === meId ? ' me' : ''}`}>
             <div className="pc-top">
-              <Ring pct={p.pct} />
+              <button
+                type="button"
+                className="plink pc-photo"
+                aria-label={`Ver perfil de ${p.name}`}
+                onClick={() => openProfile({ id: p.playerId, name: p.name, avatar: p.avatar })}
+              >
+                <Avatar id={p.playerId} name={p.name} v={p.avatar} size={64} />
+              </button>
               <div className="pc-id">
                 <span className="pname">
                   <span className="pc-pos">{idx + 1}</span>
@@ -588,6 +668,7 @@ function PlayerCards({ stats, meId }: { stats: StatsDTO; meId: string }) {
                   {p.missed > 0 && `, ${p.missed} sin pronosticar`}
                 </span>
               </div>
+              <Ring pct={p.pct} />
             </div>
 
             <FormDots marks={p.form} />

@@ -84,7 +84,7 @@ export default function UserMenu({
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <Avatar id={me.id} name={me.name} v={me.avatar} size={30} />
+        <Avatar id={me.id} name={me.name} v={me.avatar} size={36} />
         <span className="usermenu-name">{me.name}</span>
         <span aria-hidden="true" className="usermenu-caret">
           ▾
@@ -94,7 +94,7 @@ export default function UserMenu({
       {open && (
         <div className="usermenu-pop" role="menu">
           <div className="um-me">
-            <Avatar id={me.id} name={me.name} v={me.avatar} size={46} />
+            <Avatar id={me.id} name={me.name} v={me.avatar} size={60} />
             <div>
               <b>{me.name}</b>
               <small>{me.group}</small>
@@ -112,7 +112,7 @@ export default function UserMenu({
                   disabled={busy || a.current}
                   onClick={() => switchTo(a.pid)}
                 >
-                  <Avatar id={a.pid} name={a.name} v={a.avatar} size={26} />
+                  <Avatar id={a.pid} name={a.name} v={a.avatar} size={36} />
                   <span className="um-txt">
                     <b>{a.group}</b>
                     <small>{a.name}</small>

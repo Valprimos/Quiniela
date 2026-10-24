@@ -33,6 +33,7 @@ export type TeamAcc = {
 export type PlayerStat = {
   playerId: string;
   name: string;
+  avatar: number | null; // versión de la foto de perfil (null = sin foto)
   hits: number;
   played: number;
   missed: number;
@@ -188,7 +189,7 @@ function buildRounds(matches: MatchLite[], multi: boolean): Round[] {
 export function computeStats(input: {
   matches: MatchLite[];
   preds: { player_id: string; match_id: number; pick: string; pleno_home?: number | null; pleno_away?: number | null }[];
-  players: { id: string; name: string }[];
+  players: { id: string; name: string; avatar?: number | null }[];
   liga: LigaRow[];
 }): StatsDTO {
   const { matches, preds, players, liga } = input;
@@ -463,6 +464,7 @@ export function computeStats(input: {
     return {
       playerId: p.id,
       name: p.name,
+      avatar: p.avatar ?? null,
       hits: a.hits,
       played: a.played,
       missed: a.missed,

@@ -32,8 +32,14 @@ export async function GET(req: NextRequest) {
       .order('id')
       .range(from, to)
   );
-  const { data: players } = await supabase.from('players').select('id,name').eq('group_id', session.gid);
-  const playerRows = players ?? [];
+  // La foto de perfil es opcional: si aún no se ha ejecutado la migración, se piden los jugadores sin ella
+  let withAvatar = await supabase.from('players').select('id,name,avatar_updated_at').eq('group_id', session.gid);
+  if (withAvatar.error) withAvatar = (await supabase.from('players').select('id,name').eq('group_id', session.gid)) as typeof withAvatar;
+  const playerRows = (withAvatar.data ?? []).map((p: { id: string; name: string; avatar_updated_at?: string | null }) => ({
+    id: p.id,
+    name: p.name,
+    avatar: p.avatar_updated_at ? new Date(p.avatar_updated_at).getTime() : null,
+  }));
   const playerIds = new Set(playerRows.map((p) => p.id));
 
   // Solo pronósticos de partidos terminados: nunca se filtra nada de partidos abiertos

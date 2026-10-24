@@ -9,6 +9,7 @@ import UserMenu from './UserMenu';
 import ProfilePanel from './ProfilePanel';
 import LoginForm from './LoginForm';
 import Avatar from './Avatar';
+import PlayerProfileModal, { ProfileCtx, useProfile, type ProfileTarget } from './PlayerProfile';
 import { unsubscribeBrowser } from '@/lib/pushClient';
 import TeamModal from './TeamModal';
 import H2HModal from './H2HModal';
@@ -270,6 +271,7 @@ function MatchRow({
   onOpenTeam: (name: string, crest: string | null) => void;
   onOpenH2H: (home: Team, away: Team) => void;
 }) {
+  const openProfile = useProfile();
   return (
     <li className={`match${m.provisional ? ' live' : ''}${m.isPleno ? ' pleno' : ''}`}>
       <div className="when">
@@ -337,8 +339,15 @@ function MatchRow({
               const state = m.result ? (c.plenoGuess ? (hit ? 'hit' : 'miss') : '') : '';
               return (
                 <li key={i} className={`chip ${state}`}>
-                  <Avatar id={c.playerId} name={c.name} v={c.avatar} size={18} />
-                  {c.name}
+                  <button
+                    type="button"
+                    className="plink"
+                    aria-label={`Ver perfil de ${c.name}`}
+                    onClick={() => openProfile({ id: c.playerId, name: c.name, avatar: c.avatar })}
+                  >
+                    <Avatar id={c.playerId} name={c.name} v={c.avatar} size={28} />
+                    {c.name}
+                  </button>
                   <b>{c.plenoGuess ? `${c.plenoGuess.home}-${c.plenoGuess.away}` : '–'}</b>
                 </li>
               );
@@ -347,8 +356,15 @@ function MatchRow({
             const state = real ? (c.pick === real ? 'hit' : 'miss') : '';
             return (
               <li key={i} className={`chip ${state}`}>
-                <Avatar id={c.playerId} name={c.name} v={c.avatar} size={18} />
-                {c.name}
+                <button
+                  type="button"
+                  className="plink"
+                  aria-label={`Ver perfil de ${c.name}`}
+                  onClick={() => openProfile({ id: c.playerId, name: c.name, avatar: c.avatar })}
+                >
+                  <Avatar id={c.playerId} name={c.name} v={c.avatar} size={28} />
+                  {c.name}
+                </button>
                 <b>{c.pick}</b>
               </li>
             );
@@ -370,6 +386,7 @@ function Ranking({
   showDelta: boolean;
   crown: boolean;
 }) {
+  const openProfile = useProfile();
   let pos = 0;
   let prev: number | null = null;
   const topPoints = Math.max(1, ...rows.map((r) => r.points));
@@ -394,9 +411,18 @@ function Ranking({
             />
             <span className="pos">{pos}</span>
             <span className="who">
-              <Avatar id={r.playerId} name={r.name} v={r.avatar} size={26} />
-              <span className="whoname">{r.name}</span>
-              {crown && pos === 1 && r.points > 0 && <span className="badge">Ganó la jornada</span>}
+              <button
+                type="button"
+                className="plink"
+                aria-label={`Ver perfil de ${r.name}`}
+                onClick={() => openProfile({ id: r.playerId, name: r.name, avatar: r.avatar })}
+              >
+                <Avatar id={r.playerId} name={r.name} v={r.avatar} size={52} />
+                <span className="whotxt">
+                  <span className="whoname">{r.name}</span>
+                  {crown && pos === 1 && r.points > 0 && <span className="badge">Ganó la jornada</span>}
+                </span>
+              </button>
             </span>
             <span className="delta">
               {showDelta && r.delta > 0 && <span className="up">▲{r.delta}</span>}
@@ -497,6 +523,8 @@ export default function Quiniela() {
   // Solo un panel abierto a la vez (los abre el menú de usuario)
   const [panel, setPanel] = useState<'pin' | 'notify' | 'admin' | 'profile' | 'league' | null>(null);
   const [menuKey, setMenuKey] = useState(0);
+  const [profile, setProfile] = useState<ProfileTarget | null>(null);
+  const openProfile = useCallback((t: ProfileTarget) => setProfile(t), []);
   const showPin = panel === 'pin';
   const showNotify = panel === 'notify';
   const showAdmin = panel === 'admin';
@@ -743,6 +771,7 @@ export default function Quiniela() {
   }
 
   return (
+    <ProfileCtx.Provider value={openProfile}>
     <main className="wrap">
       <header className="top">
         <span className="brand">Quiniela {seasonLabel}</span>
@@ -961,6 +990,20 @@ export default function Quiniela() {
           <Stats meId={data.me.id} competition={competition} version={data.finishedTotal} onTeamClick={openTeamModal} />
         )}
       </div>
+
+      {profile && (
+        <PlayerProfileModal
+          target={profile}
+          meId={data.me.id}
+          group={data.me.group}
+          onClose={() => setProfile(null)}
+          onEdit={() => {
+            setProfile(null);
+            setPanel('profile');
+          }}
+        />
+      )}
     </main>
+    </ProfileCtx.Provider>
   );
 }

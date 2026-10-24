@@ -5,7 +5,8 @@ import Avatar from './Avatar';
 
 type Me = { id: string; name: string; avatar: number | null };
 
-const SIZES = [256, 192, 144];
+// Más resolución que la que se ve en pantalla, para que la foto grande del perfil no salga borrosa
+const SIZES = [384, 288, 224, 160];
 
 // Recorta al centro en cuadrado y reduce la foto hasta que pese poco (JPEG)
 async function toSquareJpeg(file: File): Promise<string> {
@@ -111,9 +112,9 @@ export default function ProfilePanel({ me, onClose, onSaved }: { me: Me; onClose
       <div className="pp-photo">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img className="avatar" src={photo} alt="Foto nueva" width={84} height={84} style={{ width: 84, height: 84 }} />
+          <img className="avatar" src={photo} alt="Foto nueva" width={110} height={110} style={{ width: 110, height: 110 }} />
         ) : (
-          <Avatar id={me.id} name={me.name} v={me.avatar} size={84} />
+          <Avatar id={me.id} name={me.name} v={me.avatar} size={110} />
         )}
         <div className="pp-photo-actions">
           <input ref={file} type="file" accept="image/*" hidden onChange={choose} />

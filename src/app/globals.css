@@ -806,3 +806,83 @@ select {
 .saved-league:hover { border-color: var(--foco); }
 .saved-league small { color: var(--muted); }
 .chip .avatar + b, .chip b { margin-left: 0; }
+
+/* ===== Perfil pulsable y fotos más grandes ===== */
+.plink {
+  display: inline-flex; align-items: center; gap: 10px; padding: 0; background: none; border: 0; color: inherit;
+  font: inherit; font-weight: inherit; text-align: left; cursor: pointer; min-width: 0;
+}
+.plink:hover .avatar, .plink:focus-visible .avatar { box-shadow: 0 0 0 2px var(--foco); }
+.plink:focus-visible { outline: none; }
+
+/* Clasificación: foto grande */
+.rank li { padding: 10px 10px; }
+.rank .who { gap: 6px 10px; }
+.rank .plink { font-size: 17px; font-weight: 700; color: inherit; }
+.rank li.me .plink { color: var(--foco); }
+.rank .plink .avatar { box-shadow: 0 0 0 2px var(--line); }
+.rank li.me .plink .avatar { box-shadow: 0 0 0 2px var(--foco); }
+
+/* Pronósticos de los demás */
+.chip { padding: 3px 12px 3px 4px; }
+.chip .plink { gap: 8px; font: inherit; }
+
+/* Estadísticas */
+.award-who { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px; }
+.award-who .plink { font-weight: 700; font-size: 15px; gap: 8px; }
+.pbars li { grid-template-columns: 124px 1fr 34px; }
+.pbname.plink { font-weight: 600; gap: 8px; }
+.pbname.plink span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pbars li.me .pbname { color: var(--foco); }
+.hm .hm-name { min-width: 112px; max-width: 112px; }
+.hm .hm-name .plink { gap: 6px; max-width: 100%; }
+.hm .hm-name .plink span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.vs-faces { display: flex; justify-content: center; align-items: flex-start; gap: 40px; margin: 4px 0 12px; }
+.vsface { flex-direction: column; gap: 6px; align-items: center; font-size: 14px; }
+.vsring { display: inline-flex; border-radius: 50%; border: 3px solid var(--line); padding: 2px; }
+.siam-who { align-items: flex-start; gap: 14px; }
+.siam-who > span { margin-top: 28px; }
+.siam-face { flex-direction: column; gap: 6px; align-items: center; font-size: 16px; }
+.siam-names { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.siam-names .siam-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.siam-row { grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr) 56px; }
+.pc-top { gap: 12px; }
+.pc-photo .avatar { box-shadow: 0 0 0 2px var(--line); }
+.pcard.me .pc-photo .avatar { box-shadow: 0 0 0 2px var(--foco); }
+.pc-top .ring { margin-left: auto; width: 56px; height: 56px; }
+.pc-id { flex: 1; }
+
+/* Ventana del perfil de un jugador */
+.pmodal-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(4, 10, 12, 0.72); display: grid; place-items: center; padding: 16px; }
+.pmodal {
+  position: relative; width: min(400px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 20px 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6); display: grid; gap: 14px;
+}
+.pmodal-close {
+  position: absolute; top: 8px; right: 10px; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--text); font-size: 24px; line-height: 1; cursor: pointer;
+}
+.pmodal-head { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.pmodal-photo { display: inline-flex; border-radius: 50%; padding: 4px; border: 3px solid var(--line); margin-bottom: 6px; }
+.pmodal-photo.me { border-color: var(--foco); }
+.pmodal-name { margin: 0; font-family: var(--font-display); font-size: 40px; line-height: 1; }
+.pmodal-sub { margin: 0; color: var(--muted); font-size: 14px; }
+.ptiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ptile { display: grid; gap: 1px; align-content: start; padding: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
+.ptile-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+.ptile-val { font-family: var(--font-display); font-size: 28px; line-height: 1.05; }
+.ptile-sub { font-size: 11px; color: var(--muted); }
+.pcomps { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
+.pcomps li { flex: 1; display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
+.pcomps b { font-family: var(--font-display); font-size: 24px; }
+.pcomps small { font-size: 11px; color: var(--muted); }
+.pmodal-form { margin: 0; }
+.pmodal-facts { margin: 0; display: grid; gap: 6px; }
+.pmodal-facts div { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.pmodal-facts dt { color: var(--muted); }
+.pmodal-facts dd { margin: 0; font-weight: 700; text-align: right; }
+.pmodal-edit { justify-self: center; }
+.whotxt { display: grid; gap: 3px; justify-items: start; min-width: 0; }
+.hm .hm-name { height: 28px; padding: 0; }
+.hm .hm-name .plink { height: 28px; }
