@@ -375,16 +375,27 @@ function MatchRow({
   );
 }
 
+// Nombre corto de la fase para la etiqueta del ganador (🏆 Octavos)
+const STAGE_SHORT: Record<string, string> = {
+  Playoff: 'Playoff',
+  'Octavos de final': 'Octavos',
+  'Cuartos de final': 'Cuartos',
+  Semifinales: 'Semis',
+  Final: 'Final',
+};
+
 function Ranking({
   rows,
   meId,
   showDelta,
   crown,
+  roundLabel,
 }: {
   rows: RankRow[];
   meId: string;
   showDelta: boolean;
   crown: boolean;
+  roundLabel: string;
 }) {
   const openProfile = useProfile();
   let pos = 0;
@@ -403,7 +414,8 @@ function Ranking({
         const pct = r.maxPts > 0 ? Math.round((r.points / r.maxPts) * 100) : null;
         const barWidth = (r.points / topPoints) * 100;
         return (
-          <li key={r.playerId} className={r.playerId === meId ? 'me' : ''}>
+          // Oro, plata y bronce para el podio (los empatados comparten color); el resto, un tono neutro
+          <li key={r.playerId} className={`${pos <= 3 ? `m${pos}` : 'mn'}${r.playerId === meId ? ' me' : ''}`}>
             <span
               className="rankbar"
               style={{ width: `${barWidth}%` }}
@@ -420,7 +432,12 @@ function Ranking({
                 <Avatar id={r.playerId} name={r.name} v={r.avatar} size={52} />
                 <span className="whotxt">
                   <span className="whoname">{r.name}</span>
-                  {crown && pos === 1 && r.points > 0 && <span className="badge">Ganó la jornada</span>}
+                  {r.playerId === meId && <span className="metag">tú</span>}
+                  {crown && pos === 1 && r.points > 0 && (
+                    <span className="badge" title="Ganó la jornada" aria-label="Ganó la jornada">
+                      🏆 {roundLabel}
+                    </span>
+                  )}
                 </span>
               </button>
             </span>
@@ -992,14 +1009,16 @@ export default function Quiniela() {
                 Combinada
               </button>
             </div>
-            {scope === 'combinada' && <p className="hint">Suma los puntos de La Liga y Champions esta temporada.</p>}
             {scope === 'jornada' && data.liveCount > 0 && (
-              <p className="hint">
-                {data.liveCount === 1 ? 'Hay 1 partido en juego ahora mismo' : `Hay ${data.liveCount} partidos en juego ahora mismo`}.
-                La clasificación puede cambiar según acaben.
-              </p>
+              <p className="hint">{data.liveCount} en juego · la clasificación puede cambiar</p>
             )}
-            <Ranking rows={rankRows} meId={data.me.id} showDelta={scope === 'general'} crown={scope === 'jornada' && data.jornadaComplete} />
+            <Ranking
+              rows={rankRows}
+              meId={data.me.id}
+              showDelta={scope === 'general'}
+              crown={scope === 'jornada' && data.jornadaComplete}
+              roundLabel={data.matchday >= 100 ? STAGE_SHORT[data.stageLabel ?? ''] ?? data.stageLabel ?? '' : `J${data.matchday}`}
+            />
             <div className="share">
               <button type="button" className="link" onClick={shareRanking}>
                 Compartir clasificación

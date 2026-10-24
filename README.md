@@ -85,6 +85,13 @@ temporada (normalmente uno o dos partidos), separado del historial normal de cad
 favoritos o Equilibrado) calculada comparando sus pronósticos con lo que pasa de verdad y con la
 mayoría del grupo; hace falta un mínimo de pronósticos para que salga.
 
+## Clasificación
+
+El podio tiene color propio: oro para el primero, plata para el segundo, bronce para el tercero (los
+empatados comparten color) y un azul grisáceo para el resto. Quien gana una jornada completa lleva
+la etiqueta 🏆 con la jornada (`🏆 J12`, o `🏆 Octavos` en las eliminatorias) y tu propia fila lleva
+la marca "tú".
+
 ## Perfil y varias ligas
 
 Arriba a la derecha cada persona tiene su **menú de usuario** (con su foto y su nombre):

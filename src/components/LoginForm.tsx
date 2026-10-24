@@ -76,9 +76,9 @@ export default function LoginForm({ embedded = false, onDone }: { embedded?: boo
         )}
         <p className="muted">
           {registering
-            ? 'Únete a la pandilla de tus colegas, o crea una nueva con un código que te inventes.'
+            ? 'Únete a una pandilla o crea una con un código nuevo.'
             : embedded
-              ? 'Entra en otra pandilla con su código, tu nombre en ella y tu PIN. Quedará guardada para cambiar con un toque.'
+              ? 'Entra con el código, tu nombre y tu PIN.'
               : 'Entra con el código de tu pandilla, tu nombre y tu PIN.'}
         </p>
 

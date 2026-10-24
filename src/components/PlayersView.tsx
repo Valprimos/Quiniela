@@ -190,7 +190,7 @@ function Heatmap({ stats, meId }: { stats: StatsDTO; meId: string }) {
     if (el) el.scrollLeft = el.scrollWidth;
   }, [rounds.length]);
 
-  if (!rounds.length) return <p className="muted">Aparece cuando haya partidos terminados.</p>;
+  if (!rounds.length) return <p className="muted">Sin partidos terminados todavía.</p>;
   const maxes = rounds.map((_, i) => Math.max(0, ...series.map((s) => s.per[i] ?? 0)));
 
   return (
@@ -244,11 +244,6 @@ function Heatmap({ stats, meId }: { stats: StatsDTO; meId: string }) {
           </tbody>
         </table>
       </div>
-      <p className="hint">
-        Puntos de cada uno en cada jornada; el verde más fuerte es el mejor de esa jornada y el rojo,
-        cero puntos. Las jornadas con borde discontinuo aún no han terminado.
-        {multi && ' La franja de color de arriba indica la competición.'}
-      </p>
     </>
   );
 }
@@ -315,7 +310,7 @@ function Versus({ stats, meId }: { stats: StatsDTO; meId: string }) {
   const [idA, setIdA] = useState(() => (ps.some((p) => p.playerId === meId) ? meId : ps[0]?.playerId ?? ''));
   const [idB, setIdB] = useState(() => ps.find((p) => p.playerId !== (ps.some((q) => q.playerId === meId) ? meId : ps[0]?.playerId))?.playerId ?? '');
 
-  if (ps.length < 2) return <p className="muted">Hacen falta al menos dos jugadores para comparar.</p>;
+  if (ps.length < 2) return <p className="muted">Hacen falta dos jugadores.</p>;
   const A = ps.find((p) => p.playerId === idA) ?? ps[0];
   const B = ps.find((p) => p.playerId === idB && p.playerId !== A.playerId) ?? ps.find((p) => p.playerId !== A.playerId)!;
 
@@ -386,10 +381,6 @@ function Versus({ stats, meId }: { stats: StatsDTO; meId: string }) {
           );
         })}
       </div>
-      <p className="hint">
-        Cada eje va de 0 al máximo del grupo (acierto, de 0 a 100%). La suegra es la frecuencia con la que
-        va contra la mayoría; Constancia, los partidos que sí pronosticó.
-      </p>
     </>
   );
 }
@@ -443,9 +434,7 @@ function Siamesismo({ stats, meId }: { stats: StatsDTO; meId: string }) {
   const pairs = stats.siamese;
   if (!pairs.length) {
     return (
-      <p className="muted">
-        Aparece cuando dos jugadores hayan pronosticado al menos 8 partidos terminados en común.
-      </p>
+      <p className="muted">Disponible con 8 partidos en común.</p>
     );
   }
   const top = pairs[0];
@@ -478,7 +467,7 @@ function Siamesismo({ stats, meId }: { stats: StatsDTO; meId: string }) {
           ))}
         </div>
         <p className="siam-sub">
-          Los más siameses: pusieron lo mismo en {top.same} de {top.n} partidos.
+          Coinciden en {top.same} de {top.n} partidos.
         </p>
       </div>
 
@@ -501,8 +490,7 @@ function Siamesismo({ stats, meId }: { stats: StatsDTO; meId: string }) {
       )}
       {last && (
         <p className="hint">
-          Los más distintos: {last.aName} y {last.bName} ({fmt(last.pct)}%). El porcentaje es la parte de
-          partidos terminados, pronosticados por los dos, en los que pusieron lo mismo (1, X o 2).
+          Los más distintos: {last.aName} y {last.bName} ({fmt(last.pct)}%)
         </p>
       )}
     </>

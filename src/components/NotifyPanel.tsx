@@ -126,28 +126,26 @@ export default function NotifyPanel({ onClose }: { onClose: () => void }) {
   if (!support || !status) {
     content = <p className="muted">Comprobando…</p>;
   } else if (!status.configured) {
-    content = <p className="muted">Los avisos aún no están configurados en el servidor.</p>;
+    content = <p className="muted">Los avisos no están configurados.</p>;
   } else if (support === 'ios-install') {
     content = (
       <p className="muted">
-        En iPhone los avisos solo funcionan con la web instalada. Pulsa <b>Compartir</b> y luego{' '}
-        <b>Añadir a pantalla de inicio</b>, abre la Quiniela desde ese icono y vuelve aquí.
+        En iPhone: <b>Compartir → Añadir a pantalla de inicio</b> y abre la Quiniela desde ese icono.
       </p>
     );
   } else if (support === 'unsupported') {
-    content = <p className="muted">Este navegador no admite avisos. Prueba con Chrome, Edge, Firefox o Safari actualizado.</p>;
+    content = <p className="muted">Este navegador no admite avisos.</p>;
   } else if (denied && !status.subscribed) {
     content = (
       <p className="muted">
-        Los avisos están bloqueados para esta web. Actívalos en los ajustes del navegador (permisos del
-        sitio) y vuelve aquí.
+        Avisos bloqueados: actívalos en los ajustes del navegador.
       </p>
     );
   } else if (!status.subscribed) {
     content = (
       <>
         <p className="muted">
-          Te avisamos en este dispositivo cuando se acerque un partido y todavía no lo hayas pronosticado.
+          Te avisamos antes de los partidos que no hayas pronosticado.
         </p>
         <div className="row">
           <button className="primary notify-btn" type="button" disabled={busy} onClick={enable}>
@@ -169,9 +167,7 @@ export default function NotifyPanel({ onClose }: { onClose: () => void }) {
             ))}
           </select>
         </div>
-        <p className="hint">
-          Antes del primer partido que te falte por pronosticar. Si ya lo tienes todo, no te molestamos.
-        </p>
+        <p className="hint">Solo si te falta algún pronóstico.</p>
         <div className="row">
           <button className="seg-btn" type="button" disabled={busy} onClick={test}>
             Enviar prueba

@@ -703,10 +703,6 @@ export default function AdminPanel({
 
       {tool === 'pronosticos' && (
         <>
-          <p className="hint">
-            Pon, cambia o quita el pronóstico de cualquier jugador, aunque el partido ya esté cerrado o
-            terminado. Los puntos y las estadísticas se recalculan solos.
-          </p>
           {resolvedMd != null && (
             <PredictionEditor competition={pc} matchday={resolvedMd} players={players ?? []} onChanged={onChanged} />
           )}
@@ -720,10 +716,10 @@ export default function AdminPanel({
             {!round
               ? 'Cargando…'
               : lockedAll
-                ? 'Esta jornada está bloqueada: nadie puede cambiar sus pronósticos.'
+                ? 'Jornada bloqueada.'
                 : lockedAny
-                  ? 'Algunos partidos de esta jornada están bloqueados a mano.'
-                  : 'Esta jornada está abierta (se cierra sola partido a partido).'}
+                  ? 'Algunos partidos bloqueados.'
+                  : 'Jornada abierta.'}
           </p>
           <div className="row">
             <button type="button" className="seg-btn" onClick={() => toggleLock(true)} disabled={!round || lockedAll}>
@@ -741,10 +737,7 @@ export default function AdminPanel({
           <button type="button" className="primary" onClick={archiveSeason}>
             Archivar temporada actual ({compName})
           </button>
-          <p className="hint">
-            Guarda la clasificación de hoy en el archivo. Hazlo cuando termine la temporada, antes de que
-            empiece la siguiente. Se archiva la competición que estás viendo en la app.
-          </p>
+          <p className="hint">Guarda la clasificación final en el archivo.</p>
         </>
       )}
 
@@ -754,18 +747,13 @@ export default function AdminPanel({
             {backfilling ? 'Trayendo...' : `Traer historial de ${compName} (últimas 4 temporadas)`}
           </button>
           <p className="hint">
-            Rellena el "Cara a cara" entre equipos con temporadas pasadas, usando una clave gratuita de
-            api-football.com (variable de entorno <code>API_FOOTBALL_KEY</code>). No toca la
-            sincronización en directo de esta temporada.
+            Rellena el Cara a cara con temporadas pasadas (<code>API_FOOTBALL_KEY</code>).
           </p>
         </>
       )}
 
       {tool === 'equipos' && (
         <>
-          <p className="hint">
-            Para comprobar si un equipo falta o está guardado con dos nombres distintos sin agrupar ({compName}).
-          </p>
           <TeamNamesDebug competition={competition} />
         </>
       )}

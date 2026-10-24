@@ -154,10 +154,7 @@ function Equipos({ stats, onTeamClick }: { stats: StatsDTO; onTeamClick: (name: 
         </ul>
       )}
 
-      <p className="hint">
-        Porcentaje de pronósticos acertados en los partidos de cada equipo. Pulsa una columna para
-        ordenar.
-      </p>
+      <p className="hint">Toca una columna para ordenar.</p>
       <div className="agrid head">
         <span />
         {head('total', 'Total')}
@@ -236,10 +233,7 @@ function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: stri
           </li>
         ))}
       </ol>
-      <p className="hint">
-        Calculada con los resultados de la app. Desempate simplificado: diferencia de goles y goles a
-        favor.
-      </p>
+      <p className="hint">Calculada con los resultados de la app.</p>
     </>
   );
 }
@@ -250,7 +244,7 @@ const PALETTE = ['#45d89c', '#5ab1ff', '#ff8fab', '#b79cff', '#ff9f5a', '#7fe0e6
 function Evolution({ ev, meId, comps }: { ev: StatsDTO['evolution']; meId: string; comps: number }) {
   if (ev.rounds.length < 2) {
     return (
-      <p className="muted">La gráfica aparece cuando se hayan jugado partidos de dos jornadas.</p>
+      <p className="muted">Disponible tras dos jornadas.</p>
     );
   }
   const W = 480;
@@ -544,10 +538,6 @@ export default function Stats({
       {!stats && !cur.failed && <p className="muted empty">Calculando estadísticas…</p>}
       {stats && (
         <>
-          <p className="hint">
-            {stats.finished} partidos terminados en la temporada
-            {stats.comps.length > 1 ? ` (${stats.comps.map(compName).join(' y ')}).` : '.'}
-          </p>
           {view === 'jugadores' && <PlayersView stats={stats} meId={meId} />}
           {view === 'equipos' && <Equipos stats={stats} onTeamClick={onTeamClick} />}
           {view === 'liga' && <Liga liga={stats.liga} onTeamClick={onTeamClick} />}

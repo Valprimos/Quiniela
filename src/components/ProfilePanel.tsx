@@ -156,7 +156,7 @@ export default function ProfilePanel({ me, onClose, onSaved }: { me: Me; onClose
           Guardar nombre
         </button>
       </form>
-      <p className="hint">El nombre cambia solo en esta liga y lo ven los demás jugadores.</p>
+      <p className="hint">Solo cambia en esta liga.</p>
 
       {msg && (
         <p className={msg.ok ? 'okmsg' : 'notice'} role="status">

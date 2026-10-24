@@ -154,8 +154,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .rank .who { font-weight: 600; }
 .rank .pctpts { font-size: 13px; color: var(--muted); min-width: 34px; text-align: right; }
 .rank .pts { font-family: var(--font-display); font-size: 30px; font-weight: 700; }
-.rank li.me .who, .rank li.me .pos { color: var(--foco); }
-.rank li.me .rankbar { background: linear-gradient(90deg, rgba(255, 210, 63, 0.26), rgba(255, 210, 63, 0.04)); }
 
 /* Acceso */
 .login { min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
@@ -819,9 +817,6 @@ select {
 .rank li { padding: 10px 10px; }
 .rank .who { gap: 6px 10px; }
 .rank .plink { font-size: 17px; font-weight: 700; color: inherit; }
-.rank li.me .plink { color: var(--foco); }
-.rank .plink .avatar { box-shadow: 0 0 0 2px var(--line); }
-.rank li.me .plink .avatar { box-shadow: 0 0 0 2px var(--foco); }
 
 /* Pronósticos de los demás */
 .chip { padding: 3px 12px 3px 4px; }
@@ -922,3 +917,24 @@ select {
 .fd[data-tip].tip-l::after { left: -4px; transform: none; }
 .fd[data-tip].tip-r::after { left: auto; right: -4px; transform: none; }
 .fd[data-tip]:hover::after, .fd[data-tip]:focus::after { opacity: 1; }
+
+/* ===== Clasificación: oro, plata y bronce ===== */
+.rank li { --medal: #6f9bb0; }
+.rank li.m1 { --medal: #ffd23f; }
+.rank li.m2 { --medal: #d3dae2; }
+.rank li.m3 { --medal: #d98f4e; }
+.rank .rankbar {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--medal) 24%, transparent), color-mix(in srgb, var(--medal) 3%, transparent));
+  border-right: 1px solid color-mix(in srgb, var(--medal) 50%, transparent);
+}
+.rank .pos, .rank .pts { color: var(--medal); }
+.rank .plink .avatar { box-shadow: 0 0 0 2.5px var(--medal); }
+.rank .whotxt { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.metag {
+  padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.5;
+  background: rgba(255, 255, 255, 0.12); color: var(--text);
+}
+.rank .badge {
+  margin: 0; padding: 1px 8px; font-size: 12px; font-weight: 700; line-height: 1.5; white-space: nowrap;
+  background: rgba(255, 210, 63, 0.14); border: 1px solid rgba(255, 210, 63, 0.6); color: var(--foco);
+}
