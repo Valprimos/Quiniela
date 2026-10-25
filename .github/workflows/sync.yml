@@ -1,0 +1,44 @@
+name: Sincronizar resultados y avisos
+
+# Cada 5 minutos (el mínimo que permite GitHub) llama a la web para traer los resultados nuevos
+# y avisar a quien no haya pronosticado. Sin esto, los resultados solo se actualizan cuando alguien
+# abre la app. Necesita dos secretos en GitHub > Settings > Secrets and variables > Actions:
+#   APP_URL      la dirección de la web, p. ej. https://tu-quiniela.vercel.app
+#   CRON_SECRET  el mismo valor que tienes en las variables de entorno de Vercel
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: quiniela-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      APP_URL: ${{ secrets.APP_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Comprobar los secretos
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Faltan los secretos APP_URL y/o CRON_SECRET (GitHub > Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+
+      - name: Traer resultados
+        run: |
+          curl --fail-with-body -sS --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" "${APP_URL%/}/api/cron/sync"
+          echo
+
+      - name: Avisar a quien no ha pronosticado
+        if: always()
+        run: |
+          curl --fail-with-body -sS --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" "${APP_URL%/}/api/cron/notify"
+          echo
