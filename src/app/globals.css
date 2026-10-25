@@ -961,3 +961,11 @@ select {
 /* Al cambiar de jornada sin datos guardados, el esqueleto sustituye al contenido anterior */
 .fadebox.showsk > :not(.sk-wrap) { display: none; }
 .fadebox.showsk { opacity: 1; }
+
+/* ===== Admin: sincronización de resultados ===== */
+.syncs { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.syncs li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.sync-txt { display: grid; gap: 2px; min-width: 0; }
+.sync-txt b { font-size: 15px; }
+.sync-txt small { font-size: 12px; color: var(--muted); }
+.sync-txt small.sync-err { color: var(--ko); }

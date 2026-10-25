@@ -68,6 +68,19 @@ async function syncOne(competition: CompetitionCode): Promise<number> {
   return rows.length;
 }
 
+// Mensaje claro de por qué ha fallado la sincronización (sale en el aviso de la app y en el panel de admin)
+function describeError(e: unknown): string {
+  if (e instanceof FootballDataError) {
+    if (e.status === 0) return 'Falta FOOTBALL_DATA_TOKEN en Vercel';
+    if (e.status === 400 || e.status === 401) return 'La clave de football-data.org no es válida';
+    if (e.status === 403) return 'No incluida en tu plan de football-data.org';
+    if (e.status === 429) return 'Límite de peticiones de football-data.org: se reintenta en un minuto';
+    if (e.status === -1) return 'No se pudo conectar con football-data.org';
+    return `football-data.org respondió ${e.status}`;
+  }
+  return 'No se pudieron guardar los partidos';
+}
+
 // Sincroniza solo si los datos de esa competición están "viejos": 2 min con partidos en
 // juego, 3 h el resto del tiempo. El "reclamo" en sync_state evita que dos peticiones a
 // la vez llamen a la API de fútbol para la misma competición.
@@ -85,14 +98,21 @@ async function syncCompetitionIfStale(
     .select();
   if (error || !data?.length) return { competition, synced: false };
   try {
-    return { competition, synced: true, count: await syncOne(competition) };
+    const count = await syncOne(competition);
+    // Para el panel de admin; si aún no se ha ejecutado la migración 6, el error se ignora
+    await db().from('sync_state').update({ last_ok: new Date().toISOString(), last_error: null }).eq('competition', competition);
+    return { competition, synced: true, count };
   } catch (e) {
-    const msg =
-      e instanceof FootballDataError && e.status === 403
-        ? 'No incluida en tu plan de football-data.org'
-        : 'Fallo al sincronizar';
     console.error(`Fallo al sincronizar ${competition}`, e);
-    return { competition, synced: false, error: msg };
+    // El "reclamo" ya marcó la competición como recién sincronizada. Si falla, se deja para reintentarlo
+    // en 1 minuto (y no esperar 3 horas con resultados sin actualizar).
+    await db()
+      .from('sync_state')
+      .update({ last_synced: new Date(Date.now() - maxAge + 60e3).toISOString() })
+      .eq('competition', competition);
+    const error = describeError(e);
+    await db().from('sync_state').update({ last_error: error }).eq('competition', competition);
+    return { competition, synced: false, error };
   }
 }
 

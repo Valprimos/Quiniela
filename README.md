@@ -151,8 +151,8 @@ Puesta en marcha (una sola vez):
 3. Variables de entorno en Vercel (y redeploy, porque la pública se incrusta al compilar):
    `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (por ejemplo `mailto:tu@correo.com`) y
    `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (el mismo valor que `VAPID_PUBLIC_KEY`).
-4. El workflow `.github/workflows/notify.yml` llama cada 10 min a `/api/cron/notify` con los mismos
-   secretos `APP_URL` y `CRON_SECRET` que el de sincronización.
+4. Los avisos los manda el mismo workflow `.github/workflows/sync.yml` (ver "Despliegue en Vercel"),
+   cada 5 minutos, con los secretos `APP_URL` y `CRON_SECRET`.
 
 Probar a mano qué se enviaría, sin enviar nada: `curl -H "Authorization: Bearer $CRON_SECRET"
 "$APP_URL/api/cron/notify?dry=1"`.
@@ -187,20 +187,44 @@ en la app. Desde ahí se puede:
 
 ## Despliegue en Vercel
 
-Importa el repo y añade las mismas variables de entorno. Al abrir la web, los datos se refrescan
-solos si están viejos (cada 2 min con partidos en juego, cada 3 h el resto del tiempo).
+Importa el repo y añade las variables de entorno. Al abrir la web, los datos se refrescan solos si
+están viejos (cada 2 min con partidos en juego, cada 3 h el resto del tiempo).
 
-Para que también se actualicen sin que nadie entre, el repo trae un workflow de GitHub Actions
-(`.github/workflows/sync.yml`, cada 10 min). Añade en GitHub > Settings > Secrets: `APP_URL`
-(p. ej. `https://tu-quiniela.vercel.app`) y `CRON_SECRET` (el mismo de las variables de entorno).
+### Actualizar los resultados sin que nadie abra la app
 
-> El cron nativo de Vercel en el plan Hobby solo puede ejecutarse una vez al día, por eso no se usa.
+Hace falta el workflow `.github/workflows/sync.yml`: cada 5 minutos trae los resultados nuevos y manda
+los avisos a quien no haya pronosticado. Sin él, los resultados solo se actualizan cuando alguien abre
+la app.
 
-Comprobar la sincronización a mano:
+1. **Crear el archivo.** Va dentro de una carpeta oculta (`.github`) y al subir archivos arrastrándolos
+   a GitHub esa carpeta suele quedarse fuera. Lo más fiable: en el repositorio, *Add file → Create new
+   file*, escribe `.github/workflows/sync.yml` como nombre (al escribir las barras se crean las
+   carpetas) y pega el contenido del archivo.
+2. **Secretos.** En GitHub > Settings > Secrets and variables > Actions: `APP_URL` (la dirección de la
+   web, p. ej. `https://tu-quiniela.vercel.app`) y `CRON_SECRET` (el mismo valor que en las variables de
+   entorno de Vercel).
+3. **Probarlo.** Pestaña *Actions → Sincronizar resultados y avisos → Run workflow*. Tiene que salir en
+   verde, y el registro de cada paso muestra qué ha actualizado.
+
+Para comprobar el estado desde la propia app: **Panel de admin → Sincronización** muestra cuándo se
+actualizó cada competición por última vez, el último error si lo hubo, y permite forzar una
+sincronización al momento. (La migración `supabase/migration-6-sync.sql` es opcional: añade el dato del
+último error.) También a mano:
 
 ```
 curl -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/sync?force=1"
 ```
+
+Cosas a tener en cuenta:
+
+- **Plan gratuito de football-data.org:** sus resultados llegan con retraso (no son en tiempo real) y
+  permite 10 llamadas por minuto. Para resultados al instante hace falta un plan de pago de esa API.
+- **GitHub Actions** deja 5 minutos como mínimo entre ejecuciones y puede retrasarse unos minutos. Si
+  el repositorio pasa 60 días sin actividad, GitHub pausa los workflows programados (se reactivan desde
+  la pestaña Actions).
+- **Alternativa:** un servicio de cron gratuito (por ejemplo cron-job.org) que llame cada minuto a
+  `APP_URL/api/cron/sync` con la cabecera `Authorization: Bearer <CRON_SECRET>`.
+- El cron nativo de Vercel en el plan Hobby solo puede ejecutarse una vez al día, por eso no se usa.
 
 ## Reglas
 

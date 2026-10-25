@@ -139,3 +139,7 @@ alter table push_sent enable row level security;
 -- Foto de perfil: ver migration-5-perfil.sql
 alter table players add column if not exists avatar text;
 alter table players add column if not exists avatar_updated_at timestamptz;
+
+-- Estado de la sincronización: ver migration-6-sync.sql
+alter table sync_state add column if not exists last_ok timestamptz;
+alter table sync_state add column if not exists last_error text;

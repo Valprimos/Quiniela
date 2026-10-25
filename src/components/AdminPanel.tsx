@@ -533,11 +533,95 @@ function ResultsEditor({ round, onSaved }: { round: RoundData | null; onSaved: (
   );
 }
 
-type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'jornada' | 'temporada' | 'historial' | 'equipos';
+type SyncInfo = {
+  competitions: { code: string; name: string; lastOk: string | null; lastError: string | null }[];
+  config: { footballToken: boolean; cronSecret: boolean };
+  detail: boolean;
+};
+type SyncResult = { code: string; name: string; ok: boolean; count: number; error: string | null };
+
+function ago(iso: string | null): string {
+  if (!iso) return 'nunca';
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'hace instantes';
+  if (mins < 60) return `hace ${mins} min`;
+  const h = Math.floor(mins / 60);
+  return h < 24 ? `hace ${h} h` : `hace ${Math.floor(h / 24)} d`;
+}
+
+// Cuándo se actualizaron por última vez los resultados y botón para forzarlo
+function SyncPanel() {
+  const [info, setInfo] = useState<SyncInfo | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [results, setResults] = useState<SyncResult[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const reload = useCallback(() => {
+    fetch('/api/admin/sync', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => (j.error ? setError(j.error) : setInfo(j)))
+      .catch(() => setError('No se pudo comprobar el estado.'));
+  }, []);
+  useEffect(reload, [reload]);
+
+  async function syncNow() {
+    setBusy(true);
+    setError(null);
+    const r = await call('/api/admin/sync', {});
+    setBusy(false);
+    if (!r.ok) return setError((r.error as string) ?? 'No se pudo sincronizar.');
+    setResults(r.results as SyncResult[]);
+    reload();
+  }
+
+  if (!info && !error) return <RowsSkeleton rows={2} />;
+  return (
+    <>
+      {error && <p className="notice">{error}</p>}
+      {info && !info.config.footballToken && <p className="notice">Falta FOOTBALL_DATA_TOKEN en Vercel.</p>}
+      {info && (
+        <ul className="syncs">
+          {info.competitions.map((c) => (
+            <li key={c.code}>
+              <CompLogo code={c.code} size={26} />
+              <span className="sync-txt">
+                <b>{c.name}</b>
+                <small>Última vez correcta: {ago(c.lastOk)}</small>
+                {c.lastError && <small className="sync-err">{c.lastError}</small>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="row">
+        <button type="button" className="primary" disabled={busy} onClick={syncNow}>
+          {busy ? 'Sincronizando…' : 'Sincronizar ahora'}
+        </button>
+      </div>
+      {results && (
+        <ul className="syncs">
+          {results.map((r) => (
+            <li key={r.code}>
+              <span className="sync-txt">
+                <b>{r.name}</b>
+                <small className={r.ok ? undefined : 'sync-err'}>
+                  {r.ok ? `${r.count} partidos actualizados` : r.error ?? 'Ya se estaba sincronizando'}
+                </small>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'sync' | 'jornada' | 'temporada' | 'historial' | 'equipos';
 const TOOLS: { id: Tool; title: string; hint: string }[] = [
   { id: 'jugadores', title: 'Jugadores y PIN', hint: 'Cambiar PIN, dar admin, expulsar' },
   { id: 'resultados', title: 'Resultados', hint: 'Corregir el resultado de un partido' },
   { id: 'pronosticos', title: 'Pronósticos', hint: 'Poner o cambiar lo de un jugador' },
+  { id: 'sync', title: 'Sincronización', hint: 'Ver y forzar la actualización de resultados' },
   { id: 'jornada', title: 'Bloquear jornada', hint: 'Cerrar o abrir los pronósticos' },
   { id: 'temporada', title: 'Archivar temporada', hint: 'Guardar la clasificación final' },
   { id: 'historial', title: 'Historial', hint: 'Traer temporadas anteriores' },
@@ -710,6 +794,8 @@ export default function AdminPanel({
           {round && resolvedMd == null && <p className="muted">No hay partidos en esta competición.</p>}
         </>
       )}
+
+      {tool === 'sync' && <SyncPanel />}
 
       {tool === 'jornada' && (
         <>
