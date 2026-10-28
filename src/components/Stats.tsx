@@ -241,7 +241,7 @@ function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: stri
 }
 
 /* ---------- Evolución (gráfica) ---------- */
-const PALETTE = ['#45d89c', '#5ab1ff', '#ff8fab', '#b79cff', '#ff9f5a', '#7fe0e6', '#c5e063', '#f2a6ff', '#9aa9ff', '#e0b48a'];
+const PALETTE = ['#1fa970', '#2f8fe0', '#e0577f', '#8a63e8', '#e8782c', '#17a5b0', '#8fb21a', '#c24fd6', '#5b6ee0', '#b98550'];
 
 function Evolution({ ev, meId, comps }: { ev: StatsDTO['evolution']; meId: string; comps: number }) {
   if (ev.rounds.length < 2) {

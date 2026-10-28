@@ -1,5 +1,6 @@
 'use client';
 
+import ThemeToggle from './ThemeToggle';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -162,6 +163,7 @@ export default function LoginForm({ embedded = false, onDone }: { embedded?: boo
         >
           {registering ? 'Ya tengo jugador' : 'Soy nuevo o quiero crear una pandilla'}
         </button>
+        {!embedded && <ThemeToggle />}
       </form>
   );
 

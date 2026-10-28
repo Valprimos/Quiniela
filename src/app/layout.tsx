@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Barlow_Condensed, Figtree } from 'next/font/google';
 import './globals.css';
+import './theme-light.css';
+import { themeInitScript } from '@/lib/theme';
 
 const display = Barlow_Condensed({
   subsets: ['latin'],
@@ -22,7 +24,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${display.variable} ${body.variable}`}>
+    <html lang="es" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

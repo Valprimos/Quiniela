@@ -6,6 +6,7 @@
   --text: #e9f0ec;
   --muted: #93aaa8;
   --foco: #ffd23f;
+  --foco-ink: var(--foco); /* amarillo como texto: en modo claro pasa a un ocre legible */
   --ok: #45d89c;
   --ko: #ff6b6b;
 }
@@ -71,7 +72,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .jornada { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .jtitle { display: flex; align-items: baseline; gap: 12px; }
 .jlabel { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--muted); }
-.jnum { font-family: var(--font-display); font-size: 88px; line-height: 0.9; font-weight: 700; color: var(--foco); }
+.jnum { font-family: var(--font-display); font-size: 88px; line-height: 0.9; font-weight: 700; color: var(--foco-ink); }
 .arrow {
   width: 44px; height: 44px;
   background: var(--panel); border: 1.5px solid var(--line); border-radius: 4px;
@@ -136,7 +137,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
   background: var(--panel); border: 1.5px solid var(--line); border-radius: 999px;
   padding: 8px 16px; font-weight: 600; cursor: pointer;
 }
-.seg button[aria-pressed='true'] { border-color: var(--foco); color: var(--foco); }
+.seg button[aria-pressed='true'] { border-color: var(--foco); color: var(--foco-ink); }
 .rank { list-style: none; margin: 8px 0 0; padding: 0; }
 .rank li {
   position: relative; overflow: hidden;
@@ -158,7 +159,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 /* Acceso */
 .login { min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
 .login-form { width: 100%; max-width: 340px; display: grid; gap: 16px; }
-.login-title { font-family: var(--font-display); font-size: 84px; line-height: 0.9; font-weight: 700; margin: 0; color: var(--foco); }
+.login-title { font-family: var(--font-display); font-size: 84px; line-height: 0.9; font-weight: 700; margin: 0; color: var(--foco-ink); }
 .login-form p { margin: 0; }
 .field { display: grid; gap: 6px; }
 .field label { font-size: 14px; color: var(--muted); }
@@ -201,7 +202,7 @@ select {
 .jselect { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; opacity: 0; cursor: pointer; }
 
 .reminder { margin: 14px 0 0; font-size: 14px; color: var(--muted); }
-.reminder.warn { color: var(--foco); }
+.reminder.warn { color: var(--foco-ink); }
 
 /* Forma y puesto de cada equipo */
 .tpos { font-size: 12px; color: var(--muted); min-width: 22px; text-align: right; }
@@ -267,7 +268,7 @@ select {
   background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
   font-size: 11px; font-weight: 600; cursor: default;
 }
-.pstat.me .pname { color: var(--foco); }
+.pstat.me .pname { color: var(--foco-ink); }
 .ppct { font-family: var(--font-display); font-size: 40px; font-weight: 700; line-height: 1; }
 .pline { margin: 2px 0 10px; font-size: 14px; color: var(--muted); }
 .pboxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
@@ -316,7 +317,7 @@ select {
 
 /* Competiciones */
 .complist { margin-top: 4px; flex-wrap: wrap; }
-.complist button sup { margin-left: 2px; color: var(--foco); }
+.complist button sup { margin-left: 2px; color: var(--foco-ink); }
 .stagelabel { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
 
 /* Transición suave entre jornadas: se atenúa mientras carga, sin desaparecer */
@@ -338,8 +339,8 @@ select {
 .match.live { border-bottom-style: solid; border-bottom-color: rgba(255, 107, 107, 0.35); }
 .box.hit-live { background: transparent; border-color: var(--ok); color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); }
 .box.miss-live { background: transparent; border-color: var(--ko); color: var(--ko); box-shadow: inset 0 0 0 1px var(--ko); }
-.cseg.live { background: rgba(255, 210, 63, 0.18); border-color: var(--foco); color: var(--foco); }
-.ptslive { display: block; font-size: 11px; font-weight: 600; color: var(--foco); }
+.cseg.live { background: rgba(255, 210, 63, 0.18); border-color: var(--foco); color: var(--foco-ink); }
+.ptslive { display: block; font-size: 11px; font-weight: 600; color: var(--foco-ink); }
 
 /* Modal de historial de equipo */
 .modal-backdrop {
@@ -439,7 +440,7 @@ select {
   padding: 5px 0; margin: 2px 0; font-size: 11px; color: var(--muted); text-transform: uppercase;
   letter-spacing: 0.04em; cursor: pointer; text-align: center;
 }
-.h2htrigger:hover { color: var(--foco); border-color: var(--foco); }
+.h2htrigger:hover { color: var(--foco-ink); border-color: var(--foco); }
 
 /* Modal de cara a cara */
 .h2hvs { font-family: var(--font-display); font-size: 13px; color: var(--muted); text-transform: uppercase; }
@@ -544,7 +545,7 @@ select {
 .pbars { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
 .pbars li { display: grid; grid-template-columns: 84px 1fr 34px; gap: 10px; align-items: center; }
 .pbname { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pbars li.me .pbname { color: var(--foco); }
+.pbars li.me .pbname { color: var(--foco-ink); }
 .pbbar { display: flex; height: 18px; background: var(--panel); border-radius: 3px; }
 .pbbar i { display: block; height: 100%; min-width: 2px; }
 .pbbar i + i { border-left: 2px solid var(--bg); }
@@ -564,15 +565,15 @@ select {
   background: var(--bg); box-shadow: 6px 0 0 var(--bg); font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .hm thead .hm-name { background: var(--bg); }
-.hm tr.me .hm-name { color: var(--foco); }
+.hm tr.me .hm-name { color: var(--foco-ink); }
 .hm .part { outline: 1px dashed var(--line); outline-offset: -1px; }
 
 /* Cara a cara de jugadores */
 .vs-pick select { border-width: 2px; }
 .radar { width: 100%; max-width: 340px; height: auto; display: block; margin: 6px auto 0; }
 .radar-ring { fill: none; stroke: var(--line); stroke-width: 1; }
-.cmp b.vs-a { color: var(--foco); }
-.cmp b.vs-b { color: #b79cff; text-align: right; }
+.cmp b.vs-a { color: var(--foco-ink); }
+.cmp b.vs-b { color: #9b78f2; text-align: right; }
 
 /* Tarjetas de jugador */
 .pcards .pcard { padding: 16px 0; }
@@ -644,9 +645,9 @@ select {
 .siam-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 62px; gap: 10px; align-items: center; }
 .siam-names { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .siam-names i { font-style: normal; color: var(--muted); font-weight: 400; }
-.siam-row.me .siam-names { color: var(--foco); }
+.siam-row.me .siam-names { color: var(--foco-ink); }
 .siam-track { height: 8px; background: var(--panel); border-radius: 999px; overflow: hidden; }
-.siam-track i { display: block; height: 100%; border-radius: 999px; background: #b79cff; }
+.siam-track i { display: block; height: 100%; border-radius: 999px; background: #9b78f2; }
 .siam-row.me .siam-track i { background: var(--foco); }
 .siam-val { text-align: right; line-height: 1.1; }
 .siam-val b { font-family: var(--font-display); font-size: 18px; }
@@ -675,13 +676,13 @@ select {
 .pedit-teams { display: grid; gap: 2px; }
 .pedit-teams b { font-size: 15px; }
 .pedit-teams small { font-size: 12px; color: var(--muted); }
-.pedit-teams small.pedit-closed { color: var(--foco); }
+.pedit-teams small.pedit-closed { color: var(--foco-ink); }
 .pedit-picks { display: flex; gap: 6px; }
 .pedit-picks button {
   flex: 1; padding: 8px 0; background: var(--panel-2); border: 1.5px solid var(--line); border-radius: 4px;
   font-family: var(--font-display); font-size: 20px; cursor: pointer; color: var(--muted);
 }
-.pedit-picks button[aria-pressed='true'] { border-color: var(--foco); color: var(--foco); background: rgba(255, 210, 63, 0.1); }
+.pedit-picks button[aria-pressed='true'] { border-color: var(--foco); color: var(--foco-ink); background: rgba(255, 210, 63, 0.1); }
 .pedit-picks button:disabled { opacity: 0.5; cursor: default; }
 .pedit-score { display: flex; align-items: center; gap: 8px; }
 .pedit-score input { width: 56px; text-align: center; }
@@ -777,7 +778,7 @@ select {
 .um-leagues button b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .um-leagues button:hover:not(:disabled) { background: var(--panel-2); }
 .um-leagues button.cur { border-color: var(--foco); background: rgba(255, 210, 63, 0.08); cursor: default; }
-.um-leagues button i { font-style: normal; color: var(--foco); font-weight: 700; }
+.um-leagues button i { font-style: normal; color: var(--foco-ink); font-weight: 700; }
 .um-leagues button:disabled:not(.cur) { opacity: 0.5; }
 .um-loading { font-size: 13px; color: var(--muted); padding: 6px; }
 .um-item {
@@ -828,7 +829,7 @@ select {
 .pbars li { grid-template-columns: 124px 1fr 34px; }
 .pbname.plink { font-weight: 600; gap: 8px; }
 .pbname.plink span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pbars li.me .pbname { color: var(--foco); }
+.pbars li.me .pbname { color: var(--foco-ink); }
 .hm .hm-name { min-width: 112px; max-width: 112px; }
 .hm .hm-name .plink { gap: 6px; max-width: 100%; }
 .hm .hm-name .plink span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
@@ -936,7 +937,7 @@ select {
 }
 .rank .badge {
   margin: 0; padding: 1px 8px; font-size: 12px; font-weight: 700; line-height: 1.5; white-space: nowrap;
-  background: rgba(255, 210, 63, 0.14); border: 1px solid rgba(255, 210, 63, 0.6); color: var(--foco);
+  background: rgba(255, 210, 63, 0.14); border: 1px solid rgba(255, 210, 63, 0.6); color: var(--foco-ink);
 }
 
 /* ===== Esqueletos de carga ===== */

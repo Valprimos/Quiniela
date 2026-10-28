@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Avatar from './Avatar';
 import { RowsSkeleton } from './Skeleton';
+import { useTheme } from './ThemeToggle';
 import { fetchJson, load, peek } from '@/lib/clientCache';
 
 type Me = { id: string; name: string; admin: boolean; avatar: number | null; group: string };
@@ -29,6 +30,7 @@ export default function UserMenu({
   onLeave: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [theme, toggleTheme] = useTheme();
   // Las ligas guardadas se piden una vez y se reutilizan (se actualizan si cambias tu perfil)
   const key = `accounts:${me.id}`;
   const [accounts, setAccounts] = useState<Saved[] | null>(() => peek<Saved[]>(key) ?? null);
@@ -141,6 +143,9 @@ export default function UserMenu({
           <hr />
           <button type="button" role="menuitem" className="um-item" onClick={pick(onProfile)}>
             Editar perfil <small>foto y nombre</small>
+          </button>
+          <button type="button" role="menuitem" className="um-item" onClick={toggleTheme}>
+            {theme === 'light' ? 'Modo oscuro' : 'Modo claro'} <small>{theme === 'light' ? 'de noche' : 'campo de fútbol'}</small>
           </button>
           <button type="button" role="menuitem" className="um-item" onClick={pick(onNotify)}>
             Avisos

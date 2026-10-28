@@ -250,7 +250,7 @@ function Heatmap({ stats, meId }: { stats: StatsDTO; meId: string }) {
 
 /* ---------- Comparador con radar ---------- */
 const COLOR_A = 'var(--foco)';
-const COLOR_B = '#b79cff';
+const COLOR_B = '#9b78f2';
 const AXES = ['Acierto', 'Media', 'Racha', 'La suegra', 'Constancia', 'Pleno'];
 
 function axisValues(p: PlayerStat, g: { maxAvg: number; maxStreak: number; maxPleno: number }): number[] {
@@ -397,7 +397,7 @@ function Overlap({ pct, a, b }: { pct: number; a: string; b: string }) {
   return (
     <svg viewBox="0 0 300 124" className="siam-svg" role="img" aria-label={`${a} y ${b} coinciden un ${fmt(pct)}%`}>
       <circle cx={xa} cy={cy} r={r} fill="rgba(69, 216, 156, 0.22)" stroke="var(--ok)" strokeWidth={2.5} />
-      <circle cx={xb} cy={cy} r={r} fill="rgba(183, 156, 255, 0.22)" stroke="#b79cff" strokeWidth={2.5} />
+      <circle cx={xb} cy={cy} r={r} fill="rgba(183, 156, 255, 0.22)" stroke="#9b78f2" strokeWidth={2.5} />
       <text x={cx} y={cy + 9} textAnchor="middle" className="siam-pct">
         {fmt(pct)}%
       </text>
@@ -448,7 +448,7 @@ function Siamesismo({ stats, meId }: { stats: StatsDTO; meId: string }) {
         <div className="siam-who">
           {[
             { id: top.a, name: top.aName, color: 'var(--ok)' },
-            { id: top.b, name: top.bName, color: '#b79cff' },
+            { id: top.b, name: top.bName, color: '#9b78f2' },
           ].map((x, i) => (
             <Fragment key={x.id}>
               {i > 0 && <span>y</span>}
