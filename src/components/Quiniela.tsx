@@ -6,7 +6,7 @@ import Stats from './Stats';
 import CompLogo from './CompLogo';
 import NotifyPanel from './NotifyPanel';
 import UserMenu from './UserMenu';
-import ProfilePanel from './ProfilePanel';
+import ProfilePanel, { type ProfileFocus } from './ProfilePanel';
 import LoginForm from './LoginForm';
 import Avatar from './Avatar';
 import { AppSkeleton, MatchesSkeleton, RankingSkeleton } from './Skeleton';
@@ -550,6 +550,12 @@ export default function Quiniela() {
   const showProfile = panel === 'profile';
   const showLeague = panel === 'league';
   const openPanel = (p: NonNullable<typeof panel>) => setPanel((cur) => (cur === p ? null : p));
+  // Pulsar la foto o el nombre del menú abre el perfil (sin cerrarlo si ya estaba abierto) y va directo a eso
+  const [profileFocus, setProfileFocus] = useState<ProfileFocus | null>(null);
+  const editProfile = (target?: 'photo' | 'name') => {
+    setProfileFocus(target ? { target, n: Date.now() } : null);
+    setPanel(target ? 'profile' : (cur) => (cur === 'profile' ? null : 'profile'));
+  };
 
   // Un submenú abierto (perfil, añadir liga, avisos, PIN, admin) se cierra al tocar en cualquier sitio de fuera.
   // Se usa el final del toque (no el inicio) para que desplazarse por la página no lo cierre.
@@ -867,7 +873,7 @@ export default function Quiniela() {
         <UserMenu
           me={data.me}
           refreshKey={menuKey}
-          onProfile={() => openPanel('profile')}
+          onProfile={editProfile}
           onNotify={() => openPanel('notify')}
           onPin={() => openPanel('pin')}
           onAdmin={() => openPanel('admin')}
@@ -894,6 +900,7 @@ export default function Quiniela() {
       {showProfile && (
         <ProfilePanel
           me={data.me}
+          focus={profileFocus}
           onClose={() => setPanel(null)}
           onSaved={() => {
             setMenuKey((k) => k + 1);

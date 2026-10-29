@@ -41,7 +41,19 @@ async function toSquareJpeg(file: File): Promise<string> {
 }
 
 // Foto de perfil y nombre
-export default function ProfilePanel({ me, onClose, onSaved }: { me: Me; onClose: () => void; onSaved: () => void }) {
+export type ProfileFocus = { target: 'photo' | 'name'; n: number };
+
+export default function ProfilePanel({
+  me,
+  focus,
+  onClose,
+  onSaved,
+}: {
+  me: Me;
+  focus?: ProfileFocus | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const key = `accounts:${me.id}`;
   const [leagues, setLeagues] = useState(() => peek<unknown[]>(key)?.length || 1);
   useEffect(() => {
@@ -55,6 +67,22 @@ export default function ProfilePanel({ me, onClose, onSaved }: { me: Me; onClose
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const file = useRef<HTMLInputElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const [flash, setFlash] = useState(false);
+
+  // Si se abre pulsando la foto o el nombre del menú, lleva directo a eso:
+  // el nombre queda listo para escribir y el botón de la foto parpadea un momento.
+  useEffect(() => {
+    if (!focus) return;
+    if (focus.target === 'name') {
+      nameInput.current?.focus();
+      nameInput.current?.select();
+      return;
+    }
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), 1600);
+    return () => clearTimeout(t);
+  }, [focus]);
 
   async function post(body: Record<string, unknown>) {
     setBusy(true);
@@ -119,7 +147,7 @@ export default function ProfilePanel({ me, onClose, onSaved }: { me: Me; onClose
         )}
         <div className="pp-photo-actions">
           <input ref={file} type="file" accept="image/*" hidden onChange={choose} />
-          <button type="button" className="seg-btn" disabled={busy} onClick={() => file.current?.click()}>
+          <button type="button" className={`seg-btn${flash ? ' pp-flash' : ''}`} disabled={busy} onClick={() => file.current?.click()}>
             {me.avatar || photo ? 'Cambiar foto' : 'Elegir foto'}
           </button>
           {photo && (
@@ -146,6 +174,7 @@ export default function ProfilePanel({ me, onClose, onSaved }: { me: Me; onClose
           <label htmlFor="pp-name">Tu nombre</label>
           <input
             id="pp-name"
+            ref={nameInput}
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={20}
