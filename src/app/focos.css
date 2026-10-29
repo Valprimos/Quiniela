@@ -1,6 +1,7 @@
 /* ===== Focos de estadio (solo modo oscuro) — easter egg =====
    Se encienden/apagan tocando la marca "Quiniela" de la cabecera (ver Brand.tsx).
-   Por defecto están encendidos; apagados se guarda como <html data-focos="off">.
+   Por defecto están APAGADOS (el campo nocturno de theme-field.css, tal cual); encendidos se
+   guarda como <html data-focos="on">.
    Encendidos: una capa de césped iluminado (.lit) se funde por encima del campo nocturno y
    cuatro torres lanzan conos de luz desde las esquinas. El modo claro es de día: no hay focos. */
 
@@ -15,10 +16,6 @@
   --pitch-lit-l: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1110 740%22 preserveAspectRatio=%22xMidYMid slice%22%3E%3Cg fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.5%22 stroke-width=%223.2%22 stroke-linejoin=%22round%22%3E%3Crect x=%2230.0%22 y=%2230.0%22 width=%221050.0%22 height=%22680.0%22/%3E%3Cline x1=%22555.0%22 y1=%2230.0%22 x2=%22555.0%22 y2=%22710.0%22/%3E%3Ccircle cx=%22555.0%22 cy=%22370.0%22 r=%2291.5%22/%3E%3Ccircle cx=%22555.0%22 cy=%22370.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Crect x=%2230.0%22 y=%22168.4%22 width=%22165.0%22 height=%22403.2%22/%3E%3Crect x=%2230.0%22 y=%22278.4%22 width=%2255.0%22 height=%22183.2%22/%3E%3Ccircle cx=%22140.0%22 cy=%22370.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Cpath d=%22M195.0 296.9 A91.5 91.5 0 0 1 195.0 443.1%22/%3E%3Crect x=%22915.0%22 y=%22168.4%22 width=%22165.0%22 height=%22403.2%22/%3E%3Crect x=%221025.0%22 y=%22278.4%22 width=%2255.0%22 height=%22183.2%22/%3E%3Ccircle cx=%22970.0%22 cy=%22370.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Cpath d=%22M915.0 296.9 A91.5 91.5 0 0 0 915.0 443.1%22/%3E%3Cpath d=%22M30.0 40.0 A10 10 0 0 0 40.0 30.0%22/%3E%3Cpath d=%22M30.0 700.0 A10 10 0 0 1 40.0 710.0%22/%3E%3Cpath d=%22M1080.0 40.0 A10 10 0 0 1 1070.0 30.0%22/%3E%3Cpath d=%22M1080.0 700.0 A10 10 0 0 0 1070.0 710.0%22/%3E%3C/g%3E%3C/svg%3E");
 }
 html:not([data-theme='light']) .focos { display: block; }
-
-/* Sin focos, la noche es más cerrada */
-html:not([data-theme='light']) body::before { transition: filter 0.9s ease-out; }
-html:not([data-theme='light'])[data-focos='off'] body::before { filter: brightness(0.72); }
 
 /* Césped iluminado */
 .focos .lit {
@@ -86,8 +83,8 @@ html:not([data-theme='light'])[data-focos='off'] body::before { filter: brightne
 }
 
 /* Encendido */
-html:not([data-theme='light']):not([data-focos='off']) .focos .lit,
-html:not([data-theme='light']):not([data-focos='off']) .focos i { opacity: 1; }
+html:not([data-theme='light'])[data-focos='on'] .focos .lit,
+html:not([data-theme='light'])[data-focos='on'] .focos i { opacity: 1; }
 
 /* Al encender: parpadeo de focos que se calientan, cada torre a su aire */
 @keyframes foco-on {
@@ -109,7 +106,7 @@ html.focos-warm .focos i:nth-of-type(2) { animation-delay: 0.14s; }
 html.focos-warm .focos i:nth-of-type(3) { animation-delay: 0.05s; }
 html.focos-warm .focos i:nth-of-type(4) { animation-delay: 0.22s; }
 @media (prefers-reduced-motion: reduce) {
-  .focos .lit, .focos i, html:not([data-theme='light']) body::before { transition: none; }
+  .focos .lit, .focos i { transition: none; }
   html.focos-warm .focos i, html.focos-warm .focos .lit { animation: none; }
 }
 

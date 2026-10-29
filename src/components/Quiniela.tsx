@@ -1,5 +1,6 @@
 'use client';
 
+import Brand from './Brand';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Stats from './Stats';
@@ -869,7 +870,7 @@ export default function Quiniela() {
     <ProfileCtx.Provider value={openProfile}>
     <main className="wrap">
       <header className="top">
-        <span className="brand">Quiniela {seasonLabel}</span>
+        <Brand>Quiniela {seasonLabel}</Brand>
         <UserMenu
           me={data.me}
           refreshKey={menuKey}
