@@ -1,0 +1,131 @@
+/* ===== Focos de estadio (solo modo oscuro) — easter egg =====
+   Se encienden/apagan tocando la marca "Quiniela" de la cabecera (ver Brand.tsx).
+   Por defecto están encendidos; apagados se guarda como <html data-focos="off">.
+   Encendidos: una capa de césped iluminado (.lit) se funde por encima del campo nocturno y
+   cuatro torres lanzan conos de luz desde las esquinas. El modo claro es de día: no hay focos. */
+
+.focos {
+  position: fixed;
+  inset: 0;
+  z-index: -1;       /* tras el contenido y encima del campo (body::before, que va antes en el DOM) */
+  pointer-events: none;
+  overflow: hidden;
+  display: none;
+  --pitch-lit-p: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 740 1110%22 preserveAspectRatio=%22xMidYMid slice%22%3E%3Cg fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.5%22 stroke-width=%223.2%22 stroke-linejoin=%22round%22%3E%3Crect x=%2230.0%22 y=%2230.0%22 width=%22680.0%22 height=%221050.0%22/%3E%3Cline x1=%2230.0%22 y1=%22555.0%22 x2=%22710.0%22 y2=%22555.0%22/%3E%3Ccircle cx=%22370.0%22 cy=%22555.0%22 r=%2291.5%22/%3E%3Ccircle cx=%22370.0%22 cy=%22555.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Crect x=%22168.4%22 y=%2230.0%22 width=%22403.2%22 height=%22165.0%22/%3E%3Crect x=%22278.4%22 y=%2230.0%22 width=%22183.2%22 height=%2255.0%22/%3E%3Ccircle cx=%22370.0%22 cy=%22140.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Cpath d=%22M296.9 195.0 A91.5 91.5 0 0 0 443.1 195.0%22/%3E%3Crect x=%22168.4%22 y=%22915.0%22 width=%22403.2%22 height=%22165.0%22/%3E%3Crect x=%22278.4%22 y=%221025.0%22 width=%22183.2%22 height=%2255.0%22/%3E%3Ccircle cx=%22370.0%22 cy=%22970.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Cpath d=%22M296.9 915.0 A91.5 91.5 0 0 1 443.1 915.0%22/%3E%3Cpath d=%22M40.0 30.0 A10 10 0 0 1 30.0 40.0%22/%3E%3Cpath d=%22M700.0 30.0 A10 10 0 0 0 710.0 40.0%22/%3E%3Cpath d=%22M40.0 1080.0 A10 10 0 0 0 30.0 1070.0%22/%3E%3Cpath d=%22M700.0 1080.0 A10 10 0 0 1 710.0 1070.0%22/%3E%3C/g%3E%3C/svg%3E");
+  --pitch-lit-l: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1110 740%22 preserveAspectRatio=%22xMidYMid slice%22%3E%3Cg fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.5%22 stroke-width=%223.2%22 stroke-linejoin=%22round%22%3E%3Crect x=%2230.0%22 y=%2230.0%22 width=%221050.0%22 height=%22680.0%22/%3E%3Cline x1=%22555.0%22 y1=%2230.0%22 x2=%22555.0%22 y2=%22710.0%22/%3E%3Ccircle cx=%22555.0%22 cy=%22370.0%22 r=%2291.5%22/%3E%3Ccircle cx=%22555.0%22 cy=%22370.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Crect x=%2230.0%22 y=%22168.4%22 width=%22165.0%22 height=%22403.2%22/%3E%3Crect x=%2230.0%22 y=%22278.4%22 width=%2255.0%22 height=%22183.2%22/%3E%3Ccircle cx=%22140.0%22 cy=%22370.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Cpath d=%22M195.0 296.9 A91.5 91.5 0 0 1 195.0 443.1%22/%3E%3Crect x=%22915.0%22 y=%22168.4%22 width=%22165.0%22 height=%22403.2%22/%3E%3Crect x=%221025.0%22 y=%22278.4%22 width=%2255.0%22 height=%22183.2%22/%3E%3Ccircle cx=%22970.0%22 cy=%22370.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Cpath d=%22M915.0 296.9 A91.5 91.5 0 0 0 915.0 443.1%22/%3E%3Cpath d=%22M30.0 40.0 A10 10 0 0 0 40.0 30.0%22/%3E%3Cpath d=%22M30.0 700.0 A10 10 0 0 1 40.0 710.0%22/%3E%3Cpath d=%22M1080.0 40.0 A10 10 0 0 1 1070.0 30.0%22/%3E%3Cpath d=%22M1080.0 700.0 A10 10 0 0 0 1070.0 710.0%22/%3E%3C/g%3E%3C/svg%3E");
+}
+html:not([data-theme='light']) .focos { display: block; }
+
+/* Sin focos, la noche es más cerrada */
+html:not([data-theme='light']) body::before { transition: filter 0.9s ease-out; }
+html:not([data-theme='light'])[data-focos='off'] body::before { filter: brightness(0.72); }
+
+/* Césped iluminado */
+.focos .lit {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.9s ease-out;
+  background-image:
+    radial-gradient(ellipse 110% 85% at 50% 38%, rgba(255, 255, 228, 0.12), rgba(0, 20, 6, 0.34) 100%),
+    var(--pitch-lit-p),
+    repeating-linear-gradient(180deg, #1a5a30 0 72px, #20673a 72px 144px);
+  background-size: 100% 100%, cover, auto;
+  background-position: center, center, 0 0;
+  background-repeat: no-repeat, no-repeat, repeat;
+}
+@media (min-aspect-ratio: 1 / 1) {
+  .focos .lit {
+    background-image:
+      radial-gradient(ellipse 110% 85% at 50% 38%, rgba(255, 255, 228, 0.12), rgba(0, 20, 6, 0.34) 100%),
+      var(--pitch-lit-l),
+      repeating-linear-gradient(90deg, #1a5a30 0 72px, #20673a 72px 144px);
+  }
+}
+
+/* Torres de luz: la cabeza (6 lámparas) y su cono */
+.focos i {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  transition: opacity 0.9s ease-out;
+  --a: 158deg; /* hacia dónde apunta el cono (0° = arriba, en sentido horario) */
+}
+.focos i::before {
+  content: '';
+  position: absolute;
+  width: 34px;
+  height: 22px;
+  left: -17px;
+  top: -11px;
+  background: radial-gradient(circle, #fffbe8 0 2.6px, transparent 3.5px) 0 0 / 11.34px 11px;
+  filter: drop-shadow(0 0 4px #fff8dc) drop-shadow(0 0 16px rgba(255, 236, 170, 0.9));
+}
+.focos i::after {
+  content: '';
+  position: absolute;
+  width: 170vmax;
+  height: 170vmax;
+  left: -85vmax;
+  top: -85vmax;
+  background: conic-gradient(from calc(var(--a) - 30deg), transparent 0deg, rgba(255, 246, 214, 0.17) 30deg, transparent 60deg, transparent 360deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.6) 12%, transparent 42%);
+  mask-image: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.6) 12%, transparent 42%);
+}
+.focos i:nth-of-type(1) { left: 7%; top: 0; --a: 158deg; }
+.focos i:nth-of-type(2) { left: 93%; top: 0; --a: 202deg; }
+/* Las torres de abajo solo se ven en pantallas apaisadas; en vertical quedarían tapadas por el boleto */
+.focos i:nth-of-type(3),
+.focos i:nth-of-type(4) { display: none; }
+@media (min-aspect-ratio: 1 / 1) {
+  .focos i:nth-of-type(1) { --a: 124deg; left: 3%; top: 2%; }
+  .focos i:nth-of-type(2) { --a: 236deg; left: 97%; top: 2%; }
+  .focos i:nth-of-type(3) { display: block; left: 3%; top: 98%; --a: 56deg; }
+  .focos i:nth-of-type(4) { display: block; left: 97%; top: 98%; --a: 304deg; }
+}
+
+/* Encendido */
+html:not([data-theme='light']):not([data-focos='off']) .focos .lit,
+html:not([data-theme='light']):not([data-focos='off']) .focos i { opacity: 1; }
+
+/* Al encender: parpadeo de focos que se calientan, cada torre a su aire */
+@keyframes foco-on {
+  0% { opacity: 0; }
+  6% { opacity: 0.9; }
+  9% { opacity: 0.12; }
+  16% { opacity: 1; }
+  20% { opacity: 0.3; }
+  27% { opacity: 0.8; }
+  31% { opacity: 0.18; }
+  40% { opacity: 0.7; }
+  46% { opacity: 0.35; }
+  60% { opacity: 0.95; }
+  100% { opacity: 1; }
+}
+html.focos-warm .focos i { animation: foco-on 1.5s linear both; }
+html.focos-warm .focos .lit { animation: foco-on 1.5s linear 0.12s both; }
+html.focos-warm .focos i:nth-of-type(2) { animation-delay: 0.14s; }
+html.focos-warm .focos i:nth-of-type(3) { animation-delay: 0.05s; }
+html.focos-warm .focos i:nth-of-type(4) { animation-delay: 0.22s; }
+@media (prefers-reduced-motion: reduce) {
+  .focos .lit, .focos i, html:not([data-theme='light']) body::before { transition: none; }
+  html.focos-warm .focos i, html.focos-warm .focos .lit { animation: none; }
+}
+
+/* El interruptor es un botón sin aspecto de botón: la marca de siempre */
+.brand-egg {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: #fff;
+  line-height: inherit;
+  text-align: left;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.brand-egg:focus-visible { outline: 2px solid var(--foco); outline-offset: 4px; border-radius: 4px; }

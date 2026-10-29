@@ -22,7 +22,7 @@ export default function UserMenu({
 }: {
   me: Me;
   refreshKey: number;
-  onProfile: (focus?: 'photo' | 'name') => void;
+  onProfile: () => void;
   onNotify: () => void;
   onPin: () => void;
   onAdmin: () => void;
@@ -72,10 +72,6 @@ export default function UserMenu({
     setOpen(false);
     fn();
   };
-  const editProfile = (focus?: 'photo' | 'name') => () => {
-    setOpen(false);
-    onProfile(focus);
-  };
 
   async function switchTo(pid: string) {
     setBusy(true);
@@ -107,17 +103,9 @@ export default function UserMenu({
       {open && (
         <div className="usermenu-pop" role="menu">
           <div className="um-me">
-            <button type="button" className="um-me-photo" aria-label="Cambiar mi foto" onClick={editProfile('photo')}>
-              <Avatar id={me.id} name={me.name} v={me.avatar} size={60} />
-              <span aria-hidden="true" className="um-me-edit">
-                ✎
-              </span>
-            </button>
+            <Avatar id={me.id} name={me.name} v={me.avatar} size={60} />
             <div>
-              <button type="button" className="um-me-name" aria-label="Cambiar mi nombre" onClick={editProfile('name')}>
-                <b>{me.name}</b>
-                <span aria-hidden="true">✎</span>
-              </button>
+              <b>{me.name}</b>
               <small>{me.group}</small>
             </div>
           </div>
@@ -153,25 +141,11 @@ export default function UserMenu({
           </button>
 
           <hr />
-          <button type="button" role="menuitem" className="um-item" onClick={editProfile()}>
-            Editar perfil
+          <button type="button" role="menuitem" className="um-item" onClick={pick(onProfile)}>
+            Editar perfil <small>foto y nombre</small>
           </button>
-          <button
-            type="button"
-            role="menuitemcheckbox"
-            aria-checked={theme === 'light'}
-            className="um-item um-theme"
-            onClick={toggleTheme}
-          >
-            <span className="um-theme-txt">
-              <b>{theme === 'light' ? 'Modo oscuro' : 'Modo claro'}</b>
-              <small>{theme === 'light' ? 'Noche de estadio' : 'Día de partido'}</small>
-            </span>
-            <span className="um-switch" aria-hidden="true">
-              <i>☀️</i>
-              <i>🌙</i>
-              <em />
-            </span>
+          <button type="button" role="menuitem" className="um-item" onClick={toggleTheme}>
+            {theme === 'light' ? 'Modo oscuro' : 'Modo claro'} <small>{theme === 'light' ? 'de noche' : 'campo de fútbol'}</small>
           </button>
           <button type="button" role="menuitem" className="um-item" onClick={pick(onNotify)}>
             Avisos

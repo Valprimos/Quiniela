@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Barlow_Condensed, Figtree } from 'next/font/google';
 import './globals.css';
 import './theme-field.css';
+import './focos.css';
 import { themeInitScript } from '@/lib/theme';
 
 const display = Barlow_Condensed({
@@ -28,7 +29,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <div className="focos" aria-hidden="true">
+          <div className="lit" />
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
+        {children}
+      </body>
     </html>
   );
 }
