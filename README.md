@@ -179,6 +179,12 @@ en la app. Desde ahí se puede:
 - Corregir a mano el resultado de un partido (queda marcado para que la próxima sincronización
   con football-data.org no lo vuelva a pisar), o devolverlo a la actualización automática.
 - Bloquear o desbloquear a mano los pronósticos de una jornada entera.
+- Ver de un vistazo quién no ha pronosticado (o no del todo) una jornada: **Sin pronosticar**.
+- **Pleno al 15**: elegir a mano qué partido es el pleno de una jornada (queda fijo hasta que se pulse
+  "Volver a automático") y revisar y corregir jornadas pasadas con el pleno mal puesto. Corregirlas cambia
+  los puntos de quien tenga pronósticos en esos partidos, y el cambio se ve en todas las pandillas porque
+  los partidos son comunes. Hace falta ejecutar `supabase/migration-7-pleno-manual.sql` una vez (hasta
+  entonces la app funciona igual, pero sin poder elegir el pleno a mano).
 - Archivar la clasificación final de la temporada actual, para consultarla luego en "Archivo de
   temporadas" dentro de Clasificación.
 - Traer las últimas 4 temporadas pasadas de la competición elegida (necesita la variable
@@ -235,6 +241,8 @@ Cosas a tener en cuenta:
   posición.
 - **Pleno al 15**: el penúltimo partido de cada jornada (por orden de fecha) pide el marcador
   exacto en vez de 1X2. Acertarlo vale 3 puntos; fallarlo vale 0, aunque hubieras acertado quién
-  gana. Se asigna una sola vez la primera vez que se ve esa jornada, y no cambia después aunque
-  algún partido se aplace.
+  gana. Se recalcula al abrir la jornada y tras cada sincronización, así que se corrige solo si
+  cambian horarios o se aplaza un partido (un aplazado no cuenta, y uno reprogramado semanas
+  después tampoco). Una vez empezado el partido del pleno ya no se mueve solo. Un admin puede
+  elegirlo a mano (Panel de admin > Pleno al 15).
 - Los colegas se registran con el código de su pandilla, un nombre y un PIN (4-6 números).
