@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Barlow_Condensed, Figtree } from 'next/font/google';
 import './globals.css';
-import './theme-light.css';
+import './theme-field.css';
 import { themeInitScript } from '@/lib/theme';
 
 const display = Barlow_Condensed({
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0C171C',
+  themeColor: '#0b2616',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
