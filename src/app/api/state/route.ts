@@ -7,6 +7,7 @@ import { isLocked, liveResultOf, resultOf } from '@/lib/scoring';
 import { MatchLite, buildLiga, isFinished } from '@/lib/league';
 import { COMPETITIONS, isCompetitionCode, STAGE_LABEL } from '@/lib/competitions';
 import { soonestCompetition } from '@/lib/defaultCompetition';
+import { reconcilePleno } from '@/lib/pleno';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,14 +77,10 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => new Date(a.utc_date).getTime() - new Date(b.utc_date).getTime() || a.id - b.id);
   const stageLabel = matchRows[0]?.stage ? STAGE_LABEL[matchRows[0].stage] ?? null : null;
 
-  // El "pleno al 15" es el penúltimo partido de la jornada (por orden de fecha). Se asigna
-  // una sola vez la primera vez que se ve esta jornada con al menos 2 partidos, y luego se
-  // queda fijo (no se reasigna aunque algún partido se aplace y cambie el orden).
-  if (matchRows.length >= 2 && !matchRows.some((m) => m.is_pleno)) {
-    const plenoMatch = matchRows[matchRows.length - 2];
-    await supabase.from('matches').update({ is_pleno: true }).eq('id', plenoMatch.id);
-    plenoMatch.is_pleno = true;
-  }
+  // El "pleno al 15" es siempre el penúltimo partido de la jornada (por orden de fecha). Se
+  // recalcula en cada petición, así que se corrige solo si cambian horarios o se aplaza algo;
+  // una vez empezado el pleno ya no se mueve (ver src/lib/pleno.ts).
+  await reconcilePleno(supabase, matchRows);
 
   // La foto de perfil es opcional: si aún no se ha ejecutado la migración, se piden los jugadores sin ella
   const playersQuery = async () => {

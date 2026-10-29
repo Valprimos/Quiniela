@@ -2,6 +2,7 @@ import { db } from './db';
 import { fetchMatches, FootballDataError } from './football';
 import { currentSeason } from './season';
 import { COMPETITIONS, CompetitionCode, KNOCKOUT_STAGE_ORDER } from './competitions';
+import { reconcilePleno } from './pleno';
 
 const LIVE = ['IN_PLAY', 'PAUSED', 'LIVE'];
 const OPEN = ['SCHEDULED', 'TIMED', ...LIVE];
@@ -64,6 +65,19 @@ async function syncOne(competition: CompetitionCode): Promise<number> {
   if (rows.length) {
     const { error } = await db().from('matches').upsert(rows, { onConflict: 'id' });
     if (error) throw error;
+  }
+  // Tras cambiar fechas u horarios, el pleno al 15 puede haber dejado de ser el penúltimo
+  // partido de su jornada: se recalcula sin esperar a que alguien abra la app.
+  try {
+    const { data: all } = await db()
+      .from('matches')
+      .select('id,matchday,utc_date,status,is_pleno')
+      .eq('competition', competition)
+      .eq('season', season)
+      .limit(1000);
+    await reconcilePleno(db(), all ?? []);
+  } catch (e) {
+    console.error(`No se pudo recalcular el pleno al 15 de ${competition}`, e);
   }
   return rows.length;
 }
