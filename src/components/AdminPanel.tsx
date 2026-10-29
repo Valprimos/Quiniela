@@ -362,7 +362,7 @@ type RoundMatch = {
   adminLocked: boolean;
   manualOverride: boolean;
 };
-type RoundData = { rounds: Round[]; matchday: number | null; matches: RoundMatch[] };
+type RoundData = { rounds: Round[]; matchday: number | null; matches: RoundMatch[]; plenoManual?: boolean };
 
 // Elige competición y jornada dentro del propio panel, sin tocar lo que se ve en la app
 function RoundPicker({
@@ -533,6 +533,214 @@ function ResultsEditor({ round, onSaved }: { round: RoundData | null; onSaved: (
   );
 }
 
+const kickoff = (iso: string) =>
+  new Date(iso).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const hasKickedOff = (m: RoundMatch) => m.status !== 'SCHEDULED' && m.status !== 'TIMED';
+
+// Elegir a mano el pleno al 15 de la jornada, o devolverlo a automático (el penúltimo partido)
+function PlenoPicker({ comp, round, onSaved }: { comp: string; round: RoundData | null; onSaved: () => void }) {
+  const [busy, setBusy] = useState<number | 'auto' | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function send(body: { matchId?: number; auto?: boolean }, askIfPlayed: boolean) {
+    if (!round || round.matchday == null) return;
+    if (askIfPlayed && round.matches.some(hasKickedOff)) {
+      const ok = window.confirm(
+        'Esta jornada ya tiene partidos empezados. Cambiar el pleno cambia los puntos de quien tenga pronósticos en él. ¿Seguir?'
+      );
+      if (!ok) return;
+    }
+    setBusy(body.auto ? 'auto' : body.matchId ?? null);
+    setMsg(null);
+    const r = await call('/api/admin/pleno', { competition: comp, matchday: round.matchday, ...body });
+    setBusy(null);
+    setMsg(
+      r.ok
+        ? { ok: true, text: body.auto ? 'Pleno automático: el penúltimo partido.' : 'Pleno elegido a mano.' }
+        : { ok: false, text: (r.error as string) ?? 'No se pudo cambiar el pleno.' }
+    );
+    if (r.ok) onSaved();
+  }
+
+  if (!round) return <RowsSkeleton rows={3} />;
+  if (!round.matches.length) return <p className="muted">No hay partidos en esta jornada.</p>;
+  return (
+    <>
+      <p className="hint">
+        {round.plenoManual ? 'Pleno elegido a mano: no se mueve solo.' : 'Pleno automático: el penúltimo partido de la jornada.'}
+      </p>
+      {msg && <p className={msg.ok ? 'okmsg' : 'notice'}>{msg.text}</p>}
+      <ul className="pedit-list">
+        {round.matches.map((m) => (
+          <li key={m.id} className="pedit-row">
+            <div className="pedit-info">
+              <div className="pedit-teams">
+                <b>
+                  {m.home} - {m.away}
+                </b>
+                <small>{kickoff(m.utcDate)}</small>
+              </div>
+              {m.isPleno ? (
+                <span className="adm-tag">Pleno al 15</span>
+              ) : (
+                <button type="button" className="seg-btn" disabled={busy != null} onClick={() => send({ matchId: m.id }, true)}>
+                  Hacer pleno
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {round.plenoManual && (
+        <button type="button" className="link" disabled={busy != null} onClick={() => send({ auto: true }, true)}>
+          Volver a automático
+        </button>
+      )}
+    </>
+  );
+}
+
+type PlenoItem = { matchday: number; label: string; from: string | null; to: string | null; predictions: number; played: boolean };
+
+// Busca jornadas (también pasadas) con el pleno mal puesto y deja corregirlas, avisando de los puntos
+function PlenoRecalc({ comp, onFixed }: { comp: string; onFixed: () => void }) {
+  const [data, setData] = useState<{ items: PlenoItem[]; manual: number } | null>(null);
+  const [busy, setBusy] = useState<number | 'all' | 'check' | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    setData(null);
+    setMsg(null);
+  }, [comp]);
+
+  async function check() {
+    setBusy('check');
+    setMsg(null);
+    const j = await fetch(`/api/admin/pleno-recalc?competition=${comp}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .catch(() => ({ error: 'No se pudo revisar.' }));
+    setBusy(null);
+    if (j.error) setMsg({ ok: false, text: j.error });
+    else setData(j);
+  }
+
+  async function fix(matchdays?: number[]) {
+    const n = matchdays ? matchdays.length : data?.items.length ?? 0;
+    const ok = window.confirm(
+      `Vas a cambiar el pleno de ${n} ${n === 1 ? 'jornada' : 'jornadas'}. Esto cambia los puntos de quien tenga pronósticos en esos partidos, también en jornadas ya jugadas. ¿Seguir?`
+    );
+    if (!ok) return;
+    setBusy(matchdays?.[0] ?? 'all');
+    const r = await call('/api/admin/pleno-recalc', { competition: comp, matchdays });
+    setBusy(null);
+    if (!r.ok) {
+      setMsg({ ok: false, text: (r.error as string) ?? 'No se pudo corregir.' });
+      return;
+    }
+    setMsg({ ok: true, text: `${r.fixed} ${r.fixed === 1 ? 'jornada corregida' : 'jornadas corregidas'}.` });
+    onFixed();
+    check();
+  }
+
+  return (
+    <div className="pedit" style={{ marginTop: 18 }}>
+      <h3 className="sh small">Corregir jornadas pasadas</h3>
+      <p className="hint">Busca jornadas donde el pleno no es el penúltimo partido. Corregirlas cambia los puntos.</p>
+      <button type="button" className="seg-btn" disabled={busy != null} onClick={check}>
+        {busy === 'check' ? 'Revisando…' : 'Revisar jornadas'}
+      </button>
+      {msg && <p className={msg.ok ? 'okmsg' : 'notice'}>{msg.text}</p>}
+      {data && !data.items.length && <p className="okmsg">Todas las jornadas tienen el pleno bien puesto.</p>}
+      {data && data.manual > 0 && (
+        <p className="hint">
+          {data.manual} {data.manual === 1 ? 'jornada elegida' : 'jornadas elegidas'} a mano, no se tocan.
+        </p>
+      )}
+      {data && data.items.length > 0 && (
+        <>
+          <p className="notice">
+            Cambiar el pleno cambia los puntos de quien tenga pronósticos en ese partido. Se aplica a todas las pandillas.
+          </p>
+          <ul className="pedit-list">
+            {data.items.map((it) => (
+              <li key={it.matchday} className="pedit-row">
+                <div className="pedit-teams">
+                  <b>{it.label}</b>
+                  <small>Ahora: {it.from ?? 'sin pleno'}</small>
+                  <small>Debería ser: {it.to}</small>
+                  <small className={it.played ? 'pedit-closed' : undefined}>
+                    {it.predictions} {it.predictions === 1 ? 'pronóstico afectado' : 'pronósticos afectados'}
+                    {it.played && ' · ya jugado'}
+                  </small>
+                </div>
+                <div className="pedit-info">
+                  <span />
+                  <button type="button" className="seg-btn" disabled={busy != null} onClick={() => fix([it.matchday])}>
+                    {busy === it.matchday ? 'Corrigiendo…' : 'Corregir'}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {data.items.length > 1 && (
+            <button type="button" className="primary" disabled={busy != null} onClick={() => fix()}>
+              {busy === 'all' ? 'Corrigiendo…' : `Corregir las ${data.items.length} jornadas`}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+type MissingData = { total: number; players: { id: string; name: string; made: number }[] };
+
+// Quién de la pandilla no ha pronosticado (o no del todo) la jornada elegida
+function MissingPanel({ comp, matchday }: { comp: string; matchday: number | null }) {
+  const [data, setData] = useState<MissingData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (matchday == null) return;
+    setData(null);
+    setError(null);
+    fetch(`/api/admin/missing?competition=${comp}&matchday=${matchday}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => (j.error ? setError(j.error) : setData(j)))
+      .catch(() => setError('No se pudo cargar.'));
+  }, [comp, matchday]);
+
+  if (matchday == null) return <p className="muted">No hay partidos en esta competición.</p>;
+  if (error) return <p className="notice">{error}</p>;
+  if (!data) return <RowsSkeleton rows={4} />;
+  if (!data.total) return <p className="muted">No hay partidos que pronosticar en esta jornada.</p>;
+
+  const pending = data.players.filter((p) => p.made < data.total);
+  const done = data.players.filter((p) => p.made >= data.total);
+  return (
+    <>
+      <p className="hint">
+        {pending.length === 0
+          ? 'Todos han pronosticado la jornada completa.'
+          : `Faltan ${pending.length} de ${data.players.length} por completar la jornada.`}
+      </p>
+      {pending.length > 0 && (
+        <ul className="miss-list">
+          {pending.map((p) => (
+            <li key={p.id} className="miss-row">
+              <b>{p.name}</b>
+              <small>
+                {p.made === 0 ? 'No ha puesto nada' : `Faltan ${data.total - p.made} de ${data.total}`}
+              </small>
+            </li>
+          ))}
+        </ul>
+      )}
+      {done.length > 0 && <p className="hint">Al día: {done.map((p) => p.name).join(', ')}.</p>}
+    </>
+  );
+}
+
 type SyncInfo = {
   competitions: { code: string; name: string; lastOk: string | null; lastError: string | null }[];
   config: { footballToken: boolean; cronSecret: boolean };
@@ -616,11 +824,13 @@ function SyncPanel() {
   );
 }
 
-type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'sync' | 'jornada' | 'temporada' | 'historial' | 'equipos';
+type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'pendientes' | 'pleno' | 'sync' | 'jornada' | 'temporada' | 'historial' | 'equipos';
 const TOOLS: { id: Tool; title: string; hint: string }[] = [
   { id: 'jugadores', title: 'Jugadores y PIN', hint: 'Cambiar PIN, dar admin, expulsar' },
   { id: 'resultados', title: 'Resultados', hint: 'Corregir el resultado de un partido' },
   { id: 'pronosticos', title: 'Pronósticos', hint: 'Poner o cambiar lo de un jugador' },
+  { id: 'pendientes', title: 'Sin pronosticar', hint: 'Ver quién falta en una jornada' },
+  { id: 'pleno', title: 'Pleno al 15', hint: 'Elegir a mano o corregir jornadas' },
   { id: 'sync', title: 'Sincronización', hint: 'Ver y forzar la actualización de resultados' },
   { id: 'jornada', title: 'Bloquear jornada', hint: 'Cerrar o abrir los pronósticos' },
   { id: 'temporada', title: 'Archivar temporada', hint: 'Guardar la clasificación final' },
@@ -651,7 +861,7 @@ export default function AdminPanel({
   const [pc, setPc] = useState(competition);
   const [pm, setPm] = useState<number | null>(matchday);
   const [round, setRound] = useState<RoundData | null>(null);
-  const needsRound = tool === 'resultados' || tool === 'pronosticos' || tool === 'jornada';
+  const needsRound = tool === 'resultados' || tool === 'pronosticos' || tool === 'jornada' || tool === 'pendientes' || tool === 'pleno';
 
   const loadPlayers = () => {
     fetch('/api/admin/players')
@@ -792,6 +1002,23 @@ export default function AdminPanel({
             <PredictionEditor competition={pc} matchday={resolvedMd} players={players ?? []} onChanged={onChanged} />
           )}
           {round && resolvedMd == null && <p className="muted">No hay partidos en esta competición.</p>}
+        </>
+      )}
+
+      {tool === 'pendientes' && (round ? <MissingPanel comp={pc} matchday={resolvedMd} /> : <RowsSkeleton rows={4} />)}
+
+      {tool === 'pleno' && (
+        <>
+          <PlenoPicker
+            key={pc}
+            comp={pc}
+            round={round}
+            onSaved={() => {
+              loadRound();
+              onChanged();
+            }}
+          />
+          <PlenoRecalc comp={pc} onFixed={() => { loadRound(); onChanged(); }} />
         </>
       )}
 

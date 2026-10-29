@@ -45,10 +45,18 @@ export async function GET(req: NextRequest) {
     ? asked
     : days.find((d) => byDay.get(d)!.some((m) => PENDING.includes(m.status))) ?? days[days.length - 1];
 
+  // ¿Se eligió el pleno de esta jornada a mano? (si falta la tabla de la migración, no)
+  const dayMatches = byDay.get(matchday)!;
+  const { data: manual, error: manualError } = await db()
+    .from('pleno_overrides')
+    .select('match_id')
+    .in('match_id', dayMatches.map((m) => m.id));
+
   return NextResponse.json({
     rounds,
     matchday,
-    matches: byDay.get(matchday)!.map((m) => ({
+    plenoManual: !manualError && !!manual?.length,
+    matches: dayMatches.map((m) => ({
       id: m.id,
       utcDate: m.utc_date,
       status: m.status,

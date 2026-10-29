@@ -694,6 +694,10 @@ select {
 }
 
 /* ===== Admin: menú de herramientas y selector de jornada ===== */
+.adm-tag { flex: none; font-size: 12px; font-weight: 700; color: var(--foco-ink); border: 1px solid var(--foco); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.miss-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.miss-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.miss-row small { color: var(--ko); font-weight: 600; text-align: right; }
 .admin-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
 .admin-tile {
   display: grid; gap: 3px; align-content: start; text-align: left; padding: 12px;

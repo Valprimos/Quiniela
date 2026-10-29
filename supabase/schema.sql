@@ -143,3 +143,10 @@ alter table players add column if not exists avatar_updated_at timestamptz;
 -- Estado de la sincronización: ver migration-6-sync.sql
 alter table sync_state add column if not exists last_ok timestamptz;
 alter table sync_state add column if not exists last_error text;
+
+-- Pleno al 15 elegido a mano por un admin (ver migration-7-pleno-manual.sql)
+create table if not exists pleno_overrides (
+  match_id integer primary key references matches(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table pleno_overrides enable row level security;
