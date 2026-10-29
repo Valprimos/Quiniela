@@ -164,8 +164,8 @@ export default function UserMenu({
             onClick={toggleTheme}
           >
             <span className="um-theme-txt">
-              <b>{theme === 'light' ? 'Modo oscuro' : 'Modo claro'}</b>
-              <small>{theme === 'light' ? 'Noche de estadio' : 'Día de partido'}</small>
+              <b>{theme === 'light' ? 'Modo claro' : 'Modo oscuro'}</b>
+              <small>{theme === 'light' ? 'Día de partido' : 'Noche de estadio'}</small>
             </span>
             <span className="um-switch" aria-hidden="true">
               <i>☀️</i>

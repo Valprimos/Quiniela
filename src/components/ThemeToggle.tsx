@@ -20,7 +20,7 @@ export default function ThemeToggle({ className = 'link' }: { className?: string
   const [theme, toggle] = useTheme();
   return (
     <button type="button" className={className} onClick={toggle}>
-      {theme === 'light' ? '🌙 Modo oscuro' : '☀️ Modo claro'}
+      {theme === 'light' ? '☀️ Modo claro' : '🌙 Modo oscuro'}
     </button>
   );
 }
