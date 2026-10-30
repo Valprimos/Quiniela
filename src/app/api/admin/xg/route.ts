@@ -11,7 +11,9 @@ const NEEDS_MIGRATION = 'Falta ejecutar supabase/migration-8-xg.sql en Supabase 
 
 type Row = {
   id: number;
+  competition: string;
   matchday: number;
+  stage: string | null;
   utc_date: string;
   home_name: string;
   away_name: string;
@@ -22,15 +24,14 @@ type Row = {
   xg_source: string | null;
 };
 
-// El xG solo se maneja para La Liga: Understat no cubre la Champions
-async function finishedPd(): Promise<Row[] | null> {
+async function finishedMatches(competition: 'PD' | 'CL'): Promise<Row[] | null> {
   const supabase = db();
   let failed = false;
   const rows = await fetchAll<Row>(async (from, to) => {
     const res = await supabase
       .from('matches')
-      .select('id,matchday,utc_date,home_name,away_name,home_score,away_score,home_xg,away_xg,xg_source')
-      .eq('competition', 'PD')
+      .select('id,competition,matchday,stage,utc_date,home_name,away_name,home_score,away_score,home_xg,away_xg,xg_source')
+      .eq('competition', competition)
       .eq('season', currentSeason())
       .eq('status', 'FINISHED')
       .order('utc_date', { ascending: false })
@@ -42,23 +43,29 @@ async function finishedPd(): Promise<Row[] | null> {
 }
 
 // Estado: cuántos partidos terminados tienen xG y cuáles faltan (los más recientes primero)
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await requireAdmin();
   if (session instanceof NextResponse) return session;
-  const rows = await finishedPd();
+  const competition = req.nextUrl.searchParams.get('competition') === 'CL' ? 'CL' : 'PD';
+  const rows = await finishedMatches(competition);
   if (!rows) return NextResponse.json({ error: NEEDS_MIGRATION, needsMigration: true }, { status: 400 });
-  const missing = rows.filter((r) => r.home_xg == null || r.away_xg == null);
+  const withXg = rows.filter((r) => r.home_xg != null && r.away_xg != null).length;
   return NextResponse.json({
     finished: rows.length,
-    withXg: rows.length - missing.length,
-    missing: missing.slice(0, 30).map((r) => ({
+    withXg,
+    competition,
+    matches: rows.map((r) => ({
       id: r.id,
       matchday: r.matchday,
+      stage: r.stage,
+      date: r.utc_date,
       home: r.home_name,
       away: r.away_name,
-      score: `${r.home_score}-${r.away_score}`,
+      score: r.home_score == null || r.away_score == null ? '—' : `${r.home_score}-${r.away_score}`,
+      homeXg: r.home_xg,
+      awayXg: r.away_xg,
+      source: r.xg_source,
     })),
-    missingTotal: missing.length,
   });
 }
 
@@ -92,7 +99,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'import') {
-    const rows = await finishedPd();
+    const rows = await finishedMatches('PD');
     if (!rows) return NextResponse.json({ error: NEEDS_MIGRATION, needsMigration: true }, { status: 400 });
     let remote;
     try {

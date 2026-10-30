@@ -1045,6 +1045,10 @@ select {
 .xg-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .xg-list li { display: grid; grid-template-columns: 1fr 64px 64px auto; gap: 6px; align-items: center; }
 .xg-list input { width: 100%; text-align: center; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 6px; font: inherit; }
+.xg-switch { display: flex; gap: 6px; margin: 8px 0 14px; }
+.xg-switch .active { border-color: var(--foco); color: var(--foco); }
+.xg-search { display: block; margin-top: 14px; }
+.xg-search input { display: block; width: 100%; margin-top: 5px; padding: 8px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
 .xg-t { display: grid; min-width: 0; }
 .xg-t small { color: var(--muted); font-size: 12px; }
 @media (max-width: 420px) { .xg-list li { grid-template-columns: 1fr 1fr; } .xg-t, .xg-list li .seg-btn { grid-column: 1 / -1; } }
