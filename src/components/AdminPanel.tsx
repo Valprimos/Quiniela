@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { COMPETITIONS } from '@/lib/competitions';
 import CompLogo from './CompLogo';
 import { RowsSkeleton } from './Skeleton';
+import XgAdmin from './XgAdmin';
 
 type TeamNameGroup = { key: string; names: string[]; seasons: number[]; matches: number };
 
@@ -824,7 +825,7 @@ function SyncPanel() {
   );
 }
 
-type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'pendientes' | 'pleno' | 'sync' | 'jornada' | 'temporada' | 'historial' | 'equipos';
+type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'pendientes' | 'pleno' | 'sync' | 'jornada' | 'temporada' | 'historial' | 'equipos' | 'xg';
 const TOOLS: { id: Tool; title: string; hint: string }[] = [
   { id: 'jugadores', title: 'Jugadores y PIN', hint: 'Cambiar PIN, dar admin, expulsar' },
   { id: 'resultados', title: 'Resultados', hint: 'Corregir el resultado de un partido' },
@@ -834,6 +835,7 @@ const TOOLS: { id: Tool; title: string; hint: string }[] = [
   { id: 'sync', title: 'Sincronización', hint: 'Ver y forzar la actualización de resultados' },
   { id: 'jornada', title: 'Bloquear jornada', hint: 'Cerrar o abrir los pronósticos' },
   { id: 'temporada', title: 'Archivar temporada', hint: 'Guardar la clasificación final' },
+  { id: 'xg', title: 'xG', hint: 'Cargar el xG para el índice de suerte' },
   { id: 'historial', title: 'Historial', hint: 'Traer temporadas anteriores' },
   { id: 'equipos', title: 'Equipos guardados', hint: 'Revisar nombres de equipos' },
 ];
@@ -1065,6 +1067,8 @@ export default function AdminPanel({
           </p>
         </>
       )}
+
+      {tool === 'xg' && <XgAdmin onChanged={onChanged} />}
 
       {tool === 'equipos' && (
         <>

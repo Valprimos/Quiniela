@@ -1017,3 +1017,34 @@ select {
 .sync-txt b { font-size: 15px; }
 .sync-txt small { font-size: 12px; color: var(--muted); }
 .sync-txt small.sync-err { color: var(--ko); }
+
+/* ----- Índice de suerte (xG) ----- */
+.luck-note { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+.luck-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 12px; }
+.luck-row { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: center; }
+.luck-main { display: grid; gap: 4px; min-width: 0; }
+.luck-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.luck-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.luck-val { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1; }
+.luck-val.zero { color: var(--muted); }
+.luck-val.pos { color: var(--ok); }
+.luck-val.neg { color: var(--ko); }
+.luck-bar { position: relative; height: 8px; background: var(--panel); border-radius: 999px; overflow: hidden; }
+.luck-bar::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--line); z-index: 1; }
+.luck-bar i { position: absolute; top: 0; bottom: 0; }
+.luck-bar i.pos { left: 50%; background: var(--ok); border-radius: 0 999px 999px 0; }
+.luck-bar i.neg { right: 50%; background: var(--ko); border-radius: 999px 0 0 999px; }
+.luck-name .metag { margin-left: 6px; }
+.luck-sub { font-size: 12px; color: var(--muted); }
+.luck-sub-h { margin: 18px 0 4px; font-size: 15px; }
+.luck-fair { list-style: none; margin: 0; padding: 0; }
+.luck-fair li { display: grid; grid-template-columns: 22px 1fr auto 40px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.luck-d { text-align: right; font-size: 12px; color: var(--muted); }
+.luck-d.up { color: var(--ok); }
+.luck-d.down { color: var(--ko); }
+.xg-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.xg-list li { display: grid; grid-template-columns: 1fr 64px 64px auto; gap: 6px; align-items: center; }
+.xg-list input { width: 100%; text-align: center; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 6px; font: inherit; }
+.xg-t { display: grid; min-width: 0; }
+.xg-t small { color: var(--muted); font-size: 12px; }
+@media (max-width: 420px) { .xg-list li { grid-template-columns: 1fr 1fr; } .xg-t, .xg-list li .seg-btn { grid-column: 1 / -1; } }

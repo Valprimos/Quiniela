@@ -6,6 +6,7 @@ import type { StatsDTO, Rec, TeamAcc, MatchInsight } from '@/lib/stats';
 import type { LigaRow, Rec5 } from '@/lib/league';
 import { H2HBody } from './H2HModal';
 import PlayersView from './PlayersView';
+import LuckCard from './LuckCard';
 import CompLogo from './CompLogo';
 import { StatsSkeleton } from './Skeleton';
 import { fetchJson, load, peek } from '@/lib/clientCache';
@@ -398,6 +399,9 @@ function Grupo({ stats, meId }: { stats: StatsDTO; meId: string }) {
 
       <h2 className="sh">Evolución de puntos</h2>
       <Evolution ev={stats.evolution} meId={meId} comps={stats.comps.length} />
+
+      <h2 className="sh">Índice de suerte</h2>
+      <LuckCard luck={stats.luck} meId={meId} />
 
       <h2 className="sh">Los partidos que más engañaron</h2>
       <InsightList items={g.hardest} />

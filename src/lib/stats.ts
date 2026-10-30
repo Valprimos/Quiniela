@@ -1,6 +1,7 @@
 import { LigaRow, MatchLite, isFinished } from './league';
 import { Pick, resultOf } from './scoring';
 import { COMPETITIONS, STAGE_LABEL, competitionDef } from './competitions';
+import type { LuckDTO } from './luck';
 
 export type Rec = { h: number; n: number }; // aciertos / pronósticos
 type Cell = { total: Rec; home: Rec; away: Rec };
@@ -99,6 +100,8 @@ export type MatchInsight = {
 };
 
 export type StatsDTO = {
+  // Índice de suerte según xG (lo añade la ruta /api/stats; opcional por si la caché es anterior)
+  luck?: LuckDTO;
   finished: number;
   comps: string[]; // competiciones incluidas
   liga: LigaRow[];

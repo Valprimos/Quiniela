@@ -5,6 +5,7 @@ import { currentSeason } from '@/lib/season';
 import { fetchAll } from '@/lib/paging';
 import { MatchLite, buildLiga, isFinished } from '@/lib/league';
 import { computeStats } from '@/lib/stats';
+import { computeLuck, Xg } from '@/lib/luck';
 import { COMPETITIONS, isCompetitionCode } from '@/lib/competitions';
 
 export const dynamic = 'force-dynamic';
@@ -62,13 +63,36 @@ export async function GET(req: NextRequest) {
   }
   const groupPreds = preds.filter((p) => playerIds.has(p.player_id));
 
-  return NextResponse.json(
-    computeStats({
+  // xG de los partidos (índice de suerte). Es opcional: si aún no se ha ejecutado la migración 8,
+  // la consulta falla y simplemente no hay índice.
+  const xg = new Map<number, Xg>();
+  try {
+    const rows = await fetchAll<{ id: number; home_xg: number | null; away_xg: number | null }>(async (from, to) => {
+      const res = await supabase
+        .from('matches')
+        .select('id,home_xg,away_xg')
+        .in('competition', codes)
+        .eq('season', currentSeason())
+        .not('home_xg', 'is', null)
+        .not('away_xg', 'is', null)
+        .order('id')
+        .range(from, to);
+      if (res.error) throw res.error;
+      return res as { data: { id: number; home_xg: number | null; away_xg: number | null }[] | null };
+    });
+    for (const r of rows) if (r.home_xg != null && r.away_xg != null) xg.set(r.id, { h: Number(r.home_xg), a: Number(r.away_xg) });
+  } catch {
+    /* sin migración: sin xG */
+  }
+
+  return NextResponse.json({
+    ...computeStats({
       matches,
       preds: groupPreds,
       players: playerRows,
       // La clasificación real solo tiene sentido dentro de una competición
       liga: combined ? [] : buildLiga(matches.filter((m) => m.matchday < 100)),
-    })
-  );
+    }),
+    luck: computeLuck({ matches, xg, preds: groupPreds, players: playerRows }),
+  });
 }

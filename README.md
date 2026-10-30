@@ -185,6 +185,13 @@ en la app. Desde ahí se puede:
   los puntos de quien tenga pronósticos en esos partidos, y el cambio se ve en todas las pandillas porque
   los partidos son comunes. Hace falta ejecutar `supabase/migration-7-pleno-manual.sql` una vez (hasta
   entonces la app funciona igual, pero sin poder elegir el pleno a mano).
+- **xG e índice de suerte**: en Estadísticas > Grupo hay un índice de suerte por jugador (puntos reales
+  menos los que "tocaban" según el xG de cada partido) y una clasificación "justa". El xG de La Liga se
+  carga desde el panel de admin (xG): botón para importarlo de Understat (no tiene API oficial; si su web
+  cambia o bloquea, falla con un aviso) y, para lo que falte, entrada a mano partido a partido (lo puesto a
+  mano no lo pisa la importación). La Champions no tiene xG. Hace falta ejecutar
+  `supabase/migration-8-xg.sql` una vez; hasta entonces la app funciona igual, sin ese índice. Con pocos
+  partidos con xG el índice es ruido, y la pantalla lo avisa.
 - Archivar la clasificación final de la temporada actual, para consultarla luego en "Archivo de
   temporadas" dentro de Clasificación.
 - Traer las últimas 4 temporadas pasadas de la competición elegida (necesita la variable
