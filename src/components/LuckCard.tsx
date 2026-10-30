@@ -57,7 +57,7 @@ export default function LuckCard({ luck, meId }: { luck?: LuckDTO; meId: string 
                   <i className={pos ? 'pos' : 'neg'} style={{ width: `${w / 2}%` }} />
                 </div>
                 <span className="luck-sub">
-                  {p.real} aciertos · {num(p.expected)} esperados · {p.n} partidos
+                  {num(p.real, 0)} puntos · {num(p.expected)} esperados · {p.n} partidos con xG
                 </span>
               </div>
             </li>
@@ -66,7 +66,7 @@ export default function LuckCard({ luck, meId }: { luck?: LuckDTO; meId: string 
       </ul>
 
       <h3 className="luck-sub-h">Clasificación justa</h3>
-      <p className="luck-note">Si los resultados hubieran seguido el xG. ▲ sin la suerte estarías más arriba; ▼, más abajo.</p>
+      <p className="luck-note">Orden por puntos esperados según xG, comparado con los puntos reales en estos mismos partidos con xG. ▲/▼ indica el cambio de puestos.</p>
       <ol className="luck-fair">
         {byFair.map((p, i) => {
           const d = byReal.indexOf(p) - i;
