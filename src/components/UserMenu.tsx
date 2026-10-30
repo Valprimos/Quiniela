@@ -18,6 +18,7 @@ export default function UserMenu({
   onPin,
   onAdmin,
   onAddLeague,
+  onInvite,
   onLeave,
 }: {
   me: Me;
@@ -27,6 +28,7 @@ export default function UserMenu({
   onPin: () => void;
   onAdmin: () => void;
   onAddLeague: () => void;
+  onInvite: () => void;
   onLeave: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -150,6 +152,9 @@ export default function UserMenu({
           </ul>
           <button type="button" role="menuitem" className="um-item" onClick={pick(onAddLeague)}>
             + Añadir otra liga
+          </button>
+          <button type="button" role="menuitem" className="um-item" onClick={pick(onInvite)}>
+            Invitar colegas
           </button>
 
           <hr />

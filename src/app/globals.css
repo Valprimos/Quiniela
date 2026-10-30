@@ -191,6 +191,14 @@ select {
   display: grid; gap: 12px; margin-bottom: 20px; padding: 16px;
   background: var(--panel); border: 1px solid var(--line);
 }
+/* Invitaciones: banner del enlace, QR y botones */
+.invite-banner { margin: 0; padding: 10px 12px; border: 1px solid var(--foco); border-radius: 6px; background: rgba(255, 210, 63, 0.08); text-align: center; }
+.invite-banner b { color: var(--foco-ink); }
+.invite-qr { display: grid; place-items: center; justify-self: center; width: 224px; height: 224px; padding: 12px; background: #fff; border-radius: 12px; }
+.invite-qr img { display: block; width: 200px; height: 200px; }
+.invite-actions { display: grid; gap: 8px; }
+.invite-actions .seg-btn { width: 100%; }
+.invite-wa { display: block; text-align: center; text-decoration: none; padding: 12px 16px; }
 .field.inline { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
 .field.inline label { white-space: nowrap; }
 .field.inline select { flex: 1; min-width: 0; }

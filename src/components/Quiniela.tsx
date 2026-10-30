@@ -7,6 +7,7 @@ import Stats from './Stats';
 import CompLogo from './CompLogo';
 import NotifyPanel from './NotifyPanel';
 import UserMenu from './UserMenu';
+import InvitePanel from './InvitePanel';
 import ProfilePanel, { type ProfileFocus } from './ProfilePanel';
 import LoginForm from './LoginForm';
 import Avatar from './Avatar';
@@ -541,7 +542,7 @@ export default function Quiniela() {
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   // Solo un panel abierto a la vez (los abre el menú de usuario)
-  const [panel, setPanel] = useState<'pin' | 'notify' | 'admin' | 'profile' | 'league' | null>(null);
+  const [panel, setPanel] = useState<'pin' | 'notify' | 'admin' | 'profile' | 'league' | 'invite' | null>(null);
   const [menuKey, setMenuKey] = useState(0);
   const [profile, setProfile] = useState<ProfileTarget | null>(null);
   const openProfile = useCallback((t: ProfileTarget) => setProfile(t), []);
@@ -550,6 +551,7 @@ export default function Quiniela() {
   const showAdmin = panel === 'admin';
   const showProfile = panel === 'profile';
   const showLeague = panel === 'league';
+  const showInvite = panel === 'invite';
   const openPanel = (p: NonNullable<typeof panel>) => setPanel((cur) => (cur === p ? null : p));
   // Pulsar la foto o el nombre del menú abre el perfil (sin cerrarlo si ya estaba abierto) y va directo a eso
   const [profileFocus, setProfileFocus] = useState<ProfileFocus | null>(null);
@@ -879,6 +881,7 @@ export default function Quiniela() {
           onPin={() => openPanel('pin')}
           onAdmin={() => openPanel('admin')}
           onAddLeague={() => openPanel('league')}
+          onInvite={() => openPanel('invite')}
           onLeave={logout}
         />
       </header>
@@ -910,6 +913,7 @@ export default function Quiniela() {
         />
       )}
       {showLeague && <LoginForm embedded onDone={() => window.location.reload()} />}
+      {showInvite && <InvitePanel onClose={() => setPanel(null)} />}
       {showNotify && <NotifyPanel onClose={() => setPanel(null)} />}
       {showPin && <PinPanel onClose={() => setPanel(null)} />}
       {showAdmin && (

@@ -7,13 +7,24 @@ import { useRouter } from 'next/navigation';
 type Saved = { pid: string; name: string; group: string };
 
 // `embedded`: dentro del menú de usuario, para añadir otra liga sin salir de la actual.
-export default function LoginForm({ embedded = false, onDone }: { embedded?: boolean; onDone?: () => void } = {}) {
+export default function LoginForm({
+  embedded = false,
+  onDone,
+  invite = null,
+  inviteInvalid = false,
+}: {
+  embedded?: boolean;
+  onDone?: () => void;
+  // Viene de un enlace o QR de invitación: la pandilla ya existe y el código va puesto
+  invite?: { code: string; groupName: string } | null;
+  inviteInvalid?: boolean;
+} = {}) {
   const router = useRouter();
   const [saved, setSaved] = useState<Saved[]>([]);
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(invite ? 'register' : 'login');
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(invite?.code ?? '');
   const [groupName, setGroupName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -75,8 +86,20 @@ export default function LoginForm({ embedded = false, onDone }: { embedded?: boo
         ) : (
           <h1 className="login-title">Quiniela</h1>
         )}
+        {inviteInvalid && (
+          <p className="notice">Este enlace de invitación ya no es válido. Pide uno nuevo a tu pandilla.</p>
+        )}
+        {invite && (
+          <p className="invite-banner">
+            Te han invitado a <b>{invite.groupName}</b>
+          </p>
+        )}
         <p className="muted">
-          {registering
+          {invite
+            ? registering
+              ? 'Elige tu nombre y un PIN para unirte.'
+              : 'Entra con tu nombre y tu PIN.'
+            : registering
             ? 'Únete a una pandilla o crea una con un código nuevo.'
             : embedded
               ? 'Entra con el código, tu nombre y tu PIN.'
@@ -95,19 +118,21 @@ export default function LoginForm({ embedded = false, onDone }: { embedded?: boo
           </div>
         )}
 
-        <div className="field">
-          <label htmlFor="code">Código de pandilla</label>
-          <input
-            id="code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            autoComplete="off"
-            maxLength={30}
-            required
-          />
-        </div>
+        {!invite && (
+          <div className="field">
+            <label htmlFor="code">Código de pandilla</label>
+            <input
+              id="code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              autoComplete="off"
+              maxLength={30}
+              required
+            />
+          </div>
+        )}
 
-        {registering && (
+        {registering && !invite && (
           <div className="field">
             <label htmlFor="groupName">Nombre de la pandilla (solo si es nueva)</label>
             <input
@@ -151,7 +176,7 @@ export default function LoginForm({ embedded = false, onDone }: { embedded?: boo
         {error && <p className="notice" role="alert">{error}</p>}
 
         <button className="primary" type="submit" disabled={busy}>
-          {registering ? 'Entrar o crear pandilla' : 'Entrar'}
+          {invite && registering ? 'Unirme a la pandilla' : registering ? 'Entrar o crear pandilla' : 'Entrar'}
         </button>
         <button
           className="link"
@@ -161,7 +186,7 @@ export default function LoginForm({ embedded = false, onDone }: { embedded?: boo
             setError(null);
           }}
         >
-          {registering ? 'Ya tengo jugador' : 'Soy nuevo o quiero crear una pandilla'}
+          {registering ? 'Ya tengo jugador' : invite ? 'Soy nuevo en la pandilla' : 'Soy nuevo o quiero crear una pandilla'}
         </button>
         {!embedded && <ThemeToggle />}
       </form>

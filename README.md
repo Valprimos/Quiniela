@@ -245,4 +245,8 @@ Cosas a tener en cuenta:
   cambian horarios o se aplaza un partido (un aplazado no cuenta, y uno reprogramado semanas
   después tampoco). Una vez empezado el partido del pleno ya no se mueve solo. Un admin puede
   elegirlo a mano (Panel de admin > Pleno al 15).
+- **Invitar colegas**: en el menú de usuario, "Invitar colegas" da un enlace y un QR con el código de la
+  pandilla ya puesto (`/login?codigo=...`), y se puede compartir o copiar. Quien lo abre solo elige nombre
+  y PIN. Cualquier miembro puede invitar, porque ya conoce el código. Si el código del enlace ya no existe,
+  se avisa en vez de crear una pandilla nueva.
 - Los colegas se registran con el código de su pandilla, un nombre y un PIN (4-6 números).
