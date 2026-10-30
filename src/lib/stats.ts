@@ -1,5 +1,5 @@
 import { LigaRow, MatchLite, isFinished } from './league';
-import { Pick, resultOf } from './scoring';
+import { Pick, pointsForPrediction, resultOf } from './scoring';
 import { COMPETITIONS, STAGE_LABEL, competitionDef } from './competitions';
 import type { LuckDTO } from './luck';
 
@@ -345,14 +345,19 @@ export function computeStats(input: {
       a.pickedMds.add(key);
       if (majority && pick !== majority && tally[majority] > tally[pick]) bump(a.brave, hit);
 
-      // Mismos puntos que la clasificación: 1 por acierto; en el pleno, 3 si clavas el marcador
-      let pts = hit ? 1 : 0;
-      if (m.is_pleno) {
-        const g = pg?.get(pl.id);
-        const exact = !!g && g.home === m.home_score && g.away === m.away_score;
-        if (g) bump(a.pleno15, exact);
-        pts = exact ? 3 : 0;
-      }
+      // La misma función de puntuación que usa la clasificación principal.
+      const g = pg?.get(pl.id);
+      const exact = !!g && g.home === m.home_score && g.away === m.away_score;
+      if (m.is_pleno && g) bump(a.pleno15, exact);
+      const pts = pointsForPrediction({
+        result: res,
+        pick,
+        isPleno: m.is_pleno === true,
+        homeScore: m.home_score,
+        awayScore: m.away_score,
+        plenoHome: g?.home ?? null,
+        plenoAway: g?.away ?? null,
+      });
       a.points += pts;
       a.pts.set(key, (a.pts.get(key) ?? 0) + pts);
       const ct = a.comp[m.competition];

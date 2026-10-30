@@ -1,0 +1,7 @@
+CAMBIOS PARA QUINIELA
+
+1. Descomprime este ZIP en la carpeta del proyecto. Los archivos conservan sus rutas.
+2. Sube a GitHub los archivos de src/ reemplazando los existentes y añade el archivo de migración SQL.
+3. En Supabase, abre SQL Editor y ejecuta supabase/migration-9-rebuild-points.sql para actualizar también la vista que usa el archivo de temporadas.
+
+La clasificación y Estadísticas ahora comparten la misma regla: 1 punto por signo correcto en partidos normales; 3 puntos solo por marcador exacto en el Pleno al 15.

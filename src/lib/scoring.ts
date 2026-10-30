@@ -13,6 +13,23 @@ export function resultOf(
   return home > away ? '1' : home < away ? '2' : 'X';
 }
 
+// Fuente única para los puntos de un pronóstico ya terminado: partidos normales,
+// 1 punto por acertar el signo; Pleno al 15, 3 puntos solo por acertar el marcador.
+export function pointsForPrediction(input: {
+  result: Pick | null;
+  pick: string | null;
+  isPleno: boolean;
+  homeScore: number | null;
+  awayScore: number | null;
+  plenoHome: number | null;
+  plenoAway: number | null;
+}): number {
+  const { result, pick, isPleno, homeScore, awayScore, plenoHome, plenoAway } = input;
+  if (result == null) return 0;
+  if (isPleno) return plenoHome === homeScore && plenoAway === awayScore ? 3 : 0;
+  return pick === result ? 1 : 0;
+}
+
 // Resultado "en vivo": lo mismo, pero también vale con el marcador de un partido en juego.
 // Se usa solo para pintar la pantalla mientras se juega; nunca para guardar puntos reales.
 export function liveResultOf(

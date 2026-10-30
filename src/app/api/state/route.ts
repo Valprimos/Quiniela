@@ -3,11 +3,12 @@ import { db } from '@/lib/db';
 import { getSession, clearSession } from '@/lib/session';
 import { currentSeason } from '@/lib/season';
 import { syncIfStale } from '@/lib/sync';
-import { isLocked, liveResultOf, resultOf } from '@/lib/scoring';
+import { isLocked, liveResultOf, pointsForPrediction, resultOf } from '@/lib/scoring';
 import { MatchLite, buildLiga, isFinished } from '@/lib/league';
 import { COMPETITIONS, isCompetitionCode, STAGE_LABEL } from '@/lib/competitions';
 import { soonestCompetition } from '@/lib/defaultCompetition';
 import { reconcilePleno } from '@/lib/pleno';
+import { fetchAll } from '@/lib/paging';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,11 +31,12 @@ export async function GET(req: NextRequest) {
   const askedComp = req.nextUrl.searchParams.get('competition');
   const competition = isCompetitionCode(askedComp) ? askedComp : await soonestCompetition(supabase, season);
 
-  // Toda la temporada de esta competición en una sola consulta
+  // Traer ambas competiciones permite calcular general y combinada con los mismos
+  // partidos y pronósticos, sin depender de una vista SQL que pueda tener otra regla.
   const { data: all, error: matchesError } = await supabase
     .from('matches')
     .select(COLS)
-    .eq('competition', competition)
+    .in('competition', COMPETITIONS.map((c) => c.code))
     .eq('season', season)
     .limit(1000);
   if (matchesError) {
@@ -44,7 +46,8 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-  const allMatches: MatchLite[] = all ?? [];
+  const allSeasonMatches: MatchLite[] = all ?? [];
+  const allMatches = allSeasonMatches.filter((m) => m.competition === competition);
   // La clasificación de Liga real solo tiene sentido en la fase de liga (matchday < 100)
   const liga = buildLiga(allMatches.filter((m) => m.matchday < 100));
   const ligaBy = new Map(liga.map((r) => [r.team, r]));
@@ -88,13 +91,8 @@ export async function GET(req: NextRequest) {
     if (!withAvatar.error) return withAvatar;
     return supabase.from('players').select('id,name,is_admin').eq('group_id', session.gid);
   };
-  const [{ data: players }, { data: points }, { data: groupRow }] = await Promise.all([
+  const [{ data: players }, { data: groupRow }] = await Promise.all([
     playersQuery(),
-    supabase
-      .from('player_points')
-      .select('player_id,matchday,points')
-      .eq('competition', competition)
-      .eq('season', season),
     supabase.from('groups').select('name').eq('id', session.gid).maybeSingle(),
   ]);
   const playerRows: { id: string; name: string; avatar_updated_at?: string | null }[] = players ?? [];
@@ -108,6 +106,65 @@ export async function GET(req: NextRequest) {
     await clearSession();
     return NextResponse.json({ error: 'Ya no formas parte de esta pandilla.' }, { status: 401 });
   }
+
+  // Calcula los puntos desde los resultados y pronósticos actuales con la misma
+  // regla que Estadísticas. Así un player_points desactualizado no altera la tabla.
+  const finishedAllMatches = allSeasonMatches.filter(isFinished);
+  const finishedById = new Map(finishedAllMatches.map((m) => [m.id, m]));
+  const finishedAllIds = finishedAllMatches.map((m) => m.id);
+  const scoredPredictions: PredRow[] = [];
+  let predictionsError: string | null = null;
+  for (let i = 0; i < finishedAllIds.length; i += 100) {
+    const ids = finishedAllIds.slice(i, i + 100);
+    const rows = await fetchAll<PredRow>(async (from, to) => {
+      const res = await supabase
+        .from('predictions')
+        .select('player_id,match_id,pick,pleno_home,pleno_away')
+        .in('match_id', ids)
+        .order('match_id')
+        .order('player_id')
+        .range(from, to);
+      if (res.error) {
+        predictionsError = res.error.message;
+        return { data: null };
+      }
+      return res as { data: PredRow[] | null };
+    });
+    scoredPredictions.push(...rows);
+    if (predictionsError) break;
+  }
+  if (predictionsError) {
+    console.error('Error leyendo pronósticos para la clasificación', predictionsError);
+    return NextResponse.json({ error: 'No se pudieron calcular los puntos de la clasificación.' }, { status: 500 });
+  }
+
+  const pointByRound = new Map<string, { player_id: string; matchday: number; points: number }>();
+  const combined = new Map<string, number>();
+  const generalMaxPts = new Map<string, number>();
+  const combinedMaxPts = new Map<string, number>();
+  for (const p of scoredPredictions) {
+    if (!playerIds.has(p.player_id)) continue;
+    const m = finishedById.get(p.match_id);
+    if (!m) continue;
+    const pts = pointsForPrediction({
+      result: resultOf(m.status, m.home_score, m.away_score),
+      pick: p.pick,
+      isPleno: m.is_pleno === true,
+      homeScore: m.home_score,
+      awayScore: m.away_score,
+      plenoHome: p.pleno_home,
+      plenoAway: p.pleno_away,
+    });
+    combined.set(p.player_id, (combined.get(p.player_id) ?? 0) + pts);
+    combinedMaxPts.set(p.player_id, (combinedMaxPts.get(p.player_id) ?? 0) + (m.is_pleno ? 3 : 1));
+    if (m.competition === competition) {
+      const key = `${p.player_id}|${m.matchday}`;
+      const previous = pointByRound.get(key);
+      pointByRound.set(key, { player_id: p.player_id, matchday: m.matchday, points: (previous?.points ?? 0) + pts });
+      generalMaxPts.set(p.player_id, (generalMaxPts.get(p.player_id) ?? 0) + (m.is_pleno ? 3 : 1));
+    }
+  }
+  const finishedTotalCombined = finishedAllMatches.length;
 
   const ids = matchRows.map((m) => m.id);
   let preds: PredRow[] = [];
@@ -182,23 +239,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const finishedIds = allMatches.filter(isFinished).map((m) => m.id);
-  const plenoIdSet = new Set(allMatches.filter((m) => m.is_pleno).map((m) => m.id));
-  let generalMaxPts = new Map<string, number>();
-  if (finishedIds.length) {
-    const { data } = await supabase.from('predictions').select('player_id,match_id').in('match_id', finishedIds);
-    for (const p of data ?? []) {
-      if (!playerIds.has(p.player_id)) continue;
-      generalMaxPts.set(p.player_id, (generalMaxPts.get(p.player_id) ?? 0) + (plenoIdSet.has(p.match_id) ? 3 : 1));
-    }
-  }
-
   // Clasificaciones
   const total = new Map<string, number>();
   const before = new Map<string, number>(); // puntos hasta la jornada anterior a la actual
   const jornada = new Map<string, number>();
-  for (const r of points ?? []) {
-    if (!playerIds.has(r.player_id)) continue;
+  for (const r of pointByRound.values()) {
     total.set(r.player_id, (total.get(r.player_id) ?? 0) + r.points);
     if (r.matchday < current) before.set(r.player_id, (before.get(r.player_id) ?? 0) + r.points);
     if (r.matchday === matchday) jornada.set(r.player_id, r.points);
@@ -230,45 +275,7 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
 
-  // Clasificación combinada: suma de puntos de las tres competiciones (temporada actual)
-  const { data: allPoints } = await supabase
-    .from('player_points')
-    .select('player_id,points')
-    .eq('season', season)
-    .in(
-      'competition',
-      COMPETITIONS.map((c) => c.code)
-    );
-  const combined = new Map<string, number>();
-  for (const r of allPoints ?? []) {
-    if (!playerIds.has(r.player_id)) continue;
-    combined.set(r.player_id, (combined.get(r.player_id) ?? 0) + r.points);
-  }
-
-  // Partidos terminados en TODAS las competiciones, para el máximo de puntos individual
-  // de la clasificación combinada (igual que generalMaxPts, pero sin filtrar por competición)
-  const finishedByComp = await Promise.all(
-    COMPETITIONS.map((c) =>
-      supabase.from('matches').select('id,is_pleno').eq('competition', c.code).eq('season', season).eq('status', 'FINISHED')
-    )
-  );
-  const finishedAllComp = finishedByComp.flatMap((r) => r.data ?? []);
-  const finishedTotalCombined = finishedAllComp.length;
-  const plenoIdSetCombined = new Set(finishedAllComp.filter((m) => m.is_pleno).map((m) => m.id));
-  const combinedMaxPts = new Map<string, number>();
-  if (finishedAllComp.length) {
-    const { data } = await supabase
-      .from('predictions')
-      .select('player_id,match_id')
-      .in(
-        'match_id',
-        finishedAllComp.map((m) => m.id)
-      );
-    for (const p of data ?? []) {
-      if (!playerIds.has(p.player_id)) continue;
-      combinedMaxPts.set(p.player_id, (combinedMaxPts.get(p.player_id) ?? 0) + (plenoIdSetCombined.has(p.match_id) ? 3 : 1));
-    }
-  }
+  // Clasificación combinada calculada arriba con esos mismos pronósticos y puntos.
   const rankingCombinada = playerRows
     .map((p) => ({
       playerId: p.id,
