@@ -535,6 +535,13 @@ export default function Stats({
         </div>
       )}
 
+      {view === 'jugadores' && (
+        <p className="hint">
+          Aciertos cuenta los signos 1/X/2 correctos. Puntos aplica la regla del Pleno al 15 (3 puntos solo por marcador exacto).
+          Para comparar con la clasificación, mira Puntos y elige General si ves una competición o Combinada si ves La Liga + Champions.
+        </p>
+      )}
+
       {cur.failed && !stats && <p className="notice">No se pudieron cargar las estadísticas.</p>}
       {!stats && !cur.failed && <StatsSkeleton />}
       {stats && (

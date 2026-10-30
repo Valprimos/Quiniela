@@ -635,10 +635,10 @@ function PlayerCards({ stats, meId }: { stats: StatsDTO; meId: string }) {
                   )}
                 </span>
                 <span className="pc-points">
-                  <b>{p.points}</b> puntos
+                  <b>{p.points}</b> puntos de clasificación
                 </span>
                 <span className="pline">
-                  {p.hits} aciertos de {p.played} pronósticos
+                  {p.hits} signos acertados (1X2) de {p.played} pronósticos
                   {p.missed > 0 && `, ${p.missed} sin pronosticar`}
                 </span>
               </div>

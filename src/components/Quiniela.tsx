@@ -532,6 +532,7 @@ export default function Quiniela() {
   const router = useRouter();
   const cache = useRef(new Map<string, StateDTO>());
   const [data, setData] = useState<StateDTO | null>(null);
+  const [statsVersion, setStatsVersion] = useState(0);
   // Vacío = automático: el servidor elige la competición con el partido más próximo
   const [competition, setCompetition] = useState('');
   const resolved = useRef<string | null>(null);
@@ -678,6 +679,7 @@ export default function Quiniela() {
         cache.current.set(k, fresh);
         cacheAt.current.set(k, Date.now());
         setData(fresh);
+        setStatsVersion((v) => v + 1);
         setShownKey(k);
         setError(null);
       } catch (e) {
@@ -798,6 +800,7 @@ export default function Quiniela() {
   function refreshNow() {
     // Tras un cambio (foto, nombre, pronóstico editado por el admin...) lo guardado en memoria ya no vale
     clearCache(`stats:${data?.me.id ?? ''}`);
+    setStatsVersion((v) => v + 1);
     cache.current.delete(keyOf(competition, md));
     cacheAt.current.delete(keyOf(competition, md));
     load(competition, md);
@@ -1095,7 +1098,7 @@ export default function Quiniela() {
         )}
 
         {tab === 'estadisticas' && (
-          <Stats meId={data.me.id} competition={competition} version={data.finishedTotal} onTeamClick={openTeamModal} />
+          <Stats meId={data.me.id} competition={competition} version={statsVersion} onTeamClick={openTeamModal} />
         )}
       </div>
 
