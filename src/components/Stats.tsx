@@ -488,7 +488,7 @@ export default function Stats({
   onTeamClick: (name: string, crest: string | null) => void;
 }) {
   const [view, setView] = useState<View>('jugadores');
-  const [scope, setScope] = useState<Scope>('all');
+  const [scope, setScope] = useState<Scope>('comp');
 
   const wantAll = scope === 'all' && SCOPED.includes(view);
   const one = useStats(meId, competition, version, !wantAll);
@@ -518,6 +518,12 @@ export default function Stats({
 
       {scoped && (
         <div className="scope" role="group" aria-label="Qué competiciones incluir">
+          <button type="button" aria-pressed={scope === 'comp'} onClick={() => setScope('comp')}>
+            <span className="scope-logos">
+              <CompLogo code={competition} size={24} />
+            </span>
+            {compShort}
+          </button>
           <button type="button" aria-pressed={scope === 'all'} onClick={() => setScope('all')}>
             <span className="scope-logos">
               {COMPETITIONS.map((c) => (
@@ -526,19 +532,13 @@ export default function Stats({
             </span>
             {COMPETITIONS.map((c) => c.short).join(' + ')}
           </button>
-          <button type="button" aria-pressed={scope === 'comp'} onClick={() => setScope('comp')}>
-            <span className="scope-logos">
-              <CompLogo code={competition} size={24} />
-            </span>
-            Solo {compShort}
-          </button>
         </div>
       )}
 
       {view === 'jugadores' && (
         <p className="hint">
           Aciertos cuenta los signos 1/X/2 correctos. Puntos aplica la regla del Pleno al 15 (3 puntos solo por marcador exacto).
-          Para comparar con la clasificación, mira Puntos y elige General si ves una competición o Combinada si ves La Liga + Champions.
+          Para comparar con la clasificación, mira Puntos con el mismo filtro de arriba: solo la competición, o La Liga + Champions.
         </p>
       )}
 

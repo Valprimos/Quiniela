@@ -1068,15 +1068,15 @@ export default function Quiniela() {
 
         {tab === 'clasificacion' && (
           <>
-            <div className="seg" role="group" aria-label="Tipo de clasificación">
+            <div className="seg seg-fit" role="group" aria-label="Tipo de clasificación">
               <button type="button" aria-pressed={scope === 'jornada'} onClick={() => setScope('jornada')}>
                 Jornada {data.matchday}
               </button>
               <button type="button" aria-pressed={scope === 'general'} onClick={() => setScope('general')}>
-                General
+                {data.competitions.find((c) => c.code === data.competition)?.short ?? 'General'}
               </button>
               <button type="button" aria-pressed={scope === 'combinada'} onClick={() => setScope('combinada')}>
-                Combinada
+                {data.competitions.map((c) => c.short).join(' + ')}
               </button>
             </div>
             {scope === 'jornada' && data.liveCount > 0 && (
