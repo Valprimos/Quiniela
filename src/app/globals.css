@@ -138,11 +138,21 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
   padding: 8px 16px; font-weight: 600; cursor: pointer;
 }
 .seg button[aria-pressed='true'] { border-color: var(--foco); color: var(--foco-ink); }
-/* Clasificación: tres botones en una sola fila, sin partir el texto ni saltar de línea, hasta en móviles estrechos */
-.seg-fit { gap: 5px; }
-.seg-fit button { flex: 0 1 auto; min-width: 0; padding: 8px 10px; font-size: 13px; white-space: nowrap; }
-.seg-fit button:last-child { flex: 1 1 auto; }
-@media (max-width: 350px) { .seg-fit { gap: 4px; } .seg-fit button { padding: 8px 7px; font-size: 12px; } }
+/* Clasificación: tres píldoras en una sola fila con la misma tipografía y logos que el selector de competición */
+.seg-fit { flex-wrap: nowrap; gap: 6px; }
+.seg-fit button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 0 0 auto; min-height: 37px; padding: 5px 16px 5px 10px; white-space: nowrap; }
+.seg-fit button:first-child { padding: 5px 16px; }
+.seg-fit .rk-both { padding: 5px 12px; gap: 6px; }
+.seg-fit .rk-comp { display: inline-flex; align-items: center; gap: 6px; }
+.seg-fit .rk-comp b { color: var(--muted); font-weight: 600; }
+.rk-long { display: none; }
+@media (min-width: 430px) { .rk-long { display: inline; } .rk-short { display: none; } }
+@media (max-width: 350px) {
+  .seg-fit { gap: 4px; }
+  .seg-fit button { gap: 6px; padding: 4px 10px 4px 7px; font-size: 14px; }
+  .seg-fit button:first-child { padding: 4px 10px; }
+  .seg-fit .rk-both { padding: 4px 8px; gap: 4px; }
+}
 .rank { list-style: none; margin: 8px 0 0; padding: 0; }
 .rank li {
   position: relative; overflow: hidden;

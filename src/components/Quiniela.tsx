@@ -845,6 +845,8 @@ export default function Quiniela() {
 
   const rankRows =
     scope === 'jornada' ? data.rankingJornada : scope === 'general' ? data.rankingGeneral : data.rankingCombinada;
+  // "J11" en jornadas normales; en eliminatorias, el nombre corto de la fase
+  const roundLabel = data.matchday >= 100 ? STAGE_SHORT[data.stageLabel ?? ''] ?? data.stageLabel ?? '' : `J${data.matchday}`;
 
   async function shareRanking() {
     if (!data) return;
@@ -1070,13 +1072,33 @@ export default function Quiniela() {
           <>
             <div className="seg seg-fit" role="group" aria-label="Tipo de clasificación">
               <button type="button" aria-pressed={scope === 'jornada'} onClick={() => setScope('jornada')}>
-                Jornada {data.matchday}
+                {data.matchday >= 100 ? (
+                  roundLabel
+                ) : (
+                  <>
+                    <span className="rk-long">Jornada {data.matchday}</span>
+                    <span className="rk-short">{roundLabel}</span>
+                  </>
+                )}
               </button>
               <button type="button" aria-pressed={scope === 'general'} onClick={() => setScope('general')}>
-                {data.competitions.find((c) => c.code === data.competition)?.short ?? 'General'}
+                <CompLogo code={data.competition} />
+                {data.competitions.find((c) => c.code === data.competition)?.short}
               </button>
-              <button type="button" aria-pressed={scope === 'combinada'} onClick={() => setScope('combinada')}>
-                {data.competitions.map((c) => c.short).join(' + ')}
+              <button
+                type="button"
+                className="rk-both"
+                aria-pressed={scope === 'combinada'}
+                aria-label={data.competitions.map((c) => c.short).join(' + ')}
+                title={data.competitions.map((c) => c.short).join(' + ')}
+                onClick={() => setScope('combinada')}
+              >
+                {data.competitions.map((c, k) => (
+                  <span key={c.code} className="rk-comp">
+                    {k > 0 && <b aria-hidden="true">+</b>}
+                    <CompLogo code={c.code} />
+                  </span>
+                ))}
               </button>
             </div>
             {scope === 'jornada' && data.liveCount > 0 && (
@@ -1087,7 +1109,7 @@ export default function Quiniela() {
               meId={data.me.id}
               showDelta={scope === 'general'}
               crown={scope === 'jornada' && data.jornadaComplete}
-              roundLabel={data.matchday >= 100 ? STAGE_SHORT[data.stageLabel ?? ''] ?? data.stageLabel ?? '' : `J${data.matchday}`}
+              roundLabel={roundLabel}
             />
             <div className="share">
               <button type="button" className="link" onClick={shareRanking}>
