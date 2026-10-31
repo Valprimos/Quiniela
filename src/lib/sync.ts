@@ -43,8 +43,24 @@ async function syncOne(competition: CompetitionCode): Promise<number> {
     .eq('manual_override', true);
   const keepAsIs = new Set((overridden ?? []).map((r) => r.id));
 
+  // Un partido ya terminado y guardado no se degrada: si la API devolviera un marcador vacío o un estado
+  // anterior (fallo puntual, cambio de plan...), se conserva el resultado que ya tenemos. Una corrección
+  // real (terminado + marcador) sí se acepta. Así el historial depende de nuestra base de datos, no de la API.
+  const { data: finished } = await db()
+    .from('matches')
+    .select('id')
+    .eq('competition', competition)
+    .eq('season', season)
+    .eq('status', 'FINISHED')
+    .not('home_score', 'is', null)
+    .not('away_score', 'is', null)
+    .limit(1000);
+  const frozen = new Set((finished ?? []).map((r) => r.id));
+  const degrades = (m: (typeof matches)[number]) =>
+    frozen.has(m.id) && (m.status !== 'FINISHED' || m.score.fullTime.home == null || m.score.fullTime.away == null);
+
   const rows = matches
-    .filter((m) => !keepAsIs.has(m.id))
+    .filter((m) => !keepAsIs.has(m.id) && !degrades(m))
     .map((m) => ({
       id: m.id,
       competition,
