@@ -539,6 +539,12 @@ export default function Quiniela() {
   const [md, setMd] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<'pronosticos' | 'clasificacion' | 'estadisticas'>('pronosticos');
+  // Estadísticas se queda montada (oculta) una vez abierta: al volver conserva la subpestaña (Grupo, Equipos…),
+  // el filtro y el orden donde estaban, en vez de empezar siempre en Jugadores.
+  const [statsSeen, setStatsSeen] = useState(false);
+  useEffect(() => {
+    if (tab === 'estadisticas') setStatsSeen(true);
+  }, [tab]);
   const [scope, setScope] = useState<'jornada' | 'general' | 'combinada'>('jornada');
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -1097,8 +1103,10 @@ export default function Quiniela() {
           </>
         )}
 
-        {tab === 'estadisticas' && (
-          <Stats meId={data.me.id} competition={competition} version={statsVersion} onTeamClick={openTeamModal} />
+        {(tab === 'estadisticas' || statsSeen) && (
+          <div hidden={tab !== 'estadisticas'}>
+            <Stats meId={data.me.id} competition={competition} version={statsVersion} onTeamClick={openTeamModal} />
+          </div>
         )}
       </div>
 

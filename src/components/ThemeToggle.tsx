@@ -15,12 +15,39 @@ export function useTheme(): [Theme, () => void] {
   return [theme, toggle];
 }
 
-// Enlace suelto para pantallas sin menú de usuario (el acceso).
-export default function ThemeToggle({ className = 'link' }: { className?: string }) {
+// Selector de aspecto para pantallas sin menú de usuario (el acceso): muestra las DOS opciones con su
+// nombre y deja marcada la que está activa. La posición del deslizador y el resaltado los pinta el CSS a
+// partir de <html data-theme>, que el script de layout.tsx pone antes de pintar: así no hay salto al cargar.
+export default function ThemeToggle() {
   const [theme, toggle] = useTheme();
+  const light = theme === 'light';
   return (
-    <button type="button" className={className} onClick={toggle}>
-      {theme === 'light' ? '☀️ Modo claro' : '🌙 Modo oscuro'}
-    </button>
+    <div className="theme-pick">
+      <span className="theme-pick-cap">Aspecto de la app</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={light}
+        aria-label={light ? 'Modo claro, día de partido. Pulsa para pasar a modo oscuro' : 'Modo oscuro, noche de estadio. Pulsa para pasar a modo claro'}
+        className="theme-seg"
+        onClick={toggle}
+      >
+        <em aria-hidden="true" />
+        <span className="opt night">
+          <i aria-hidden="true">🌙</i>
+          <span className="opt-txt">
+            <b>Oscuro</b>
+            <small>Noche de estadio</small>
+          </span>
+        </span>
+        <span className="opt day">
+          <i aria-hidden="true">☀️</i>
+          <span className="opt-txt">
+            <b>Claro</b>
+            <small>Día de partido</small>
+          </span>
+        </span>
+      </button>
+    </div>
   );
 }
