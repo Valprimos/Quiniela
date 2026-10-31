@@ -145,13 +145,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .seg-fit .rk-both { padding: 5px 12px; gap: 6px; }
 .seg-fit .rk-comp { display: inline-flex; align-items: center; gap: 6px; }
 .seg-fit .rk-comp b { color: var(--muted); font-weight: 600; }
-.rk-long { display: none; }
-@media (min-width: 430px) { .rk-long { display: inline; } .rk-short { display: none; } }
+/* En móviles estrechos se aprieta la letra y los márgenes para que "Jornada 11" quepa entera */
+@media (max-width: 420px) {
+  .seg-fit { gap: 5px; }
+  .seg-fit button { gap: 6px; padding: 4px 11px 4px 8px; font-size: 14px; }
+  .seg-fit button:first-child { padding: 4px 11px; }
+  .seg-fit .rk-both { padding: 4px 9px; gap: 5px; }
+  .seg-fit .rk-comp { gap: 5px; }
+}
 @media (max-width: 350px) {
   .seg-fit { gap: 4px; }
-  .seg-fit button { gap: 6px; padding: 4px 10px 4px 7px; font-size: 14px; }
-  .seg-fit button:first-child { padding: 4px 10px; }
-  .seg-fit .rk-both { padding: 4px 8px; gap: 4px; }
+  .seg-fit button { gap: 5px; padding: 4px 8px 4px 6px; font-size: 13px; }
+  .seg-fit button:first-child { padding: 4px 8px; }
+  .seg-fit .rk-both { padding: 4px 7px; gap: 4px; }
+  .seg-fit .clogo { width: 20px !important; height: 20px !important; }
 }
 .rank { list-style: none; margin: 8px 0 0; padding: 0; }
 .rank li {

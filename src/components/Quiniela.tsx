@@ -1072,14 +1072,7 @@ export default function Quiniela() {
           <>
             <div className="seg seg-fit" role="group" aria-label="Tipo de clasificación">
               <button type="button" aria-pressed={scope === 'jornada'} onClick={() => setScope('jornada')}>
-                {data.matchday >= 100 ? (
-                  roundLabel
-                ) : (
-                  <>
-                    <span className="rk-long">Jornada {data.matchday}</span>
-                    <span className="rk-short">{roundLabel}</span>
-                  </>
-                )}
+                {data.matchday >= 100 ? roundLabel : `Jornada ${data.matchday}`}
               </button>
               <button type="button" aria-pressed={scope === 'general'} onClick={() => setScope('general')}>
                 <CompLogo code={data.competition} />
