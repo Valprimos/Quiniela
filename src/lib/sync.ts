@@ -3,6 +3,7 @@ import { fetchMatches, FootballDataError } from './football';
 import { currentSeason } from './season';
 import { COMPETITIONS, CompetitionCode, KNOCKOUT_STAGE_ORDER } from './competitions';
 import { reconcilePleno } from './pleno';
+import { autoArchiveIfComplete } from './seasonArchive';
 
 const LIVE = ['IN_PLAY', 'PAUSED', 'LIVE'];
 const OPEN = ['SCHEDULED', 'TIMED', ...LIVE];
@@ -129,6 +130,10 @@ async function syncCompetitionIfStale(
   if (error || !data?.length) return { competition, synced: false };
   try {
     const count = await syncOne(competition);
+    // Al terminar la temporada, la clasificación final de cada pandilla pasa sola al archivo (no hace falta el botón de admin)
+    await autoArchiveIfComplete(competition, currentSeason()).catch((e) =>
+      console.error(`No se pudo archivar la temporada de ${competition}`, e)
+    );
     // Para el panel de admin; si aún no se ha ejecutado la migración 6, el error se ignora
     await db().from('sync_state').update({ last_ok: new Date().toISOString(), last_error: null }).eq('competition', competition);
     return { competition, synced: true, count };

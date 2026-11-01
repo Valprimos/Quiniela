@@ -6,11 +6,12 @@ export type CompetitionDef = {
   name: string;
   short: string;
   logo: string; // emblema de la competición (archivo propio en /public/logos)
+  knockout?: boolean; // tiene eliminatorias: la temporada no acaba hasta que se juega la Final
 };
 
 export const COMPETITIONS: CompetitionDef[] = [
   { code: 'PD', apiCode: 'PD', name: 'La Liga', short: 'La Liga', logo: '/logos/laliga.png' },
-  { code: 'CL', apiCode: 'CL', name: 'Champions League', short: 'Champions', logo: '/logos/champions.png' },
+  { code: 'CL', apiCode: 'CL', name: 'Champions League', short: 'Champions', logo: '/logos/champions.png', knockout: true },
 ];
 
 export function competitionDef(code: string): CompetitionDef {

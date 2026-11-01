@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
+import { finalStandings } from '@/lib/seasonArchive';
 import { isCompetitionCode } from '@/lib/competitions';
 
 export const dynamic = 'force-dynamic';
@@ -15,31 +16,18 @@ export async function POST(req: NextRequest) {
   const competition = isCompetitionCode(body?.competition) ? body.competition : 'PD';
   const season = currentSeason();
 
-  const supabase = db();
-  const [{ data: players }, { data: points }] = await Promise.all([
-    supabase.from('players').select('id,name').eq('group_id', session.gid),
-    supabase.from('player_points').select('player_id,points').eq('competition', competition).eq('season', season),
-  ]);
-  const total = new Map<string, number>();
-  for (const r of points ?? []) total.set(r.player_id, (total.get(r.player_id) ?? 0) + r.points);
+  let rows;
+  try {
+    rows = await finalStandings(competition, season, session.gid);
+  } catch (e) {
+    console.error('Error calculando la clasificación final', e);
+    return NextResponse.json({ error: 'No se pudo calcular la clasificación final.' }, { status: 500 });
+  }
+  if (!rows.length) return NextResponse.json({ error: 'No hay jugadores que archivar.' }, { status: 400 });
 
-  const ranked = (players ?? [])
-    .map((p) => ({ id: p.id, name: p.name, points: total.get(p.id) ?? 0 }))
-    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
-  if (!ranked.length) return NextResponse.json({ error: 'No hay jugadores que archivar.' }, { status: 400 });
-
-  const rows = ranked.map((r, i) => ({
-    group_id: session.gid,
-    competition,
-    season,
-    player_id: r.id,
-    player_name: r.name,
-    points: r.points,
-    pos: i + 1,
-  }));
-  const { error } = await supabase
+  const { error } = await db()
     .from('season_archive')
     .upsert(rows, { onConflict: 'group_id,competition,season,player_id' });
   if (error) return NextResponse.json({ error: 'No se pudo archivar la temporada.' }, { status: 500 });
-  return NextResponse.json({ ok: true, champion: ranked[0]?.name });
+  return NextResponse.json({ ok: true, champion: rows[0]?.player_name });
 }
