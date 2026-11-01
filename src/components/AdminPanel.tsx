@@ -825,7 +825,7 @@ function SyncPanel() {
   );
 }
 
-type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'pendientes' | 'pleno' | 'sync' | 'jornada' | 'temporada' | 'historial' | 'equipos' | 'xg';
+type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'pendientes' | 'pleno' | 'sync' | 'jornada' | 'temporada' | 'historial' | 'copia' | 'equipos' | 'xg';
 const TOOLS: { id: Tool; title: string; hint: string }[] = [
   { id: 'jugadores', title: 'Jugadores y PIN', hint: 'Cambiar PIN, dar admin, expulsar' },
   { id: 'resultados', title: 'Resultados', hint: 'Corregir el resultado de un partido' },
@@ -837,6 +837,7 @@ const TOOLS: { id: Tool; title: string; hint: string }[] = [
   { id: 'temporada', title: 'Archivar temporada', hint: 'Guardar la clasificación final' },
   { id: 'xg', title: 'xG', hint: 'Cargar el xG para el índice de suerte' },
   { id: 'historial', title: 'Historial', hint: 'Traer temporadas anteriores' },
+  { id: 'copia', title: 'Copia de seguridad', hint: 'Descargar partidos y pronósticos en un archivo' },
   { id: 'equipos', title: 'Equipos guardados', hint: 'Revisar nombres de equipos' },
 ];
 
@@ -858,6 +859,7 @@ export default function AdminPanel({
   const [players, setPlayers] = useState<Player[] | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [backfilling, setBackfilling] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
 
   // Competición y jornada que se eligen dentro del panel (empiezan en las de la app, pero son independientes)
   const [pc, setPc] = useState(competition);
@@ -925,6 +927,32 @@ export default function AdminPanel({
   async function archiveSeason() {
     const r = await call('/api/admin/archive-season', { competition });
     setMsg(r.ok ? `Temporada archivada. Campeón: ${r.champion}.` : (r.error as string) ?? 'No se pudo archivar.');
+  }
+
+  async function downloadBackup() {
+    setBackingUp(true);
+    try {
+      const res = await fetch('/api/admin/backup');
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        setMsg(j?.error ?? 'No se pudo generar la copia.');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quiniela-copia-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      setMsg('Copia descargada. Guárdala en un sitio aparte (tu Drive, el correo…).');
+    } catch {
+      setMsg('No se pudo generar la copia.');
+    } finally {
+      setBackingUp(false);
+    }
   }
 
   async function backfillHistory() {
@@ -1064,6 +1092,18 @@ export default function AdminPanel({
           </button>
           <p className="hint">
             Rellena el Cara a cara con temporadas pasadas (<code>API_FOOTBALL_KEY</code>).
+          </p>
+        </>
+      )}
+
+      {tool === 'copia' && (
+        <>
+          <button type="button" className="primary" onClick={downloadBackup} disabled={backingUp}>
+            {backingUp ? 'Preparando...' : 'Descargar copia (JSON)'}
+          </button>
+          <p className="hint">
+            Incluye todos los partidos de todas las temporadas y, de tu pandilla, los jugadores, los pronósticos y el
+            archivo de temporadas. No incluye los PIN ni las fotos de perfil.
           </p>
         </>
       )}

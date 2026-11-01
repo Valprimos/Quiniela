@@ -23,6 +23,97 @@ function twinOf(stats: StatsDTO, id: string, which: 'most' | 'least'): string {
   return `${p.a === id ? p.bName : p.aName} (${fmt(p.pct)}%)`;
 }
 
+// Ficha personal: cómo le va a un jugador con cada equipo (solo partidos terminados que pronosticó)
+type TeamRow = { team: string; crest: string | null; n: number; h: number; backed: number };
+const MIN_TEAM = 3; // pronósticos mínimos sobre un equipo para hablar de "bestia negra" o "siempre ganador"
+
+function teamRows(stats: StatsDTO, id: string): TeamRow[] {
+  const out: TeamRow[] = [];
+  for (const t of stats.teams) {
+    const c = t.acc[id]?.total;
+    if (c && c.n > 0) out.push({ team: t.team, crest: t.crest, n: c.n, h: c.h, backed: t.backed?.[id] ?? 0 });
+  }
+  return out;
+}
+
+function Crest({ src, size = 28 }: { src: string | null; size?: number }) {
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" loading="lazy" className="thcrest" style={{ width: size, height: size }} />
+  ) : (
+    <span className="thcrest" style={{ width: size, height: size }} />
+  );
+}
+
+function Ficha({ rows, mine }: { rows: TeamRow[]; mine: boolean }) {
+  if (!rows.length) return null;
+  const eligible = rows.filter((r) => r.n >= MIN_TEAM);
+  // Bestia negra: el equipo con peor % de acierto (que falle al menos la mitad); si empatan, el que tiene más partidos
+  const beast = eligible.filter((r) => r.h / r.n <= 0.5).sort((a, b) => a.h / a.n - b.h / b.n || b.n - a.n)[0];
+  // Siempre ganador: el equipo al que más veces le da la victoria (al menos la mitad de sus pronósticos sobre él)
+  const fav = [...eligible]
+    .filter((r) => r.backed / r.n >= 0.5)
+    .sort((a, b) => b.backed / b.n - a.backed / a.n || b.n - a.n)[0];
+  const all = [...rows].sort((a, b) => b.n - a.n || b.h / b.n - a.h / a.n || a.team.localeCompare(b.team, 'es'));
+  return (
+    <section className="pficha" aria-label="Ficha personal">
+      <h3 className="sh small">Ficha personal</h3>
+      <div className="pficha-pair">
+        <div className="pficha-card bad">
+          <span className="pficha-label">Bestia negra</span>
+          {beast ? (
+            <>
+              <Crest src={beast.crest} />
+              <b>{beast.team}</b>
+              <small>
+                {mine ? 'Fallas' : 'Falla'} {beast.n - beast.h} de {beast.n} ({fmt((100 * (beast.n - beast.h)) / beast.n)}%)
+              </small>
+            </>
+          ) : (
+            <small>
+              {eligible.length ? `Ningún equipo ${mine ? 'se te' : 'se le'} resiste` : `Faltan partidos (mínimo ${MIN_TEAM} por equipo)`}
+            </small>
+          )}
+        </div>
+        <div className="pficha-card good">
+          <span className="pficha-label">Siempre ganador</span>
+          {fav ? (
+            <>
+              <Crest src={fav.crest} />
+              <b>{fav.team}</b>
+              <small>
+                {mine ? 'Lo pones' : 'Lo pone'} ganador {fav.backed} de {fav.n} veces
+              </small>
+            </>
+          ) : (
+            <small>Ningún equipo al que dé siempre la victoria</small>
+          )}
+        </div>
+      </div>
+      <details className="pficha-all">
+        <summary>Acierto por equipo ({all.length})</summary>
+        <ul>
+          {all.map((r) => {
+            const pct = (100 * r.h) / r.n;
+            return (
+              <li key={r.team}>
+                <Crest src={r.crest} size={20} />
+                <span className="pficha-team">{r.team}</span>
+                <span className="pficha-bar" aria-hidden="true">
+                  <i style={{ width: `${pct}%` }} />
+                </span>
+                <span className="pficha-num">
+                  {r.h}/{r.n} · {fmt(pct)}%
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </details>
+    </section>
+  );
+}
+
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="ptile">
@@ -142,6 +233,8 @@ export default function PlayerProfileModal({
 
             <FormDotsTip marks={p.form} info={p.formInfo} />
 
+            <Ficha rows={teamRows(stats, target.id)} mine={mine} />
+
             <dl className="pmodal-facts">
               <div>
                 <dt>Piensa como</dt>
@@ -154,10 +247,6 @@ export default function PlayerProfileModal({
               <div>
                 <dt>La suegra</dt>
                 <dd>{p.brave.n ? `${fmt(pctOf(p.brave))}% de ${p.brave.n}` : '–'}</dd>
-              </div>
-              <div>
-                <dt>Equipo gafe</dt>
-                <dd>{p.jinx ? `${p.jinx.team} (${fmt(p.jinx.pct)}%)` : '–'}</dd>
               </div>
             </dl>
           </>

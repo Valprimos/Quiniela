@@ -166,6 +166,21 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
   .seg-fit .rk-both { padding: 4px 7px; gap: 4px; }
   .seg-fit .clogo { width: 20px !important; height: 20px !important; }
 }
+/* Clasificación en directo: franja con interruptor, punto que late y chip +N de puntos provisionales */
+.livebar { display: flex; align-items: center; gap: 12px; width: 100%; margin: 10px 0 4px; padding: 10px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.livebar.on { border-color: var(--ko); background: rgba(255, 107, 107, 0.1); }
+.livedot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--ko); animation: livepulse 1.6s infinite; }
+@keyframes livepulse { 0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.6); } 70%, 100% { box-shadow: 0 0 0 9px rgba(255, 107, 107, 0); } }
+.livetxt { flex: 1; display: grid; min-width: 0; line-height: 1.2; }
+.livetxt b { font-size: 15px; }
+.livetxt small { font-size: 12px; color: var(--muted); }
+.liveswitch { flex: none; position: relative; width: 42px; height: 24px; border-radius: 999px; background: var(--line); transition: background 0.2s; }
+.liveswitch i { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--text); transition: transform 0.2s; }
+.livebar.on .liveswitch { background: var(--ko); }
+.livebar.on .liveswitch i { transform: translateX(18px); background: #fff; }
+.livegain { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 13px; font-weight: 700; color: #06281a; background: var(--ok); }
+@media (prefers-reduced-motion: reduce) { .livedot { animation: none; } .liveswitch, .liveswitch i { transition: none; } }
+
 .rank { list-style: none; margin: 8px 0 0; padding: 0; }
 .rank li {
   position: relative; overflow: hidden;
@@ -978,6 +993,23 @@ select {
 .pcomps b { font-family: var(--font-display); font-size: 24px; }
 .pcomps small { font-size: 11px; color: var(--muted); }
 .pmodal-form { margin: 0; }
+/* Ficha personal del perfil */
+.pficha { display: grid; gap: 8px; }
+.pficha .sh { margin: 4px 0 0; }
+.pficha-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pficha-card { display: grid; gap: 3px; justify-items: start; align-content: start; padding: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; border-left-width: 3px; }
+.pficha-card.bad { border-left-color: var(--ko); }
+.pficha-card.good { border-left-color: var(--ok); }
+.pficha-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+.pficha-card b { font-size: 15px; line-height: 1.15; }
+.pficha-card small { font-size: 12px; color: var(--muted); }
+.pficha-all summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--foco-ink); padding: 4px 0; }
+.pficha-all ul { list-style: none; margin: 6px 0 0; padding: 0 4px 0 0; display: grid; gap: 6px; max-height: 260px; overflow-y: auto; }
+.pficha-all li { display: grid; grid-template-columns: 20px minmax(0, 1fr) 64px auto; align-items: center; gap: 8px; font-size: 13px; }
+.pficha-team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pficha-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.pficha-bar i { display: block; height: 100%; background: var(--ok); }
+.pficha-num { color: var(--muted); font-size: 12px; text-align: right; white-space: nowrap; }
 .pmodal-facts { margin: 0; display: grid; gap: 6px; }
 .pmodal-facts div { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); font-size: 14px; }
 .pmodal-facts dt { color: var(--muted); }

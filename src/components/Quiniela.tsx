@@ -41,7 +41,7 @@ type MatchDTO = {
   myPlenoGuess: { home: number; away: number } | null;
   picks: { playerId: string; name: string; avatar: number | null; pick: Pick; plenoGuess: { home: number; away: number } | null }[];
 };
-type RankRow = { playerId: string; name: string; avatar: number | null; points: number; delta: number; maxPts: number };
+type RankRow = { playerId: string; name: string; avatar: number | null; points: number; delta: number; maxPts: number; live: number };
 type CompetitionInfo = { code: string; name: string; short: string };
 type StateDTO = {
   me: { id: string; name: string; admin: boolean; avatar: number | null; group: string };
@@ -59,6 +59,8 @@ type StateDTO = {
   jornadaComplete: boolean;
   jornadaLive: boolean;
   liveCount: number;
+  // partidos en juego dentro del alcance de cada clasificación
+  live?: { jornada: number; general: number; combinada: number };
   rankingJornada: RankRow[];
   rankingGeneral: RankRow[];
   rankingCombinada: RankRow[];
@@ -388,18 +390,30 @@ const STAGE_SHORT: Record<string, string> = {
   Final: 'Final',
 };
 
+// "Si acabara así": suma a cada jugador los puntos provisionales de los partidos en juego, reordena y calcula
+// cuántos puestos subiría o bajaría respecto a la clasificación oficial (delta > 0 = sube).
+function projectLive(rows: RankRow[]): RankRow[] {
+  const before = (r: RankRow) => 1 + rows.filter((q) => q.points > r.points).length;
+  const after = (r: RankRow) => 1 + rows.filter((q) => q.points + q.live > r.points + r.live).length;
+  return rows
+    .map((r) => ({ ...r, points: r.points + r.live, delta: before(r) - after(r) }))
+    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
+}
+
 function Ranking({
   rows,
   meId,
   showDelta,
   crown,
   roundLabel,
+  live = false,
 }: {
   rows: RankRow[];
   meId: string;
   showDelta: boolean;
   crown: boolean;
   roundLabel: string;
+  live?: boolean; // vista "si acaban así": las filas ya traen los puntos provisionales sumados
 }) {
   const openProfile = useProfile();
   let pos = 0;
@@ -415,7 +429,7 @@ function Ranking({
         // El % es sobre lo que ESTE jugador podía sacar según sus propios pronósticos,
         // no sobre el total de partidos de la competición (si no, no cuadra si alguien
         // se ha saltado algún pronóstico o empezó a jugar más tarde).
-        const pct = r.maxPts > 0 ? Math.round((r.points / r.maxPts) * 100) : null;
+        const pct = !live && r.maxPts > 0 ? Math.round((r.points / r.maxPts) * 100) : null;
         const barWidth = (r.points / topPoints) * 100;
         return (
           // Oro, plata y bronce para el podio (los empatados comparten color); el resto, un tono neutro
@@ -449,7 +463,9 @@ function Ranking({
               {showDelta && r.delta > 0 && <span className="up">▲{r.delta}</span>}
               {showDelta && r.delta < 0 && <span className="down">▼{-r.delta}</span>}
             </span>
-            <span className="pctpts">{pct != null ? `${pct}%` : ''}</span>
+            <span className="pctpts">
+              {live && r.live > 0 ? <span className="livegain" title="Puntos provisionales de los partidos en juego">+{r.live}</span> : pct != null ? `${pct}%` : ''}
+            </span>
             <span className="pts">{r.points}</span>
           </li>
         );
@@ -546,6 +562,8 @@ export default function Quiniela() {
     if (tab === 'estadisticas') setStatsSeen(true);
   }, [tab]);
   const [scope, setScope] = useState<'jornada' | 'general' | 'combinada'>('jornada');
+  // La clasificación en directo se ofrece sola cuando hay partidos en juego; esto recuerda si se ha apagado
+  const [liveOff, setLiveOff] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   // Solo un panel abierto a la vez (los abre el menú de usuario)
@@ -703,17 +721,18 @@ export default function Quiniela() {
 
   // Refresco automático: cada 20 s si hay algo en juego, cada 5 min en una jornada ya cerrada y cada
   // minuto en el resto. Al volver a la pestaña se actualiza al momento (si los datos tienen más de 15 s).
+  const anyLive = !!data?.jornadaLive || (data?.live?.combinada ?? 0) > 0;
   useEffect(() => {
     const refresh = () => {
       if (!document.hidden) load(competition, md);
     };
-    const t = setInterval(refresh, data?.jornadaLive ? 20_000 : data?.jornadaComplete ? 300_000 : 60_000);
+    const t = setInterval(refresh, anyLive ? 20_000 : data?.jornadaComplete ? 300_000 : 60_000);
     document.addEventListener('visibilitychange', refresh);
     return () => {
       clearInterval(t);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [competition, md, load, data?.jornadaLive, data?.jornadaComplete]);
+  }, [competition, md, load, anyLive, data?.jornadaComplete]);
 
   // Reloj para las cuentas atrás
   useEffect(() => {
@@ -847,6 +866,9 @@ export default function Quiniela() {
     scope === 'jornada' ? data.rankingJornada : scope === 'general' ? data.rankingGeneral : data.rankingCombinada;
   // "J11" en jornadas normales; en eliminatorias, el nombre corto de la fase
   const roundLabel = data.matchday >= 100 ? STAGE_SHORT[data.stageLabel ?? ''] ?? data.stageLabel ?? '' : `J${data.matchday}`;
+  const liveN = data.live ? data.live[scope === 'jornada' ? 'jornada' : scope === 'general' ? 'general' : 'combinada'] : 0;
+  const showLive = liveN > 0 && !liveOff;
+  const shownRows = showLive ? projectLive(rankRows) : rankRows;
 
   async function shareRanking() {
     if (!data) return;
@@ -1094,15 +1116,30 @@ export default function Quiniela() {
                 ))}
               </button>
             </div>
-            {scope === 'jornada' && data.liveCount > 0 && (
-              <p className="hint">{data.liveCount} en juego · la clasificación puede cambiar</p>
+            {liveN > 0 && (
+              <button
+                type="button"
+                className={`livebar${showLive ? ' on' : ''}`}
+                aria-pressed={showLive}
+                onClick={() => setLiveOff((v) => !v)}
+              >
+                <span className="livedot" aria-hidden="true" />
+                <span className="livetxt">
+                  <b>{liveN === 1 ? '1 partido en juego' : `${liveN} partidos en juego`}</b>
+                  <small>{showLive ? 'Clasificación si acaban así' : 'Toca para ver cómo quedaría si acaban así'}</small>
+                </span>
+                <span className="liveswitch" aria-hidden="true">
+                  <i />
+                </span>
+              </button>
             )}
             <Ranking
-              rows={rankRows}
+              rows={shownRows}
               meId={data.me.id}
-              showDelta={scope === 'general'}
-              crown={scope === 'jornada' && data.jornadaComplete}
+              showDelta={scope === 'general' || showLive}
+              crown={scope === 'jornada' && data.jornadaComplete && !showLive}
               roundLabel={roundLabel}
+              live={showLive}
             />
             <div className="share">
               <button type="button" className="link" onClick={shareRanking}>

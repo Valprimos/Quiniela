@@ -41,6 +41,8 @@ export type TeamAcc = {
   pickedWin: number; // pronósticos que le daban la victoria
   pickedN: number; // pronósticos totales en sus partidos
   acc: Record<string, Cell>; // '*' = todo el grupo; el resto, por id de jugador
+  // Veces que cada jugador (clave: id) le dio la victoria a este equipo. Opcional por si la caché es anterior.
+  backed?: Record<string, number>;
 };
 
 export type PlayerStat = {
@@ -242,7 +244,7 @@ export function computeStats(input: {
   const teams = new Map<string, TeamAcc>();
   const team = (name: string, crest: string | null): TeamAcc => {
     let t = teams.get(name);
-    if (!t) teams.set(name, (t = { team: name, crest, pj: 0, won: 0, pickedWin: 0, pickedN: 0, acc: {} }));
+    if (!t) teams.set(name, (t = { team: name, crest, pj: 0, won: 0, pickedWin: 0, pickedN: 0, acc: {}, backed: {} }));
     return t;
   };
   const cellOf = (t: TeamAcc, who: string): Cell =>
@@ -397,6 +399,8 @@ export function computeStats(input: {
       away.pickedN++;
       if (pick === '1') home.pickedWin++;
       if (pick === '2') away.pickedWin++;
+      if (home.backed && pick === '1') home.backed[pl.id] = (home.backed[pl.id] ?? 0) + 1;
+      if (away.backed && pick === '2') away.backed[pl.id] = (away.backed[pl.id] ?? 0) + 1;
     }
     // Siamesismo: en este partido, ¿qué parejas pusieron lo mismo?
     if (pm) {

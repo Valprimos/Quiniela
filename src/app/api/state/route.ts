@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { getSession, clearSession } from '@/lib/session';
 import { currentSeason } from '@/lib/season';
 import { syncIfStale } from '@/lib/sync';
-import { isLocked, liveResultOf, pointsForPrediction, resultOf } from '@/lib/scoring';
+import { LIVE_STATUSES, isLocked, liveResultOf, pointsForPrediction, resultOf } from '@/lib/scoring';
 import { MatchLite, buildLiga, isFinished } from '@/lib/league';
 import { COMPETITIONS, isCompetitionCode, STAGE_LABEL } from '@/lib/competitions';
 import { soonestCompetition } from '@/lib/defaultCompetition';
@@ -223,10 +223,53 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // Cuántos partidos de la jornada están ahora mismo en juego (para avisar de que la
-  // clasificación puede cambiar, sin inventar una proyección de puntos por jugador).
+  // Cuántos partidos de la jornada están ahora mismo en juego.
   const jornadaHasLive = matches.some((m) => m.provisional);
   const liveCount = matches.filter((m) => m.provisional).length;
+
+  // Clasificación en directo ("si acabara así"): puntos provisionales de los partidos que se están jugando
+  // ahora mismo, en cualquier competición, con la misma regla que los puntos reales. Nunca se guardan:
+  // solo sirven para pintar la pantalla; al terminar el partido pasan a ser puntos de verdad por el camino normal.
+  const liveAll = allSeasonMatches.filter(
+    (m) => LIVE_STATUSES.includes(m.status) && liveResultOf(m.status, m.home_score, m.away_score) != null
+  );
+  const liveJornadaPts = new Map<string, number>();
+  const liveGeneralPts = new Map<string, number>();
+  const liveCombinedPts = new Map<string, number>();
+  if (liveAll.length) {
+    const { data: liveRows } = await supabase
+      .from('predictions')
+      .select('player_id,match_id,pick,pleno_home,pleno_away')
+      .in('match_id', liveAll.map((m) => m.id));
+    const liveById = new Map(liveAll.map((m) => [m.id, m]));
+    const addTo = (map: Map<string, number>, id: string, pts: number) => map.set(id, (map.get(id) ?? 0) + pts);
+    for (const p of (liveRows ?? []) as PredRow[]) {
+      if (!playerIds.has(p.player_id)) continue;
+      const m = liveById.get(p.match_id);
+      if (!m) continue;
+      const pts = pointsForPrediction({
+        result: liveResultOf(m.status, m.home_score, m.away_score),
+        pick: p.pick,
+        isPleno: m.is_pleno === true,
+        homeScore: m.home_score,
+        awayScore: m.away_score,
+        plenoHome: p.pleno_home,
+        plenoAway: p.pleno_away,
+      });
+      if (!pts) continue;
+      addTo(liveCombinedPts, p.player_id, pts);
+      if (m.competition === competition) {
+        addTo(liveGeneralPts, p.player_id, pts);
+        if (m.matchday === matchday) addTo(liveJornadaPts, p.player_id, pts);
+      }
+    }
+  }
+  // Partidos en juego dentro del alcance de cada clasificación (para saber cuándo ofrecer la vista en directo)
+  const liveCounts = {
+    jornada: liveAll.filter((m) => m.competition === competition && m.matchday === matchday).length,
+    general: liveAll.filter((m) => m.competition === competition).length,
+    combinada: liveAll.length,
+  };
 
   // Máximo de puntos que podía sacar cada jugador según sus PROPIOS pronósticos sobre
   // partidos ya terminados (no el total de partidos de la competición, que puede incluir
@@ -260,7 +303,12 @@ export async function GET(req: NextRequest) {
   const prevPos = positions(before);
   const currentStarted = allMatches.some((m) => m.matchday === current && isFinished(m));
 
-  const rank = (scores: Map<string, number>, withDelta: boolean, maxPts: Map<string, number>) =>
+  const rank = (
+    scores: Map<string, number>,
+    withDelta: boolean,
+    maxPts: Map<string, number>,
+    livePts: Map<string, number>
+  ) =>
     playerRows
       .map((p) => ({
         playerId: p.id,
@@ -272,6 +320,8 @@ export async function GET(req: NextRequest) {
         // máximo de puntos que podía sacar ESTE jugador según sus propios pronósticos,
         // no el total de partidos de la competición (para el % individual)
         maxPts: maxPts.get(p.id) ?? 0,
+        // puntos provisionales que sumaría si los partidos en juego acabaran como van ahora
+        live: livePts.get(p.id) ?? 0,
       }))
       .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
 
@@ -284,6 +334,7 @@ export async function GET(req: NextRequest) {
       points: combined.get(p.id) ?? 0,
       delta: 0,
       maxPts: combinedMaxPts.get(p.id) ?? 0,
+      live: liveCombinedPts.get(p.id) ?? 0,
     }))
     .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
 
@@ -310,8 +361,9 @@ export async function GET(req: NextRequest) {
     jornadaComplete: matches.length > 0 && matches.every((m) => m.result),
     jornadaLive: jornadaHasLive,
     liveCount,
-    rankingJornada: rank(jornada, false, jornadaMaxPts),
-    rankingGeneral: rank(total, true, generalMaxPts),
+    live: liveCounts,
+    rankingJornada: rank(jornada, false, jornadaMaxPts, liveJornadaPts),
+    rankingGeneral: rank(total, true, generalMaxPts, liveGeneralPts),
     rankingCombinada,
     syncNotice: syncResult.find((s) => s.error)?.error
       ? syncResult.filter((s) => s.error).map((s) => `${s.competition}: ${s.error}`)
