@@ -157,7 +157,6 @@ function Equipos({ stats, onTeamClick }: { stats: StatsDTO; onTeamClick: (name: 
         </ul>
       )}
 
-      <p className="hint">Toca una columna para ordenar.</p>
       <div className="agrid head">
         <span />
         {head('total', 'Total')}
@@ -236,7 +235,6 @@ function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: stri
           </li>
         ))}
       </ol>
-      <p className="hint">Calculada con los resultados de la app.</p>
     </>
   );
 }
@@ -533,13 +531,6 @@ export default function Stats({
             {COMPETITIONS.map((c) => c.short).join(' + ')}
           </button>
         </div>
-      )}
-
-      {view === 'jugadores' && (
-        <p className="hint">
-          Aciertos cuenta los signos 1/X/2 correctos. Puntos aplica la regla del Pleno al 15 (3 puntos solo por marcador exacto).
-          Para comparar con la clasificación, mira Puntos con el mismo filtro de arriba: solo la competición, o La Liga + Champions.
-        </p>
       )}
 
       {cur.failed && !stats && <p className="notice">No se pudieron cargar las estadísticas.</p>}

@@ -47,7 +47,12 @@ function buildAwards(stats: StatsDTO, meId: string): Award[][] {
     });
   };
   add('lider', 'Líder', leaders(ps, (p) => p.points, 1), String, 'puntos');
-  add('acertador', 'Más acertador', leaders(ps, (p) => (p.played >= 8 ? p.pct : null), 0), (v) => `${fmt(v)}%`, 'de acierto');
+  // Mínimo de partidos para optar a "Más acertador": 8 como mucho, pero nunca más de lo que ha jugado el que más
+  // lleva. Así un 100% con 2 partidos no cuenta si otros llevan 30 (muestra pequeña), pero sí cuando todos
+  // llevan pocos (por ejemplo, la Champions al principio), en vez de quedarse sin premio.
+  const maxPlayed = Math.max(0, ...ps.map((p) => p.played));
+  const minForAccuracy = Math.max(1, Math.min(8, maxPlayed));
+  add('acertador', 'Más acertador', leaders(ps, (p) => (p.played >= minForAccuracy ? p.pct : null), 0), (v) => `${fmt(v)}%`, 'de acierto');
   add('racha', 'Mejor racha', leaders(ps, (p) => p.bestStreak, 2), String, 'aciertos seguidos');
   add('mala', 'Mala racha', leaders(ps, (p) => p.worstStreak, 3), String, 'fallos seguidos');
   const top = stats.siamese[0];
