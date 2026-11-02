@@ -5,6 +5,7 @@ import { COMPETITIONS } from '@/lib/competitions';
 import CompLogo from './CompLogo';
 import { RowsSkeleton } from './Skeleton';
 import XgAdmin from './XgAdmin';
+import SeasonAdmin from './SeasonAdmin';
 
 type TeamNameGroup = { key: string; names: string[]; seasons: number[]; matches: number };
 
@@ -825,13 +826,14 @@ function SyncPanel() {
   );
 }
 
-type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'pendientes' | 'pleno' | 'sync' | 'jornada' | 'temporada' | 'historial' | 'copia' | 'equipos' | 'xg';
+type Tool = 'jugadores' | 'resultados' | 'pronosticos' | 'pendientes' | 'pleno' | 'sync' | 'jornada' | 'temporada' | 'historial' | 'copia' | 'equipos' | 'xg' | 'predicciones';
 const TOOLS: { id: Tool; title: string; hint: string }[] = [
   { id: 'jugadores', title: 'Jugadores y PIN', hint: 'Cambiar PIN, dar admin, expulsar' },
   { id: 'resultados', title: 'Resultados', hint: 'Corregir el resultado de un partido' },
   { id: 'pronosticos', title: 'Pronósticos', hint: 'Poner o cambiar lo de un jugador' },
   { id: 'pendientes', title: 'Sin pronosticar', hint: 'Ver quién falta en una jornada' },
   { id: 'pleno', title: 'Pleno al 15', hint: 'Elegir a mano o corregir jornadas' },
+  { id: 'predicciones', title: 'Predicciones de temporada', hint: 'Cierre, tramos, resultados y Primo de Oro' },
   { id: 'sync', title: 'Sincronización', hint: 'Ver y forzar la actualización de resultados' },
   { id: 'jornada', title: 'Bloquear jornada', hint: 'Cerrar o abrir los pronósticos' },
   { id: 'temporada', title: 'Archivar temporada', hint: 'Guardar la clasificación final' },
@@ -1109,6 +1111,8 @@ export default function AdminPanel({
       )}
 
       {tool === 'xg' && <XgAdmin onChanged={onChanged} />}
+
+      {tool === 'predicciones' && <SeasonAdmin onChanged={onChanged} />}
 
       {tool === 'equipos' && (
         <>

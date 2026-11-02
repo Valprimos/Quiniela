@@ -19,6 +19,8 @@ import TeamModal from './TeamModal';
 import H2HModal from './H2HModal';
 import Archive from './Archive';
 import AdminPanel from './AdminPanel';
+import SeasonPicks from './SeasonPicks';
+import SeasonChip, { useSeasonBrief } from './SeasonChip';
 
 type Pick = '1' | 'X' | '2';
 type Mark = 'G' | 'E' | 'P';
@@ -610,6 +612,8 @@ export default function Quiniela() {
       document.removeEventListener('keydown', key);
     };
   }, [panel]);
+  const [showSeason, setShowSeason] = useState(false);
+  const season = useSeasonBrief(data?.me.id ?? null);
   const [showArchive, setShowArchive] = useState(false);
   const [teamStack, setTeamStack] = useState<{ name: string; crest: string | null }[]>([]);
   const openTeamModal = (name: string, crest: string | null) => setTeamStack([{ name, crest }]);
@@ -915,6 +919,8 @@ export default function Quiniela() {
           onAdmin={() => openPanel('admin')}
           onAddLeague={() => openPanel('league')}
           onInvite={() => openPanel('invite')}
+          onSeason={() => setShowSeason(true)}
+          seasonBadge={season.badge}
           onLeave={logout}
         />
       </header>
@@ -932,6 +938,8 @@ export default function Quiniela() {
           </button>
         ))}
       </div>
+
+      <SeasonChip brief={season.brief} now={now} onOpen={() => setShowSeason(true)} />
 
       <div ref={panelRef}>
       {showProfile && (
@@ -1161,6 +1169,13 @@ export default function Quiniela() {
           </div>
         )}
       </div>
+
+      {showSeason && (
+        <SeasonPicks
+          onClose={() => setShowSeason(false)}
+          onChanged={season.refresh}
+        />
+      )}
 
       {profile && (
         <PlayerProfileModal

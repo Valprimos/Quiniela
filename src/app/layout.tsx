@@ -3,6 +3,7 @@ import { Barlow_Condensed, Figtree } from 'next/font/google';
 import './globals.css';
 import './theme-field.css';
 import './focos.css';
+import './season-picks.css';
 import { themeInitScript } from '@/lib/theme';
 
 const display = Barlow_Condensed({

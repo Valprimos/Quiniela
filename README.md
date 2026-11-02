@@ -135,6 +135,33 @@ pandilla, desaparece solo de la lista. Las fotos se guardan en la columna `avata
 ejecuta `supabase/migration-5-perfil.sql` una vez (hasta entonces la app funciona igual, pero sin
 fotos). Los avisos del móvil van a un solo perfil por dispositivo: el último que los active.
 
+## Predicciones de temporada
+
+Un aviso fino bajo el selector de competición (y una entrada en el menú de usuario) abre la ventana
+**Predicciones de temporada**. Se rellena una vez y se guarda sola.
+
+- **Clasificación:** cada jugador ordena los 20 equipos (con flechas, o tocando el número de un equipo
+  para llevarlo a otra posición). Los tramos clave llevan color: Champions, Europa League, Conference y descenso.
+- **Puntos de la clasificación:** equipo en su posición exacta, 3. En un tramo clave, acertar que acaba dentro
+  de ese tramo pero no en su posición, 3; y si además es la posición exacta, 5 (en total, no se suman).
+- **Premios:** Pichichi, máximo asistente y Zamora, en Liga y en Champions (3 puntos cada uno), y Bota de Oro (5).
+  Se escribe el nombre; vale con el apellido y da igual mayúsculas y tildes.
+- **Trofeo Primo de Oro:** cada jugador propone en privado a quien crea que hará mejor temporada. Al cerrar el
+  plazo se publica la lista de candidatos (sin decir quién propuso a quién). Al acabar la temporada, el admin abre
+  la votación final entre esos candidatos (voto secreto, sin votarse a uno mismo) y la cierra para publicar al ganador.
+  No da puntos.
+- **Cierre:** este año, el viernes 6 de noviembre de 2026 a las 20:59 (hora de Madrid). Hasta entonces nadie ve lo
+  que ha puesto nadie (el servidor no lo envía); al cerrar, la pestaña **Ranking** muestra las predicciones de todos
+  con sus puntos. Los años siguientes cierra 1 minuto antes de que empiece la jornada 1, salvo que el admin fije
+  otra hora. El valor de este año está en `DEFAULT_DEADLINES` (`src/lib/seasonPicks.ts`).
+- **Ranking:** puntos de clasificación + premios, comparados con la clasificación real (provisional con los
+  resultados de hoy hasta que acabe la liga, o la oficial si el admin la guarda).
+- **Admin > Predicciones de temporada:** cambiar el cierre, ajustar los tramos clave (por si cambia el reparto
+  europeo), guardar una clasificación final oficial (para desempates del reglamento), escribir los ganadores de
+  los premios y llevar las fases del Primo de Oro.
+
+Requiere ejecutar `supabase/migration-10-predicciones-temporada.sql` una vez (hasta entonces la sección no aparece).
+
 ## Avisos de jornada (PWA)
 
 Cada jugador puede pulsar **Avisos** en la cabecera para activar notificaciones en ese dispositivo
