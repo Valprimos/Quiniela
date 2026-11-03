@@ -54,7 +54,7 @@ export function zoneOf(pos: number, zones: Zones): ZoneKey | null {
 
 // ---------- Premios de jugadores ----------
 
-export type AwardDef = { key: string; label: string; group: 'liga' | 'champions' | 'mundial'; pts: number; goalkeeper?: boolean; team?: boolean };
+export type AwardDef = { key: string; label: string; group: 'liga' | 'champions' | 'mundial'; pts: number; goalkeeper?: boolean };
 
 export const AWARDS: AwardDef[] = [
   { key: 'liga_pichichi', label: 'Pichichi', group: 'liga', pts: 3 },
@@ -63,11 +63,18 @@ export const AWARDS: AwardDef[] = [
   { key: 'champions_pichichi', label: 'Máximo goleador', group: 'champions', pts: 3 },
   { key: 'champions_asistente', label: 'Máximo asistente', group: 'champions', pts: 3 },
   { key: 'champions_portero', label: 'Mejor portero', group: 'champions', pts: 3, goalkeeper: true },
-  { key: 'champions_campeon', label: 'Campeón', group: 'champions', pts: 3, team: true },
-  { key: 'champions_finalista', label: 'Finalista', group: 'champions', pts: 3, team: true },
   { key: 'bota_oro', label: 'Bota de Oro', group: 'mundial', pts: 5 },
   { key: 'mvp', label: 'MVP de la temporada', group: 'mundial', pts: 5 },
 ];
+
+export const CHAMPIONS_PICKS = [
+  { key: 'champions_finalista1', label: 'Finalista 1', pts: 3 },
+  { key: 'champions_finalista2', label: 'Finalista 2', pts: 3 },
+  { key: 'champions_campeon', label: 'Campeón', pts: 5 },
+] as const;
+
+export const CHAMPIONS_RESULT_KEYS = ['champions_campeon', 'champions_finalistas'] as const;
+export const AWARD_RESULT_KEYS = [...AWARDS.map((a) => a.key), ...CHAMPIONS_RESULT_KEYS];
 
 export const AWARD_GROUP_LABEL: Record<AwardDef['group'], string> = {
   liga: 'La Liga',
@@ -75,7 +82,8 @@ export const AWARD_GROUP_LABEL: Record<AwardDef['group'], string> = {
   mundial: 'Mundial',
 };
 
-export const AWARD_KEYS = AWARDS.map((a) => a.key);
+export const INDIVIDUAL_AWARD_KEYS = AWARDS.map((a) => a.key);
+export const AWARD_KEYS = [...INDIVIDUAL_AWARD_KEYS, ...CHAMPIONS_PICKS.map((a) => a.key)];
 
 // ---------- Nombres ----------
 
@@ -153,7 +161,7 @@ export function scoreAwards(picks: Record<string, string> | null | undefined, wi
     const pick = cleanName(picks?.[a.key]);
     const w = (winners?.[a.key] ?? []).filter(Boolean);
     const decided = w.length > 0;
-    const hit = !!pick && decided && w.some((x) => (a.team ? sameTeam(pick, x) : sameName(pick, x)));
+    const hit = !!pick && decided && w.some((x) => sameName(pick, x));
     const pts = hit ? a.pts : 0;
     points += pts;
     rows.push({ key: a.key, pick, pts, hit, decided });
@@ -161,10 +169,22 @@ export function scoreAwards(picks: Record<string, string> | null | undefined, wi
   return { points, rows };
 }
 
+export function scoreChampions(picks: Record<string, string> | null | undefined, winners: Record<string, string[]> | null | undefined) {
+  const finalists = (winners?.champions_finalistas ?? []).filter(Boolean);
+  const rows = CHAMPIONS_PICKS.map((p) => {
+    const pick = cleanName(picks?.[p.key]);
+    const actual = p.key === 'champions_campeon' ? (winners?.champions_campeon ?? []).filter(Boolean) : finalists;
+    const decided = actual.length > 0;
+    const hit = !!pick && decided && actual.some((team) => sameTeam(pick, team));
+    return { key: p.key, pick, pts: hit ? p.pts : 0, hit, decided };
+  });
+  return { points: rows.reduce((sum, row) => sum + row.pts, 0), rows };
+}
+
 export function maxPoints(zones: Zones, teamCount = 20): { ranking: number; awards: number; total: number } {
   let ranking = 0;
   for (let p = 1; p <= teamCount; p++) ranking += zoneOf(p, zones) ? PTS_ZONE_EXACT : PTS_EXACT;
-  const awards = AWARDS.reduce((s, a) => s + a.pts, 0);
+  const awards = AWARDS.reduce((s, a) => s + a.pts, 0) + CHAMPIONS_PICKS.reduce((s, a) => s + a.pts, 0);
   return { ranking, awards, total: ranking + awards };
 }
 

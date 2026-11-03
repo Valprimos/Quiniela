@@ -188,6 +188,17 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
           ))}
         </div>
       ))}
+      <div className="sp-admin-awards">
+        <b>Resultado de Champions</b>
+        <label className="sp-award">
+          <span>Campeón</span>
+          <input value={winners.champions_campeon ?? ''} maxLength={120} onChange={(e) => setWinners({ ...winners, champions_campeon: e.target.value })} />
+        </label>
+        <label className="sp-award">
+          <span>Finalistas (separados por punto y coma)</span>
+          <input value={winners.champions_finalistas ?? ''} maxLength={120} onChange={(e) => setWinners({ ...winners, champions_finalistas: e.target.value })} />
+        </label>
+      </div>
       <button type="button" className="seg-btn" disabled={busy} onClick={() => run({ action: 'awards', awards: winners }, 'Premios guardados.')}>
         Guardar premios
       </button>

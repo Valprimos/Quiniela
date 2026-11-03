@@ -32,7 +32,7 @@ export async function loadSettings(supabase: Supa, gid: string, season: number) 
 
 export type DeadlineInfo = { iso: string | null; source: 'admin' | 'default' | 'jornada1' | 'none' };
 
-// 1) el que fije el admin; 2) el de este año (6 nov, 20:59); 3) 1 minuto antes del primer partido de la jornada 1
+// 1) el que fije el admin; 2) el de este año (6 nov, 21:00); 3) 1 minuto antes del primer partido de la jornada 1
 export function resolveDeadline(settings: SettingsRow | null, season: number, matches: MatchLite[]): DeadlineInfo {
   if (settings?.deadline) return { iso: new Date(settings.deadline).toISOString(), source: 'admin' };
   const fixed = DEFAULT_DEADLINES[season];
@@ -57,6 +57,20 @@ export async function loadLigaMatches(supabase: Supa, season: number): Promise<M
       .order('id')
       .range(from, to)
   );
+}
+
+export async function loadChampionsTeams(supabase: Supa, season: number): Promise<string[]> {
+  const { data } = await supabase
+    .from('matches')
+    .select('home_name,away_name')
+    .eq('competition', 'CL')
+    .eq('season', season);
+  const names = new Set<string>();
+  for (const match of data ?? []) {
+    if (match.home_name) names.add(match.home_name);
+    if (match.away_name) names.add(match.away_name);
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, 'es'));
 }
 
 export type Team = { name: string; crest: string | null };

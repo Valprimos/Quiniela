@@ -9,6 +9,7 @@ import {
   AWARD_GROUP_LABEL,
   AwardDef,
   AwardScore,
+  CHAMPIONS_PICKS,
   PTS_EXACT,
   PTS_ZONE,
   PTS_ZONE_EXACT,
@@ -45,8 +46,10 @@ type Data = {
   zones: Zones;
   maxPoints: { ranking: number; awards: number; total: number };
   awardsDef: AwardDef[];
+  championsPickDef: typeof CHAMPIONS_PICKS;
+  championsTeams: string[];
   mine: { ranking: string[] | null; awards: Record<string, string> };
-  progress: { ranking: boolean; awards: boolean; done: number; total: number };
+  progress: { ranking: boolean; awards: boolean; champions: boolean; done: number; total: number };
   pending: string[];
   members: string[];
   me: { id: string; name: string };
@@ -54,12 +57,13 @@ type Data = {
   everyone: Everyone[] | null;
 };
 
-type Tab = 'clasificacion' | 'premios' | 'ranking';
+type Tab = 'clasificacion' | 'premios' | 'champions' | 'ranking';
 type Save = 'idle' | 'saving' | 'saved' | 'error';
 
 const TABS: [Tab, string][] = [
   ['clasificacion', 'Clasificación'],
   ['premios', 'Premios individuales'],
+  ['champions', 'Champions'],
   ['ranking', 'Ranking'],
 ];
 
@@ -172,6 +176,17 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
     touch();
     setAwards((a) => ({ ...a, [key]: v }));
   };
+  const changeChampionsPick = (key: string, value: string) => {
+    touch();
+    setAwards((current) => {
+      const next = { ...current, [key]: value };
+      const finalists = [next.champions_finalista1, next.champions_finalista2].filter(Boolean);
+      if (key !== 'champions_campeon' && next.champions_campeon && !finalists.includes(next.champions_campeon)) {
+        next.champions_campeon = '';
+      }
+      return next;
+    });
+  };
   const close = () => {
     void persist(true);
     onClose();
@@ -187,14 +202,15 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
 
   // El progreso se calcula con el borrador, para que las casillas reaccionen al momento
   const live = useMemo(() => {
-    if (!data) return { ranking: false, awards: false, done: 0 };
+    if (!data) return { ranking: false, awards: false, champions: false, done: 0 };
     const ranking = rankTouched;
     const aw = data.awardsDef.every((a) => (awards[a.key] ?? '').trim());
-    return { ranking, awards: aw, done: Number(ranking) + Number(aw) };
+    const champions = data.championsPickDef.every((pick) => (awards[pick.key] ?? '').trim());
+    return { ranking, awards: aw, champions, done: Number(ranking) + Number(aw) + Number(champions) };
   }, [data, rankTouched, awards]);
 
   const left = data?.deadline ? new Date(data.deadline).getTime() - now : null;
-  const urgent = editable && left != null && left < 24 * 3600e3 && live.done < 2;
+  const urgent = editable && left != null && left < 24 * 3600e3 && live.done < 3;
 
   return (
     <div
@@ -245,6 +261,7 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
               {label}
               {editable && k === 'clasificacion' && <i className={live.ranking ? 'ok' : ''} aria-hidden="true" />}
               {editable && k === 'premios' && <i className={live.awards ? 'ok' : ''} aria-hidden="true" />}
+              {editable && k === 'champions' && <i className={live.champions ? 'ok' : ''} aria-hidden="true" />}
             </button>
           ))}
         </div>
@@ -268,6 +285,9 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
           )}
           {data && tab === 'premios' && (
             <PremiosTab data={data} editable={editable} awards={awards} onChange={changeAward} />
+          )}
+          {data && tab === 'champions' && (
+            <ChampionsTab data={data} editable={editable} awards={awards} onChange={changeChampionsPick} />
           )}
           {data && tab === 'ranking' && <RankingTab data={data} />}
         </div>
@@ -306,7 +326,7 @@ function Rules({ data }: { data: Data }) {
           en total (no se suman).
         </li>
         <li>
-          Premios individuales, campeón y finalista de Champions: <b>3</b> puntos cada uno; Bota de Oro mundial: <b>5</b>.
+          Premios individuales y cada finalista de Champions: <b>3</b> puntos; campeón de Champions, Bota de Oro y MVP: <b>5</b>.
         </li>
         <li>
           * Las plazas de Champions y Europa League pueden variar según el rendimiento europeo de LaLiga.
@@ -314,7 +334,6 @@ function Rules({ data }: { data: Data }) {
         <li>
           Máximo posible: <b>{data.maxPoints.total}</b> ({data.maxPoints.ranking} de clasificación y {data.maxPoints.awards} de premios).
         </li>
-        <li>MVP de la temporada: <b>5</b> puntos.</li>
       </ul>
     </details>
   );
@@ -382,7 +401,7 @@ function PremiosTab({
   return (
     <>
       <h3>Premios individuales</h3>
-      {editable && <p className="sp-hint">Escribe el nombre del jugador o del equipo para campeón y finalista.</p>}
+      {editable && <p className="sp-hint">Escribe el nombre del jugador.</p>}
       {groups.map(({ g, items }) => (
         <section key={g} className="sp-awards">
           <h3>{AWARD_GROUP_LABEL[g]}</h3>
@@ -401,7 +420,7 @@ function PremiosTab({
                     value={awards[a.key] ?? ''}
                     maxLength={60}
                     autoComplete="off"
-                    placeholder={a.team ? 'Equipo' : a.goalkeeper ? 'Portero' : 'Jugador'}
+                    placeholder={a.goalkeeper ? 'Portero' : 'Jugador'}
                     onChange={(e) => onChange(a.key, e.target.value)}
                   />
                 ) : (
@@ -423,6 +442,76 @@ function PremiosTab({
         </section>
       ))}
     </>
+  );
+}
+
+function ChampionsTab({
+  data,
+  editable,
+  awards,
+  onChange,
+}: {
+  data: Data;
+  editable: boolean;
+  awards: Record<string, string>;
+  onChange: (key: string, value: string) => void;
+}) {
+  const first = awards.champions_finalista1 ?? '';
+  const second = awards.champions_finalista2 ?? '';
+  const champion = awards.champions_campeon ?? '';
+  const selected = [first, second].filter(Boolean);
+  const noTeams = data.championsTeams.length === 0;
+
+  return (
+    <section className="sp-cl-picks">
+      <header className="sp-cl-hero">
+        <span aria-hidden="true">🏆</span>
+        <div>
+          <h3>Final de la Champions</h3>
+          <p>Elige los dos finalistas y quién levantará la copa.</p>
+        </div>
+      </header>
+      {noTeams ? (
+        <p className="sp-hint">Todavía no hay equipos de Champions cargados para esta temporada.</p>
+      ) : (
+        <div className="sp-cl-grid">
+          <label className="sp-cl-field">
+            <span>Finalista 1 <b>+3</b></span>
+            <select
+              value={first}
+              disabled={!editable}
+              onChange={(e) => onChange('champions_finalista1', e.target.value)}
+            >
+              <option value="">Elige equipo</option>
+              {data.championsTeams.filter((team) => team !== second).map((team) => <option key={team}>{team}</option>)}
+            </select>
+          </label>
+          <label className="sp-cl-field">
+            <span>Finalista 2 <b>+3</b></span>
+            <select
+              value={second}
+              disabled={!editable}
+              onChange={(e) => onChange('champions_finalista2', e.target.value)}
+            >
+              <option value="">Elige equipo</option>
+              {data.championsTeams.filter((team) => team !== first).map((team) => <option key={team}>{team}</option>)}
+            </select>
+          </label>
+          <label className="sp-cl-field champion">
+            <span>Campeón <b>+5</b></span>
+            <select
+              value={champion}
+              disabled={!editable || selected.length !== 2}
+              onChange={(e) => onChange('champions_campeon', e.target.value)}
+            >
+              <option value="">Elige entre los finalistas</option>
+              {selected.map((team) => <option key={team}>{team}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
+      <p className="sp-cl-note">Sumas 3 puntos por cada finalista acertado. Si también eliges al campeón como finalista, sumas 5 puntos más.</p>
+    </section>
   );
 }
 
@@ -492,12 +581,15 @@ function RankingTab({ data }: { data: Data }) {
                     <p className="muted">Sin clasificación.</p>
                   )}
                   <ul className="sp-aw-list">
-                    {data.awardsDef.map((a) => {
+                    {[
+                      ...data.awardsDef.map((a) => ({ ...a, groupLabel: AWARD_GROUP_LABEL[a.group] })),
+                      ...data.championsPickDef.map((a) => ({ ...a, groupLabel: 'Champions League' })),
+                    ].map((a) => {
                       const r = e.awardRows.find((x) => x.key === a.key);
                       return (
                         <li key={a.key} className={r?.hit ? 'hit' : r?.decided ? 'miss' : ''}>
                           <span>
-                            {AWARD_GROUP_LABEL[a.group]} · {a.label}
+                            {a.groupLabel} · {a.label}
                           </span>
                           <b>{e.awards[a.key] || '—'}</b>
                           {r?.hit && <em>+{r.pts}</em>}

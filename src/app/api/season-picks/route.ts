@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { currentSeason } from '@/lib/season';
-import { AWARDS, AWARD_KEYS, cleanName, maxPoints, sameTeam, scoreAwards, scoreRanking } from '@/lib/seasonPicks';
+import { AWARDS, AWARD_KEYS, CHAMPIONS_PICKS, INDIVIDUAL_AWARD_KEYS, cleanName, maxPoints, sameTeam, scoreAwards, scoreChampions, scoreRanking } from '@/lib/seasonPicks';
 import {
   effectiveOrder,
   isClosed,
+  loadChampionsTeams,
   loadLigaMatches,
   loadSettings,
   missingTable,
@@ -25,14 +26,15 @@ type PickRow = {
   primo: string | null;
 };
 
-const awardsFilled = (a: Record<string, string> | null | undefined) => AWARD_KEYS.filter((k) => cleanName(a?.[k])).length;
+const awardsFilled = (a: Record<string, string> | null | undefined, keys = AWARD_KEYS) => keys.filter((k) => cleanName(a?.[k])).length;
 
 // Estado de un jugador: clasificación y premios.
 function progress(row: PickRow | null | undefined, teamCount: number) {
   const ranking = !!row?.ranking && row.ranking.length === teamCount && teamCount > 0;
-  const picks = { ...row?.awards, mvp: row?.awards?.mvp ?? row?.primo ?? '' };
-  const awards = awardsFilled(picks) === AWARD_KEYS.length;
-  return { ranking, awards, done: Number(ranking) + Number(awards), total: 2 };
+  const picks: Record<string, string> = { ...row?.awards, mvp: row?.awards?.mvp ?? row?.primo ?? '' };
+  const awards = awardsFilled(picks, INDIVIDUAL_AWARD_KEYS) === INDIVIDUAL_AWARD_KEYS.length;
+  const champions = CHAMPIONS_PICKS.every((pick) => !!cleanName(picks[pick.key]));
+  return { ranking, awards, champions, done: Number(ranking) + Number(awards) + Number(champions), total: 3 };
 }
 
 export async function GET(req: NextRequest) {
@@ -73,6 +75,8 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  const championsTeams = await loadChampionsTeams(supabase, season);
+
   // Jugadores de la pandilla (con foto si existe la columna)
   const withAvatar = await supabase.from('players').select('id,name,avatar_updated_at').eq('group_id', session.gid);
   const playerRows: { id: string; name: string; avatar_updated_at?: string | null }[] = withAvatar.error
@@ -100,7 +104,7 @@ export async function GET(req: NextRequest) {
 
   // Quién falta por completar (solo nombres: nunca el contenido)
   const pending = playerRows
-    .filter((p) => progress(byPlayer.get(p.id), teams.length).done < 2)
+    .filter((p) => progress(byPlayer.get(p.id), teams.length).done < 3)
     .map((p) => p.name)
     .sort((a, b) => a.localeCompare(b, 'es'));
 
@@ -112,6 +116,8 @@ export async function GET(req: NextRequest) {
           const r = scoreRanking(row?.ranking, real.order, zones);
           const awardPicks = { ...row?.awards, mvp: row?.awards?.mvp ?? row?.primo ?? '' };
           const a = scoreAwards(awardPicks, winners);
+          const champions = scoreChampions(awardPicks, winners);
+          const awardRows = [...a.rows, ...champions.rows];
           return {
             playerId: p.id,
             name: p.name,
@@ -120,10 +126,10 @@ export async function GET(req: NextRequest) {
             ranking: row?.ranking ?? null,
             teamRows: r.rows,
             awards: awardPicks,
-            awardRows: a.rows,
+            awardRows,
             rankingPoints: r.points,
-            awardPoints: a.points,
-            total: r.points + a.points,
+            awardPoints: a.points + champions.points,
+            total: r.points + a.points + champions.points,
           };
         })
         .sort((x, y) => Number(y.hasPicks) - Number(x.hasPicks) || y.total - x.total || x.name.localeCompare(y.name, 'es'))
@@ -147,6 +153,8 @@ export async function GET(req: NextRequest) {
     zones,
     maxPoints: maxPts,
     awardsDef: AWARDS,
+    championsPickDef: CHAMPIONS_PICKS,
+    championsTeams,
     mine: {
       ranking: mine?.ranking ?? null,
       awards: { ...mine?.awards, mvp: mine?.awards?.mvp ?? mine?.primo ?? '' },
@@ -183,6 +191,7 @@ export async function PUT(req: NextRequest) {
   const deadline = resolveDeadline(settings, season, matches);
   if (isClosed(deadline)) return fail('Las predicciones ya están cerradas.', 409);
   const teams = teamsOf(matches);
+  const championsTeams = await loadChampionsTeams(supabase, season);
 
   const { data: existingRow } = await supabase
     .from('season_picks')
@@ -216,10 +225,23 @@ export async function PUT(req: NextRequest) {
     for (const k of AWARD_KEYS) {
       if (k in body.awards) {
         const v = cleanName(body.awards[k]);
-        if (v) awards[k] = v;
-        else delete awards[k];
+        if (!v) {
+          delete awards[k];
+          continue;
+        }
+        if (CHAMPIONS_PICKS.some((pick) => pick.key === k)) {
+          const team = championsTeams.find((name) => sameTeam(name, v));
+          if (!team) return fail('Elige un equipo de la Champions de esta temporada.');
+          awards[k] = team;
+        } else awards[k] = v;
       }
     }
+  }
+
+  const finalists = [awards.champions_finalista1, awards.champions_finalista2].filter(Boolean);
+  if (finalists.length === 2 && sameTeam(finalists[0], finalists[1])) return fail('Elige dos finalistas distintos.');
+  if (awards.champions_campeon && !finalists.some((team) => sameTeam(team, awards.champions_campeon!))) {
+    return fail('Elige al campeón entre los dos finalistas.');
   }
 
   const { error } = await supabase.from('season_picks').upsert(

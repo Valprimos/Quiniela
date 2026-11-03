@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
-import { AWARD_KEYS, ZONE_ORDER, cleanName, sameTeam } from '@/lib/seasonPicks';
+import { AWARD_RESULT_KEYS, ZONE_ORDER, cleanName, sameTeam } from '@/lib/seasonPicks';
 import {
   SettingsRow,
   loadLigaMatches,
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   } else if (action === 'awards') {
     if (!body.awards || typeof body.awards !== 'object') return fail('Premios no válidos.');
     const awards: Record<string, string[]> = { ...(next.results?.awards ?? {}) };
-    for (const k of AWARD_KEYS) {
+    for (const k of AWARD_RESULT_KEYS) {
       if (!(k in body.awards)) continue;
       const names = String(body.awards[k] ?? '')
         .split(/[;,\n]/)

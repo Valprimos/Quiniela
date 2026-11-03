@@ -34,7 +34,7 @@ export function useSeasonBrief(meId: string | null) {
 
   let badge: string | null = null;
   if (brief?.available) {
-    if (!brief.closed && (brief.done ?? 0) < (brief.total ?? 2)) badge = `${(brief.total ?? 2) - (brief.done ?? 0)} por hacer`;
+    if (!brief.closed && (brief.done ?? 0) < (brief.total ?? 3)) badge = `${(brief.total ?? 3) - (brief.done ?? 0)} por hacer`;
   }
   return { brief, badge, refresh };
 }
@@ -43,7 +43,7 @@ export function useSeasonBrief(meId: string | null) {
 export default function SeasonChip({ brief, now, onOpen }: { brief: SeasonBrief | null; now: number; onOpen: () => void }) {
   if (!brief?.available) return null;
 
-  const total = brief.total ?? 2;
+  const total = brief.total ?? 3;
   const done = brief.done ?? 0;
   const left = brief.deadline ? new Date(brief.deadline).getTime() - now : null;
   const closed = !!brief.closed || (left != null && left <= 0);
