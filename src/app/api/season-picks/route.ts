@@ -78,6 +78,7 @@ export async function GET(req: NextRequest) {
   const playerRows: { id: string; name: string; avatar_updated_at?: string | null }[] = withAvatar.error
     ? ((await supabase.from('players').select('id,name').eq('group_id', session.gid)).data ?? [])
     : (withAvatar.data ?? []);
+  const memberIds = playerRows.map((p) => p.id);
   const avatarOf = (id: string) => {
     const ts = playerRows.find((p) => p.id === id)?.avatar_updated_at;
     return ts ? new Date(ts).getTime() : null;
