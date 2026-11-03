@@ -87,6 +87,8 @@
 .sp-row.z-europa { --zc: var(--z-europa); }
 .sp-row.z-conference { --zc: var(--z-conference); }
 .sp-row.z-relegation { --zc: var(--z-relegation); }
+.sp-row.is-dragging { z-index: 2; opacity: 0.8; border-color: var(--foco); box-shadow: 0 4px 14px rgba(0,0,0,.16); }
+.sp-row.is-drop-target:not(.is-dragging) { outline: 2px solid var(--foco); outline-offset: 1px; }
 .sp-row.z-first { margin-top: 14px; }
 .sp-row.z-first:first-child { margin-top: 12px; }
 .sp-zone-tag {
@@ -102,6 +104,10 @@
 .sp-crest { flex: none; object-fit: contain; display: inline-block; }
 .sp-team { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-arrows { display: flex; gap: 2px; flex: none; }
+.sp-drag { width: 28px; height: 32px; flex: none; display: grid; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--muted); font-size: 19px; line-height: 1; cursor: grab; touch-action: none; }
+.sp-drag:hover:not(:disabled) { border-color: var(--foco); color: var(--text); }
+.sp-drag:active { cursor: grabbing; }
+.sp-drag:disabled { opacity: .3; cursor: default; }
 .sp-arrows button {
   width: 32px; height: 32px; display: grid; place-items: center; background: transparent; border: 1px solid transparent;
   border-radius: 6px; font-size: 11px; color: var(--muted); cursor: pointer;

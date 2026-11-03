@@ -96,7 +96,7 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
         }
         setData(j);
         if (!dirty.current) {
-          setOrder(j.mine.ranking ?? j.teams.map((t) => t.name));
+          setOrder(j.mine.ranking ?? j.results.order ?? j.teams.map((t) => t.name));
           setRankTouched(!!j.mine.ranking);
           setAwards(j.mine.awards ?? {});
           setPrimo(j.mine.primo ?? '');
@@ -327,12 +327,13 @@ function Rules({ data }: { data: Data }) {
           en total (no se suman).
         </li>
         <li>
-          Premios de jugadores (Pichichi, máximo asistente y Zamora, en Liga y en Champions): <b>3</b> cada uno. Bota de
-          Oro: <b>5</b>.
+          Premios individuales: <b>3</b> puntos cada uno; Bota de Oro mundial: <b>5</b>.
         </li>
         <li>
-          Máximo posible: <b>{data.maxPoints.total}</b> ({data.maxPoints.ranking} de la clasificación y {data.maxPoints.awards} de
-          premios).
+          * LaLiga podría obtener plazas adicionales de Champions.
+        </li>
+        <li>
+          Máximo posible: <b>{data.maxPoints.total}</b> ({data.maxPoints.ranking} de clasificación y {data.maxPoints.awards} de premios).
         </li>
         <li>El premio al Mejor futbolista del mundo se vota en Premios individuales y no da puntos.</li>
       </ul>
@@ -354,7 +355,6 @@ function ClasificacionTab({
   onOrder: (o: string[]) => void;
 }) {
   const me = data.everyone?.find((e) => e.playerId === data.me.id);
-  const real = data.results.order;
   return (
     <>
       <Rules data={data} />
@@ -362,14 +362,11 @@ function ClasificacionTab({
         <>
           <p className="sp-hint">
             {rankTouched
-              ? 'Así queda tu clasificación. Usa las flechas, o toca el número de un equipo para llevarlo a otra posición.'
-              : 'Aún no has hecho tu clasificación: mueve cualquier equipo para empezar. Toca el número de un equipo para llevarlo a otra posición.'}
+              ? 'Así queda tu clasificación. Arrastra los equipos o usa las flechas y los números.'
+              : data.results.order
+                ? 'La clasificación parte de la actual. Arrastra los equipos o usa las flechas y los números.'
+                : 'Arrastra los equipos o usa las flechas y los números para ordenarlos.'}
           </p>
-          {real && !rankTouched && (
-            <button type="button" className="sp-ghost" onClick={() => onOrder(real)}>
-              Partir de la clasificación actual
-            </button>
-          )}
           <RankEditor order={order} teams={data.teams} zones={data.zones} onChange={onOrder} />
         </>
       ) : me?.ranking ? (
@@ -405,7 +402,7 @@ function PremiosTab({
   onVoted: () => void;
 }) {
   const me = data.everyone?.find((e) => e.playerId === data.me.id);
-  const groups = (['liga', 'champions', 'europa'] as const).map((g) => ({
+  const groups = (['liga', 'champions', 'mundial'] as const).map((g) => ({
     g,
     items: data.awardsDef.filter((a) => a.group === g),
   }));

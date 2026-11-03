@@ -140,11 +140,12 @@ fotos). Los avisos del móvil van a un solo perfil por dispositivo: el último q
 Un aviso fino bajo el selector de competición (y una entrada en el menú de usuario) abre la ventana
 **Predicciones de temporada**. Se rellena una vez y se guarda sola.
 
-- **Clasificación:** cada jugador ordena los 20 equipos (con flechas, o tocando el número de un equipo
-  para llevarlo a otra posición). Los tramos clave llevan color: Champions, Europa League, Conference y descenso.
+- **Clasificación:** parte de la tabla actual. Los equipos se pueden arrastrar o mover con flechas y números.
+  Champions* marca las plazas, que podrían ampliarse para LaLiga.
 - **Puntos de la clasificación:** equipo en su posición exacta, 3. En un tramo clave, acertar que acaba dentro
   de ese tramo pero no en su posición, 3; y si además es la posición exacta, 5 (en total, no se suman).
-- **Premios:** Pichichi, máximo asistente y Zamora, en Liga y en Champions (3 puntos cada uno), y Bota de Oro (5).
+- **Premios:** Pichichi, máximo asistente y Zamora en LaLiga; goleador y asistente en Champions (3 puntos cada uno).
+  Bota de Oro mundial: 5 puntos.
   Se escribe el nombre; vale con el apellido y da igual mayúsculas y tildes.
 - **Mejor futbolista del mundo:** en Premios individuales, cada jugador propone en privado al futbolista que crea
   que hará la mejor temporada en todo el fútbol mundial, sin limitarse a una liga o competición. Al cerrar el plazo

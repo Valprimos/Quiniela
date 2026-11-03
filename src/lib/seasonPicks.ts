@@ -17,7 +17,7 @@ export const DEFAULT_ZONES: Zones = {
 export const ZONE_ORDER: ZoneKey[] = ['champions', 'europa', 'conference', 'relegation'];
 
 export const ZONE_LABEL: Record<ZoneKey, string> = {
-  champions: 'Champions',
+  champions: 'Champions*',
   europa: 'Europa League',
   conference: 'Conference',
   relegation: 'Descenso',
@@ -54,7 +54,7 @@ export function zoneOf(pos: number, zones: Zones): ZoneKey | null {
 
 // ---------- Premios de jugadores ----------
 
-export type AwardDef = { key: string; label: string; group: 'liga' | 'champions' | 'europa'; pts: number; goalkeeper?: boolean };
+export type AwardDef = { key: string; label: string; group: 'liga' | 'champions' | 'mundial'; pts: number; goalkeeper?: boolean };
 
 export const AWARDS: AwardDef[] = [
   { key: 'liga_pichichi', label: 'Pichichi', group: 'liga', pts: 3 },
@@ -62,14 +62,13 @@ export const AWARDS: AwardDef[] = [
   { key: 'liga_zamora', label: 'Zamora', group: 'liga', pts: 3, goalkeeper: true },
   { key: 'champions_pichichi', label: 'Máximo goleador', group: 'champions', pts: 3 },
   { key: 'champions_asistente', label: 'Máximo asistente', group: 'champions', pts: 3 },
-  { key: 'champions_zamora', label: 'Mejor portero (Zamora)', group: 'champions', pts: 3, goalkeeper: true },
-  { key: 'bota_oro', label: 'Bota de Oro', group: 'europa', pts: 5 },
+  { key: 'bota_oro', label: 'Bota de Oro', group: 'mundial', pts: 5 },
 ];
 
 export const AWARD_GROUP_LABEL: Record<AwardDef['group'], string> = {
   liga: 'La Liga',
   champions: 'Champions League',
-  europa: 'Toda Europa',
+  mundial: 'Mundial',
 };
 
 export const AWARD_KEYS = AWARDS.map((a) => a.key);

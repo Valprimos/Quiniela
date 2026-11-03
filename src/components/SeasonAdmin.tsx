@@ -123,7 +123,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
       <p className="muted small">Hora de Madrid. Un año normal cierra 1 minuto antes de la jornada 1.</p>
 
       <h4>Tramos clave</h4>
-      <p className="muted small">Posiciones (de la X a la Y) de cada tramo. Ajústalos al final de temporada si cambia el reparto europeo.</p>
+      <p className="muted small">Posiciones de cada tramo. LaLiga podría sumar plazas de Champions*.</p>
       <div className="sp-zones">
         {ZONE_ORDER.map((k) => (
           <div key={k} className={`sp-zone-row z-${k}`}>
@@ -179,7 +179,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
 
       <h4>Ganadores de los premios</h4>
       <p className="muted small">Si hay empate, sepáralos con punto y coma. Se acepta con o sin tildes y vale el apellido. Déjalo vacío hasta que se resuelva.</p>
-      {(['liga', 'champions', 'europa'] as const).map((g) => (
+      {(['liga', 'champions', 'mundial'] as const).map((g) => (
         <div key={g} className="sp-admin-awards">
           <b>{AWARD_GROUP_LABEL[g]}</b>
           {AWARDS.filter((a) => a.group === g).map((a) => (
