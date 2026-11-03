@@ -1040,7 +1040,7 @@ select {
 .pmodal-facts { gap: 4px; }
 .pmodal-facts div { font-size: 13px; padding-bottom: 4px; }
 
-.usermenu-pop { max-height: calc(100dvh - 96px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--line) transparent; width: min(300px, calc(100vw - 32px)); padding: 8px; }
+.usermenu-pop { max-height: calc(100dvh - 96px); overflow-y: auto; overscroll-behavior: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--line) transparent; width: min(300px, calc(100vw - 32px)); padding: 8px; }
 .um-item { padding: 8px; }
 
 .fd[data-tip] { position: relative; cursor: default; outline: none; }
