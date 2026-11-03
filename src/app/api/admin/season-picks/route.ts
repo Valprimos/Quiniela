@@ -5,11 +5,9 @@ import { currentSeason } from '@/lib/season';
 import { AWARD_KEYS, ZONE_ORDER, cleanName, sameTeam } from '@/lib/seasonPicks';
 import {
   SettingsRow,
-  isClosed,
   loadLigaMatches,
   loadSettings,
   missingTable,
-  resolveDeadline,
   teamsOf,
 } from '@/lib/seasonPicksServer';
 
@@ -22,7 +20,6 @@ const fail = (error: string, status = 400) => NextResponse.json({ error }, { sta
 //   zones    : { zones: { champions:[a,b], ... } }            tramos clave
 //   order    : { order: [equipos] | null }                    clasificación final oficial (null = la calculada)
 //   awards   : { awards: { clave: 'Nombre; Otro' } }          ganadores de los premios (varios si hay empate)
-//   primo    : { stage: 'nominate' | 'vote' | 'closed' }      fases del premio al Mejor futbolista del mundo
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (session instanceof NextResponse) return session;
@@ -39,11 +36,10 @@ export async function POST(req: NextRequest) {
   const matches = await loadLigaMatches(supabase, season);
   const teams = teamsOf(matches);
 
-  const next: Pick<SettingsRow, 'deadline' | 'zones' | 'results' | 'primo_stage'> = {
+  const next: Pick<SettingsRow, 'deadline' | 'zones' | 'results'> = {
     deadline: settings?.deadline ?? null,
     zones: settings?.zones ?? null,
     results: settings?.results ?? null,
-    primo_stage: settings?.primo_stage ?? 'nominate',
   };
 
   if (action === 'deadline') {
@@ -93,15 +89,6 @@ export async function POST(req: NextRequest) {
       else delete awards[k];
     }
     next.results = { ...(next.results ?? {}), awards };
-  } else if (action === 'primo') {
-    const stage = body.stage;
-    if (!['nominate', 'vote', 'closed'].includes(stage)) return fail('Fase no válida.');
-    // Las votaciones finales no pueden empezar hasta que se hayan publicado los candidatos
-    const deadline = resolveDeadline(settings, season, matches);
-    if (stage !== 'nominate' && !isClosed(deadline)) {
-      return fail('Hasta que no cierre el plazo de predicciones no se puede abrir la votación final.', 409);
-    }
-    next.primo_stage = stage;
   } else {
     return fail('Acción no válida.');
   }

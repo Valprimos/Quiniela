@@ -63,6 +63,7 @@ export const AWARDS: AwardDef[] = [
   { key: 'champions_pichichi', label: 'Máximo goleador', group: 'champions', pts: 3 },
   { key: 'champions_asistente', label: 'Máximo asistente', group: 'champions', pts: 3 },
   { key: 'bota_oro', label: 'Bota de Oro', group: 'mundial', pts: 5 },
+  { key: 'mvp', label: 'MVP de la temporada', group: 'mundial', pts: 5 },
 ];
 
 export const AWARD_GROUP_LABEL: Record<AwardDef['group'], string> = {

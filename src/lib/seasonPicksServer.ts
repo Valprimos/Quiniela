@@ -11,7 +11,6 @@ export type SettingsRow = {
   deadline: string | null;
   zones: unknown;
   results: { order?: string[] | null; awards?: Record<string, string[]> } | null;
-  primo_stage: 'nominate' | 'vote' | 'closed';
 };
 
 // ¿Existen ya las tablas? Mientras no se ejecute la migración, la sección no se ofrece.
@@ -24,7 +23,7 @@ export function missingTable(error: { code?: string; message?: string } | null |
 export async function loadSettings(supabase: Supa, gid: string, season: number) {
   const { data, error } = await supabase
     .from('season_settings')
-    .select('group_id,season,deadline,zones,results,primo_stage')
+    .select('group_id,season,deadline,zones,results')
     .eq('group_id', gid)
     .eq('season', season)
     .maybeSingle();

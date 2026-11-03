@@ -2,16 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { currentSeason } from '@/lib/season';
-import {
-  AWARDS,
-  AWARD_KEYS,
-  cleanName,
-  maxPoints,
-  sameName,
-  sameTeam,
-  scoreAwards,
-  scoreRanking,
-} from '@/lib/seasonPicks';
+import { AWARDS, AWARD_KEYS, cleanName, maxPoints, sameTeam, scoreAwards, scoreRanking } from '@/lib/seasonPicks';
 import {
   effectiveOrder,
   isClosed,
@@ -36,25 +27,12 @@ type PickRow = {
 
 const awardsFilled = (a: Record<string, string> | null | undefined) => AWARD_KEYS.filter((k) => cleanName(a?.[k])).length;
 
-// Estado de un jugador: 3 tareas (clasificación, premios y propuesta de futbolista mundial)
+// Estado de un jugador: clasificación y premios.
 function progress(row: PickRow | null | undefined, teamCount: number) {
   const ranking = !!row?.ranking && row.ranking.length === teamCount && teamCount > 0;
-  const awards = awardsFilled(row?.awards) === AWARD_KEYS.length;
-  const primo = !!cleanName(row?.primo);
-  return { ranking, awards, primo, done: Number(ranking) + Number(awards) + Number(primo), total: 3 };
-}
-
-// Lista de futbolistas propuestos, sin repetidos y sin decir quién propuso a quién
-function canonicalNominees(rows: PickRow[]): string[] {
-  const out: string[] = [];
-  for (const r of rows) {
-    const n = cleanName(r.primo);
-    if (!n) continue;
-    const i = out.findIndex((x) => sameName(x, n));
-    if (i === -1) out.push(n);
-    else if (n.length > out[i].length) out[i] = n;
-  }
-  return out.sort((a, b) => a.localeCompare(b, 'es'));
+  const picks = { ...row?.awards, mvp: row?.awards?.mvp ?? row?.primo ?? '' };
+  const awards = awardsFilled(picks) === AWARD_KEYS.length;
+  return { ranking, awards, done: Number(ranking) + Number(awards), total: 2 };
 }
 
 export async function GET(req: NextRequest) {
@@ -92,7 +70,6 @@ export async function GET(req: NextRequest) {
       closed,
       done: prog.done,
       total: prog.total,
-      stage: settings?.primo_stage ?? 'nominate',
     });
   }
 
@@ -105,7 +82,6 @@ export async function GET(req: NextRequest) {
     const ts = playerRows.find((p) => p.id === id)?.avatar_updated_at;
     return ts ? new Date(ts).getTime() : null;
   };
-  const memberIds = playerRows.map((p) => p.id);
 
   const zones = zonesOf(settings, teams.length || 20);
   const maxPts = maxPoints(zones, teams.length || 20);
@@ -123,50 +99,26 @@ export async function GET(req: NextRequest) {
 
   // Quién falta por completar (solo nombres: nunca el contenido)
   const pending = playerRows
-    .filter((p) => progress(byPlayer.get(p.id), teams.length).done < 3)
+    .filter((p) => progress(byPlayer.get(p.id), teams.length).done < 2)
     .map((p) => p.name)
     .sort((a, b) => a.localeCompare(b, 'es'));
 
-  // MVP mundial de la temporada
-  let stage: 'nominate' | 'list' | 'vote' | 'closed' = 'nominate';
-  const pStage = settings?.primo_stage ?? 'nominate';
-  if (closed) stage = pStage === 'vote' ? 'vote' : pStage === 'closed' ? 'closed' : 'list';
-  const nominees = closed ? canonicalNominees(picks) : [];
-
-  let myVote: string | null = null;
-  let tally: { nominee: string; votes: number }[] | null = null;
-  let revealedVotes: { voter: string; nominee: string }[] | null = null;
-  if (closed && (stage === 'vote' || stage === 'closed')) {
-    const { data: votes } = await supabase.from('primo_votes').select('player_id,nominee').eq('season', season).in('player_id', memberIds);
-    const rows = (votes as { player_id: string; nominee: string }[] | null) ?? [];
-    myVote = rows.find((v) => v.player_id === session.pid)?.nominee ?? null;
-    const everyoneVoted = memberIds.length > 0 && memberIds.every((id) => rows.some((v) => v.player_id === id));
-    if (stage === 'closed' || everyoneVoted) {
-      tally = nominees
-        .map((n) => ({ nominee: n, votes: rows.filter((v) => sameName(v.nominee, n)).length }))
-        .sort((a, b) => b.votes - a.votes || a.nominee.localeCompare(b.nominee, 'es'));
-      const nameOf = new Map(playerRows.map((p) => [p.id, p.name]));
-      revealedVotes = rows
-        .map((v) => ({ voter: nameOf.get(v.player_id) ?? 'Participante', nominee: v.nominee }))
-        .sort((a, b) => a.voter.localeCompare(b.voter, 'es'));
-    }
-  }
-
-  // Lo que ve todo el mundo cuando se cierra el plazo: las predicciones de cada uno (salvo quién propuso a quién).
+  // Lo que ve todo el mundo cuando se cierra el plazo: las predicciones de cada uno.
   const everyone = closed
     ? playerRows
         .map((p) => {
           const row = byPlayer.get(p.id) ?? null;
           const r = scoreRanking(row?.ranking, real.order, zones);
-          const a = scoreAwards(row?.awards, winners);
+          const awardPicks = { ...row?.awards, mvp: row?.awards?.mvp ?? row?.primo ?? '' };
+          const a = scoreAwards(awardPicks, winners);
           return {
             playerId: p.id,
             name: p.name,
             avatar: avatarOf(p.id),
-            hasPicks: !!row && (!!row.ranking?.length || awardsFilled(row.awards) > 0),
+            hasPicks: !!row && (!!row.ranking?.length || awardsFilled(awardPicks) > 0),
             ranking: row?.ranking ?? null,
             teamRows: r.rows,
-            awards: row?.awards ?? {},
+            awards: awardPicks,
             awardRows: a.rows,
             rankingPoints: r.points,
             awardPoints: a.points,
@@ -181,7 +133,6 @@ export async function GET(req: NextRequest) {
         deadlineOverride: settings?.deadline ? new Date(settings.deadline).toISOString() : null,
         officialOrder: Array.isArray(settings?.results?.order) && settings!.results!.order!.length ? settings!.results!.order! : null,
         liveOrder: effectiveOrder(null, matches).order,
-        primoStage: pStage,
       }
     : undefined;
 
@@ -197,8 +148,7 @@ export async function GET(req: NextRequest) {
     awardsDef: AWARDS,
     mine: {
       ranking: mine?.ranking ?? null,
-      awards: mine?.awards ?? {},
-      primo: mine?.primo ?? null,
+      awards: { ...mine?.awards, mvp: mine?.awards?.mvp ?? mine?.primo ?? '' },
     },
     progress: prog,
     pending,
@@ -211,7 +161,6 @@ export async function GET(req: NextRequest) {
       awards: winners,
     },
     everyone,
-    primo: { stage, nominees, myVote, tally, votes: revealedVotes },
     admin,
   });
 }
@@ -260,6 +209,7 @@ export async function PUT(req: NextRequest) {
   }
 
   let awards = { ...(existing?.awards ?? {}) };
+  if (!awards.mvp && existing?.primo) awards.mvp = existing.primo;
   if (body.awards !== undefined) {
     if (!body.awards || typeof body.awards !== 'object') return fail('Los premios no son válidos.');
     for (const k of AWARD_KEYS) {
@@ -271,42 +221,10 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  let primo = existing?.primo ?? null;
-  if (body.primo !== undefined) primo = cleanName(body.primo) || null;
-
   const { error } = await supabase.from('season_picks').upsert(
-    { player_id: session.pid, season, ranking, awards, primo, updated_at: new Date().toISOString() },
+    { player_id: session.pid, season, ranking, awards, primo: null, updated_at: new Date().toISOString() },
     { onConflict: 'player_id,season' }
   );
   if (error) return fail('No se pudo guardar.', 500);
-  return NextResponse.json({ ok: true, progress: progress({ player_id: session.pid, ranking, awards, primo }, teams.length) });
-}
-
-// Votación final al MVP de la temporada (cuando el admin la abre)
-export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return fail('Sesión caducada. Vuelve a entrar.', 401);
-
-  const body = await req.json().catch(() => null);
-  if (body?.action !== 'vote') return fail('Acción no válida.');
-
-  const supabase = db();
-  const season = currentSeason();
-  const { settings, error: settingsError } = await loadSettings(supabase, session.gid, season);
-  if (missingTable(settingsError)) return fail('Esta sección todavía no está activada.', 503);
-  if (settings?.primo_stage !== 'vote') return fail('La votación al MVP de la temporada no está abierta.', 409);
-
-  const { data: members } = await supabase.from('players').select('id').eq('group_id', session.gid);
-  const ids = (members ?? []).map((m: { id: string }) => m.id);
-  const { data: rows } = await supabase.from('season_picks').select('player_id,ranking,awards,primo').eq('season', season).in('player_id', ids);
-  const nominees = canonicalNominees((rows as PickRow[] | null) ?? []);
-
-  const wanted = cleanName(body.nominee);
-  const nominee = nominees.find((n) => sameName(n, wanted) && sameName(wanted, n));
-  if (!nominee) return fail('Ese nombre no está entre los candidatos.');
-  const { error } = await supabase
-    .from('primo_votes')
-    .upsert({ player_id: session.pid, season, nominee, updated_at: new Date().toISOString() }, { onConflict: 'player_id,season' });
-  if (error) return fail('No se pudo guardar tu voto.', 500);
-  return NextResponse.json({ ok: true, nominee });
+  return NextResponse.json({ ok: true, progress: progress({ player_id: session.pid, ranking, awards, primo: null }, teams.length) });
 }

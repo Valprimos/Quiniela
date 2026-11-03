@@ -18,7 +18,6 @@ import {
   Zones,
   fmtDeadline,
   fmtShort,
-  sameName,
   untilText,
 } from '@/lib/seasonPicks';
 import { clear as clearCache } from '@/lib/clientCache';
@@ -46,20 +45,13 @@ type Data = {
   zones: Zones;
   maxPoints: { ranking: number; awards: number; total: number };
   awardsDef: AwardDef[];
-  mine: { ranking: string[] | null; awards: Record<string, string>; primo: string | null };
-  progress: { ranking: boolean; awards: boolean; primo: boolean; done: number; total: number };
+  mine: { ranking: string[] | null; awards: Record<string, string> };
+  progress: { ranking: boolean; awards: boolean; done: number; total: number };
   pending: string[];
   members: string[];
   me: { id: string; name: string };
   results: { order: string[] | null; source: 'oficial' | 'provisional' | 'calculada' | 'ninguna'; final: boolean; awards: Record<string, string[]> };
   everyone: Everyone[] | null;
-  primo: {
-    stage: 'nominate' | 'list' | 'vote' | 'closed';
-    nominees: string[];
-    myVote: string | null;
-    tally: { nominee: string; votes: number }[] | null;
-    votes: { voter: string; nominee: string }[] | null;
-  };
 };
 
 type Tab = 'clasificacion' | 'premios' | 'ranking';
@@ -82,11 +74,10 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
   const [order, setOrder] = useState<string[]>([]);
   const [rankTouched, setRankTouched] = useState(false);
   const [awards, setAwards] = useState<Record<string, string>>({});
-  const [primo, setPrimo] = useState('');
   const [save, setSave] = useState<Save>('idle');
   const dirty = useRef(false);
-  const latest = useRef({ order, rankTouched, awards, primo });
-  latest.current = { order, rankTouched, awards, primo };
+  const latest = useRef({ order, rankTouched, awards });
+  latest.current = { order, rankTouched, awards };
 
   const load = useCallback(() => {
     return fetch('/api/season-picks', { cache: 'no-store' })
@@ -101,7 +92,6 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
           setOrder(j.mine.ranking ?? j.results.order ?? j.teams.map((t) => t.name));
           setRankTouched(!!j.mine.ranking);
           setAwards(j.mine.awards ?? {});
-          setPrimo(j.mine.primo ?? '');
         }
         setError(null);
       })
@@ -111,12 +101,6 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
   useEffect(() => {
     load();
   }, [load]);
-  useEffect(() => {
-    if (data?.primo.stage !== 'vote') return;
-    const t = setInterval(() => load(), 30_000);
-    return () => clearInterval(t);
-  }, [data?.primo.stage, load]);
-
   // Reloj: cuenta atrás y, al llegar la hora, se recarga para ver las predicciones de todos
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 20_000);
@@ -145,7 +129,6 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
           body: JSON.stringify({
             ...(cur.rankTouched ? { ranking: cur.order } : {}),
             awards: cur.awards,
-            primo: cur.primo,
           }),
         });
         if (!res.ok) {
@@ -174,7 +157,7 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
     if (!dirty.current || !editable) return;
     const t = setTimeout(() => void persist(), 900);
     return () => clearTimeout(t);
-  }, [order, awards, primo, rankTouched, editable, persist]);
+  }, [order, awards, rankTouched, editable, persist]);
 
   const touch = () => {
     dirty.current = true;
@@ -189,11 +172,6 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
     touch();
     setAwards((a) => ({ ...a, [key]: v }));
   };
-  const changePrimo = (v: string) => {
-    touch();
-    setPrimo(v);
-  };
-
   const close = () => {
     void persist(true);
     onClose();
@@ -209,15 +187,14 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
 
   // El progreso se calcula con el borrador, para que las casillas reaccionen al momento
   const live = useMemo(() => {
-    if (!data) return { ranking: false, awards: false, primo: false, done: 0 };
+    if (!data) return { ranking: false, awards: false, done: 0 };
     const ranking = rankTouched;
     const aw = data.awardsDef.every((a) => (awards[a.key] ?? '').trim());
-    const pr = primo.trim().length > 0;
-    return { ranking, awards: aw, primo: pr, done: Number(ranking) + Number(aw) + Number(pr) };
-  }, [data, rankTouched, awards, primo]);
+    return { ranking, awards: aw, done: Number(ranking) + Number(aw) };
+  }, [data, rankTouched, awards]);
 
   const left = data?.deadline ? new Date(data.deadline).getTime() - now : null;
-  const urgent = editable && left != null && left < 24 * 3600e3 && live.done < 3;
+  const urgent = editable && left != null && left < 24 * 3600e3 && live.done < 2;
 
   return (
     <div
@@ -290,7 +267,7 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
             />
           )}
           {data && tab === 'premios' && (
-            <PremiosTab data={data} editable={editable} awards={awards} onChange={changeAward} primo={primo} onPrimoChange={changePrimo} onVoted={load} />
+            <PremiosTab data={data} editable={editable} awards={awards} onChange={changeAward} />
           )}
           {data && tab === 'ranking' && <RankingTab data={data} />}
         </div>
@@ -337,7 +314,7 @@ function Rules({ data }: { data: Data }) {
         <li>
           Máximo posible: <b>{data.maxPoints.total}</b> ({data.maxPoints.ranking} de clasificación y {data.maxPoints.awards} de premios).
         </li>
-        <li>El MVP mundial no da puntos.</li>
+        <li>MVP de la temporada: <b>5</b> puntos.</li>
       </ul>
     </details>
   );
@@ -391,17 +368,11 @@ function PremiosTab({
   editable,
   awards,
   onChange,
-  primo,
-  onPrimoChange,
-  onVoted,
 }: {
   data: Data;
   editable: boolean;
   awards: Record<string, string>;
   onChange: (key: string, v: string) => void;
-  primo: string;
-  onPrimoChange: (v: string) => void;
-  onVoted: () => void;
 }) {
   const me = data.everyone?.find((e) => e.playerId === data.me.id);
   const groups = (['liga', 'champions', 'mundial'] as const).map((g) => ({
@@ -445,173 +416,13 @@ function PremiosTab({
                     )}
                   </div>
                 )}
+                {a.key === 'mvp' && <small className="sp-award-note">Premio subjetivo votado entre los miembros.</small>}
               </div>
             );
           })}
-        {g === 'mundial' && <PrimoTab data={data} editable={editable} primo={primo} onChange={onPrimoChange} onVoted={onVoted} />}
         </section>
       ))}
     </>
-  );
-}
-
-function PrimoTab({
-  data,
-  editable,
-  primo,
-  onChange,
-  onVoted,
-}: {
-  data: Data;
-  editable: boolean;
-  primo: string;
-  onChange: (v: string) => void;
-  onVoted: () => void;
-}) {
-  const { stage, nominees, myVote, tally } = data.primo;
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  async function vote(nominee: string) {
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch('/api/season-picks', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ action: 'vote', nominee }),
-    }).catch(() => null);
-    const j = await res?.json().catch(() => null);
-    setBusy(false);
-    if (!res?.ok) setMsg(j?.error ?? 'No se pudo guardar tu voto.');
-    else {
-      setMsg('Voto guardado. Puedes cambiarlo hasta que se cierre.');
-      onVoted();
-    }
-  }
-
-  const winner = tally && tally.length && tally[0].votes > 0 ? tally.filter((t) => t.votes === tally[0].votes) : null;
-  const max = tally?.[0]?.votes || 1;
-
-  return (
-    <section className="sp-primo">
-      <div className="sp-primo-hero">
-        <span aria-hidden="true">🏅</span>
-        <div>
-          <h3>MVP de la temporada</h3>
-        </div>
-      </div>
-
-      {stage === 'nominate' && (
-        <>
-          <p className="sp-hint">
-            Propón tu MVP mundial de la temporada. Al terminar, se votará entre los candidatos.
-          </p>
-          <div className="sp-award">
-            <label htmlFor="primo-in">Mi futbolista candidato</label>
-            <input
-              id="primo-in"
-              value={primo}
-              maxLength={60}
-              autoComplete="off"
-              placeholder="Nombre del futbolista"
-              disabled={!editable}
-              onChange={(e) => onChange(e.target.value)}
-            />
-          </div>
-        </>
-      )}
-
-      {stage === 'list' && (
-        <>
-          <p className="sp-hint">
-            Candidatos a MVP. La votación final se abrirá al acabar la temporada.
-          </p>
-          <NomineeList nominees={nominees} />
-        </>
-      )}
-
-      {stage === 'vote' && (
-        <>
-          <p className="sp-hint">
-            <b>Votación final abierta.</b> Vota al MVP. Los votos se revelan cuando todos hayan votado o al cerrar.
-          </p>
-          <ul className="sp-nominees vote">
-            {nominees.map((n) => {
-              const mine = !!myVote && sameName(myVote, n);
-              return (
-                <li key={n}>
-                  <button
-                    type="button"
-                    className={mine ? 'on' : ''}
-                    disabled={busy}
-                    aria-pressed={mine}
-                    onClick={() => vote(n)}
-                  >
-                    <span>{n}</span>
-                    <i aria-hidden="true">{mine ? '✓' : ''}</i>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          {msg && <p className="okmsg">{msg}</p>}
-          {tally && (
-            <>
-              <p className="sp-hint">Todos han votado. Ya se puede ver el recuento y quién eligió a cada futbolista.</p>
-              <ul className="sp-tally">
-                {tally.map((t) => <li key={t.nominee}><span>{t.nominee}</span><b>{t.votes}</b></li>)}
-              </ul>
-            </>
-          )}
-        </>
-      )}
-
-      {stage === 'closed' && (
-        <>
-          {winner ? (
-            <div className="sp-winner">
-              <span aria-hidden="true">🏆</span>
-              <div>
-                <small>MVP de la temporada {data.season}/{String(data.season + 1).slice(2)}</small>
-                <b>{winner.map((w) => w.nominee).join(' y ')}</b>
-              </div>
-            </div>
-          ) : (
-            <p className="muted">Nadie ha recibido votos.</p>
-          )}
-          <ul className="sp-tally">
-            {(tally ?? []).map((t) => (
-              <li key={t.nominee}>
-                <span>{t.nominee}</span>
-                <span className="bar" style={{ ['--w' as string]: `${(t.votes / max) * 100}%` }} />
-                <b>{t.votes}</b>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {data.primo.votes && data.primo.votes.length > 0 && (
-        <div className="sp-vote-attribution">
-          <h4>Quién votó a quién</h4>
-          <ul>
-            {data.primo.votes.map((v) => <li key={`${v.voter}-${v.nominee}`}><b>{v.voter}</b> votó a {v.nominee}</li>)}
-          </ul>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function NomineeList({ nominees }: { nominees: string[] }) {
-  if (!nominees.length) return <p className="muted">Nadie propuso a nadie.</p>;
-  return (
-    <ul className="sp-nominees">
-      {nominees.map((n) => (
-        <li key={n}>
-          <span>{n}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
 

@@ -25,8 +25,7 @@ type AdminData = {
   members: string[];
   progress: { done: number };
   pending: string[];
-  primo: { stage: 'nominate' | 'list' | 'vote' | 'closed'; nominees: string[] };
-  admin?: { deadlineOverride: string | null; officialOrder: string[] | null; liveOrder: string[] | null; primoStage: 'nominate' | 'vote' | 'closed' };
+  admin?: { deadlineOverride: string | null; officialOrder: string[] | null; liveOrder: string[] | null };
 };
 
 const SOURCE_TXT: Record<AdminData['deadlineSource'], string> = {
@@ -91,7 +90,6 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
   if (!data || !zones) return <p className="muted">{msg ? '' : 'Cargando…'}{msg && <span className="notice">{msg.text}</span>}</p>;
 
   const teamCount = data.teams.length || 20;
-  const stage = data.admin?.primoStage ?? 'nominate';
 
   return (
     <div className="sp-admin">
@@ -194,34 +192,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
         Guardar premios
       </button>
 
-      <h4>MVP de la temporada</h4>
-      <p className="muted small">
-        Fase actual:{' '}
-        <b>
-          {stage === 'nominate'
-            ? data.closed
-              ? 'candidatos publicados'
-              : 'votos privados'
-            : stage === 'vote'
-              ? 'votación final abierta'
-              : 'resultado publicado'}
-        </b>
-        . La lista de candidatos se publica al cerrar el plazo; la votación final se abre al acabar la temporada.
-      </p>
-      <div className="row">
-        <button type="button" className="seg-btn" disabled={busy || !data.closed || stage === 'vote'} onClick={() => run({ action: 'primo', stage: 'vote' }, 'Votación final abierta.')}>
-          Abrir votación final
-        </button>
-        <button type="button" className="seg-btn" disabled={busy || stage !== 'vote'} onClick={() => run({ action: 'primo', stage: 'closed' }, 'Votación cerrada: ya se ve el ganador.')}>
-          Cerrar y publicar ganador
-        </button>
-        {stage !== 'nominate' && (
-          <button type="button" className="link" disabled={busy} onClick={() => run({ action: 'primo', stage: 'nominate' }, 'Premio mundial reiniciado a la fase de candidatos.')}>
-            Volver a candidatos
-          </button>
-        )}
-      </div>
-      {!data.closed && <p className="muted small">La votación final se podrá abrir cuando cierre el plazo de predicciones.</p>}
+
     </div>
   );
 }

@@ -11,7 +11,6 @@ export type SeasonBrief = {
   closed?: boolean;
   done?: number;
   total?: number;
-  stage?: 'nominate' | 'vote' | 'closed';
 };
 
 // Resumen mínimo para el aviso de arriba y la insignia del menú: una petición ligera, guardada en memoria
@@ -35,8 +34,7 @@ export function useSeasonBrief(meId: string | null) {
 
   let badge: string | null = null;
   if (brief?.available) {
-    if (brief.closed && brief.stage === 'vote') badge = 'vota';
-    else if (!brief.closed && (brief.done ?? 0) < (brief.total ?? 3)) badge = `${(brief.total ?? 3) - (brief.done ?? 0)} por hacer`;
+    if (!brief.closed && (brief.done ?? 0) < (brief.total ?? 2)) badge = `${(brief.total ?? 2) - (brief.done ?? 0)} por hacer`;
   }
   return { brief, badge, refresh };
 }
@@ -45,7 +43,7 @@ export function useSeasonBrief(meId: string | null) {
 export default function SeasonChip({ brief, now, onOpen }: { brief: SeasonBrief | null; now: number; onOpen: () => void }) {
   if (!brief?.available) return null;
 
-  const total = brief.total ?? 3;
+  const total = brief.total ?? 2;
   const done = brief.done ?? 0;
   const left = brief.deadline ? new Date(brief.deadline).getTime() - now : null;
   const closed = !!brief.closed || (left != null && left <= 0);
@@ -55,11 +53,7 @@ export default function SeasonChip({ brief, now, onOpen }: { brief: SeasonBrief 
   let text: string;
   let tone = '';
   if (closed) {
-    if (brief.stage === 'vote') {
-      text = 'Votación al MVP de la temporada abierta';
-      tone = 'hot';
-    } else if (brief.stage === 'closed') text = 'MVP de la temporada resuelto';
-    else text = 'Cerradas · ya se ven las de todos';
+    text = 'Cerradas · ya se ven las de todos';
   } else if (missing > 0) {
     text = `${done === 0 ? 'Haz' : 'Termina'} tus predicciones${left != null ? ` · cierran en ${untilText(left)}` : ''}`;
     tone = urgent ? 'urgent' : 'todo';

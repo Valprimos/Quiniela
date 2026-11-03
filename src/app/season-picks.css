@@ -52,7 +52,7 @@
 .sp-deadline.urgent b { color: var(--foco-ink); }
 .sp-deadline.closed b { color: var(--ok); }
 
-.sp-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); padding: 0 8px; }
+.sp-tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); padding: 0 8px; }
 .sp-tabs button {
   position: relative; background: none; border: 0; border-bottom: 2px solid transparent;
   padding: 9px 2px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap;
@@ -136,33 +136,7 @@
 .sp-award-ro.hit { border-color: var(--ok); }
 .sp-award-ro.hit span { color: var(--ok); font-weight: 700; }
 .sp-award-ro.miss span { color: var(--muted); }
-
-/* ---- MVP de la temporada ---- */
-.sp-primo-hero { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin: 0 0 12px; border-radius: 10px; border: 1px solid var(--foco); background: rgba(255, 210, 63, 0.1); }
-.sp-primo-hero > span { font-size: 32px; }
-.sp-primo-hero h3 { margin: 0; font-family: var(--font-display); font-size: 22px; line-height: 1.05; }
-.sp-primo-hero p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
-.sp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 0; }
-.sp-chips button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; }
-.sp-chips button:hover, .sp-chips button.on { border-color: var(--foco); color: var(--foco-ink); }
-.sp-nominees { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.sp-nominees li > span, .sp-nominees li > button { display: flex; width: 100%; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--panel-2); border: 1.5px solid var(--line); border-radius: 8px; font-weight: 600; text-align: left; }
-.sp-nominees.vote button { cursor: pointer; }
-.sp-nominees.vote button:hover:not(:disabled) { border-color: var(--foco); }
-.sp-nominees.vote button.on { border-color: var(--ok); color: var(--ok); }
-.sp-nominees.vote button:disabled { opacity: 0.5; cursor: default; }
-.sp-nominees i { font-style: normal; font-size: 12px; color: var(--muted); }
-.sp-winner { display: flex; align-items: center; gap: 14px; padding: 16px; margin: 0 0 12px; border-radius: 12px; border: 1px solid var(--foco); background: linear-gradient(135deg, rgba(255, 210, 63, 0.22), rgba(255, 210, 63, 0.05)); }
-.sp-winner > span { font-size: 40px; }
-.sp-winner small { display: block; font-size: 12px; color: var(--foco-ink); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-.sp-winner b { font-family: var(--font-display); font-size: 28px; line-height: 1.05; }
-.sp-tally { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.sp-tally li { position: relative; display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel-2); }
-.sp-tally li .bar { position: absolute; inset: 0 auto 0 0; width: var(--w); background: rgba(255, 210, 63, 0.18); z-index: 0; }
-.sp-tally li > span:first-child, .sp-tally li > b { position: relative; z-index: 1; }
-.sp-vote-attribution { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); }
-.sp-vote-attribution h4 { margin: 0 0 8px; }
-.sp-vote-attribution ul { margin: 0; padding-left: 20px; display: grid; gap: 5px; font-size: 14px; }
+.sp-award-note { color: var(--muted); font-size: 12px; }
 
 /* ---- Ranking ---- */
 .sp-locked { text-align: center; padding: 22px 8px; }
