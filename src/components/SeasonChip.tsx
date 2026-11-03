@@ -56,9 +56,9 @@ export default function SeasonChip({ brief, now, onOpen }: { brief: SeasonBrief 
   let tone = '';
   if (closed) {
     if (brief.stage === 'vote') {
-      text = 'Votación final del Primo de Oro abierta';
+      text = 'Votación al mejor futbolista del mundo abierta';
       tone = 'hot';
-    } else if (brief.stage === 'closed') text = 'Ya está el Primo de Oro y las predicciones de todos';
+    } else if (brief.stage === 'closed') text = 'Premio al mejor futbolista del mundo resuelto';
     else text = 'Cerradas · ya se ven las de todos';
   } else if (missing > 0) {
     text = `${done === 0 ? 'Haz' : 'Termina'} tus predicciones${left != null ? ` · cierran en ${untilText(left)}` : ''}`;

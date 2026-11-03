@@ -1,10 +1,10 @@
--- Predicciones de temporada: clasificación final de La Liga, premios de jugadores y Primo de Oro.
+-- Predicciones de temporada: clasificación final de La Liga, premios de jugadores y premio al Mejor futbolista del mundo.
 -- Ejecútalo una vez en Supabase > SQL Editor. Hasta entonces la app funciona igual, sin esta sección.
 
 -- Lo que predice cada jugador (una fila por jugador y temporada).
 --   ranking : lista ordenada de equipos (del 1.º al último)
 --   awards  : { liga_pichichi: '…', liga_asistente: '…', … }
---   primo   : su voto privado para el Primo de Oro (quién hará mejor temporada)
+--   primo   : su propuesta privada de futbolista para el premio mundial
 create table if not exists season_picks (
   player_id uuid not null references players(id) on delete cascade,
   season integer not null,
@@ -31,7 +31,7 @@ create table if not exists season_settings (
   primary key (group_id, season)
 );
 
--- Votación final del Primo de Oro (secreta: nunca se muestra quién votó a quién).
+-- Votación final al Mejor futbolista del mundo. La identidad de cada voto se revela al votar todos o al cerrar.
 create table if not exists primo_votes (
   player_id uuid not null references players(id) on delete cascade,
   season integer not null,

@@ -194,7 +194,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
         Guardar premios
       </button>
 
-      <h4>Primo de Oro</h4>
+      <h4>Mejor futbolista del mundo</h4>
       <p className="muted small">
         Fase actual:{' '}
         <b>
@@ -206,7 +206,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
               ? 'votación final abierta'
               : 'resultado publicado'}
         </b>
-        . Los candidatos se publican solos cuando cierra el plazo; la votación final la abres tú al acabar la temporada.
+        . Los futbolistas propuestos se publican cuando cierra el plazo; la votación final la abres tú al acabar la temporada.
       </p>
       <div className="row">
         <button type="button" className="seg-btn" disabled={busy || !data.closed || stage === 'vote'} onClick={() => run({ action: 'primo', stage: 'vote' }, 'Votación final abierta.')}>
@@ -216,7 +216,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
           Cerrar y publicar ganador
         </button>
         {stage !== 'nominate' && (
-          <button type="button" className="link" disabled={busy} onClick={() => run({ action: 'primo', stage: 'nominate' }, 'Primo de Oro reiniciado a la fase de candidatos.')}>
+          <button type="button" className="link" disabled={busy} onClick={() => run({ action: 'primo', stage: 'nominate' }, 'Premio mundial reiniciado a la fase de candidatos.')}>
             Volver a candidatos
           </button>
         )}

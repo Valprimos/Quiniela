@@ -36,7 +36,7 @@ type PickRow = {
 
 const awardsFilled = (a: Record<string, string> | null | undefined) => AWARD_KEYS.filter((k) => cleanName(a?.[k])).length;
 
-// Estado de un jugador: 3 tareas (clasificación, premios, Primo de Oro)
+// Estado de un jugador: 3 tareas (clasificación, premios y propuesta de futbolista mundial)
 function progress(row: PickRow | null | undefined, teamCount: number) {
   const ranking = !!row?.ranking && row.ranking.length === teamCount && teamCount > 0;
   const awards = awardsFilled(row?.awards) === AWARD_KEYS.length;
@@ -44,7 +44,7 @@ function progress(row: PickRow | null | undefined, teamCount: number) {
   return { ranking, awards, primo, done: Number(ranking) + Number(awards) + Number(primo), total: 3 };
 }
 
-// Lista de candidatos al Primo de Oro, sin repetidos y sin decir quién propuso a quién
+// Lista de futbolistas propuestos, sin repetidos y sin decir quién propuso a quién
 function canonicalNominees(rows: PickRow[]): string[] {
   const out: string[] = [];
   for (const r of rows) {
@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
     .map((p) => p.name)
     .sort((a, b) => a.localeCompare(b, 'es'));
 
-  // Primo de Oro
+  // Premio al Mejor futbolista del mundo
   let stage: 'nominate' | 'list' | 'vote' | 'closed' = 'nominate';
   const pStage = settings?.primo_stage ?? 'nominate';
   if (closed) stage = pStage === 'vote' ? 'vote' : pStage === 'closed' ? 'closed' : 'list';
@@ -135,19 +135,24 @@ export async function GET(req: NextRequest) {
 
   let myVote: string | null = null;
   let tally: { nominee: string; votes: number }[] | null = null;
+  let revealedVotes: { voter: string; nominee: string }[] | null = null;
   if (closed && (stage === 'vote' || stage === 'closed')) {
     const { data: votes } = await supabase.from('primo_votes').select('player_id,nominee').eq('season', season).in('player_id', memberIds);
     const rows = (votes as { player_id: string; nominee: string }[] | null) ?? [];
     myVote = rows.find((v) => v.player_id === session.pid)?.nominee ?? null;
-    if (stage === 'closed') {
-      // Solo se cuentan votos; jamás se devuelve quién votó a quién
+    const everyoneVoted = memberIds.length > 0 && memberIds.every((id) => rows.some((v) => v.player_id === id));
+    if (stage === 'closed' || everyoneVoted) {
       tally = nominees
         .map((n) => ({ nominee: n, votes: rows.filter((v) => sameName(v.nominee, n)).length }))
         .sort((a, b) => b.votes - a.votes || a.nominee.localeCompare(b.nominee, 'es'));
+      const nameOf = new Map(playerRows.map((p) => [p.id, p.name]));
+      revealedVotes = rows
+        .map((v) => ({ voter: nameOf.get(v.player_id) ?? 'Participante', nominee: v.nominee }))
+        .sort((a, b) => a.voter.localeCompare(b.voter, 'es'));
     }
   }
 
-  // Lo que ve todo el mundo cuando se cierra el plazo: las predicciones de cada uno (salvo quién propuso a quién en el Primo)
+  // Lo que ve todo el mundo cuando se cierra el plazo: las predicciones de cada uno (salvo quién propuso a quién).
   const everyone = closed
     ? playerRows
         .map((p) => {
@@ -206,7 +211,7 @@ export async function GET(req: NextRequest) {
       awards: winners,
     },
     everyone,
-    primo: { stage, nominees, myVote, tally },
+    primo: { stage, nominees, myVote, tally, votes: revealedVotes },
     admin,
   });
 }
@@ -277,7 +282,7 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ ok: true, progress: progress({ player_id: session.pid, ranking, awards, primo }, teams.length) });
 }
 
-// Votación final del Primo de Oro (cuando el admin la abre)
+// Votación final al Mejor futbolista del mundo (cuando el admin la abre)
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return fail('Sesión caducada. Vuelve a entrar.', 401);
@@ -289,7 +294,7 @@ export async function POST(req: NextRequest) {
   const season = currentSeason();
   const { settings, error: settingsError } = await loadSettings(supabase, session.gid, season);
   if (missingTable(settingsError)) return fail('Esta sección todavía no está activada.', 503);
-  if (settings?.primo_stage !== 'vote') return fail('La votación del Primo de Oro no está abierta.', 409);
+  if (settings?.primo_stage !== 'vote') return fail('La votación al Mejor futbolista del mundo no está abierta.', 409);
 
   const { data: members } = await supabase.from('players').select('id').eq('group_id', session.gid);
   const ids = (members ?? []).map((m: { id: string }) => m.id);
@@ -299,9 +304,6 @@ export async function POST(req: NextRequest) {
   const wanted = cleanName(body.nominee);
   const nominee = nominees.find((n) => sameName(n, wanted) && sameName(wanted, n));
   if (!nominee) return fail('Ese nombre no está entre los candidatos.');
-  // Votarse a uno mismo sería votar de manera desleal
-  if (sameName(nominee, session.name) && sameName(session.name, nominee)) return fail('No puedes votarte a ti mismo.');
-
   const { error } = await supabase
     .from('primo_votes')
     .upsert({ player_id: session.pid, season, nominee, updated_at: new Date().toISOString() }, { onConflict: 'player_id,season' });

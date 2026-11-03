@@ -22,7 +22,7 @@ const fail = (error: string, status = 400) => NextResponse.json({ error }, { sta
 //   zones    : { zones: { champions:[a,b], ... } }            tramos clave
 //   order    : { order: [equipos] | null }                    clasificación final oficial (null = la calculada)
 //   awards   : { awards: { clave: 'Nombre; Otro' } }          ganadores de los premios (varios si hay empate)
-//   primo    : { stage: 'nominate' | 'vote' | 'closed' }      fase del Primo de Oro
+//   primo    : { stage: 'nominate' | 'vote' | 'closed' }      fases del premio al Mejor futbolista del mundo
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (session instanceof NextResponse) return session;

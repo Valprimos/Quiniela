@@ -57,16 +57,16 @@ type Data = {
     nominees: string[];
     myVote: string | null;
     tally: { nominee: string; votes: number }[] | null;
+    votes: { voter: string; nominee: string }[] | null;
   };
 };
 
-type Tab = 'clasificacion' | 'premios' | 'primo' | 'ranking';
+type Tab = 'clasificacion' | 'premios' | 'ranking';
 type Save = 'idle' | 'saving' | 'saved' | 'error';
 
 const TABS: [Tab, string][] = [
   ['clasificacion', 'Clasificación'],
-  ['premios', 'Premios'],
-  ['primo', 'Primo de Oro'],
+  ['premios', 'Premios individuales'],
   ['ranking', 'Ranking'],
 ];
 
@@ -109,6 +109,11 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => {
+    if (data?.primo.stage !== 'vote') return;
+    const t = setInterval(() => load(), 30_000);
+    return () => clearInterval(t);
+  }, [data?.primo.stage, load]);
 
   // Reloj: cuenta atrás y, al llegar la hora, se recarga para ver las predicciones de todos
   useEffect(() => {
@@ -261,7 +266,6 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
               {label}
               {editable && k === 'clasificacion' && <i className={live.ranking ? 'ok' : ''} aria-hidden="true" />}
               {editable && k === 'premios' && <i className={live.awards ? 'ok' : ''} aria-hidden="true" />}
-              {editable && k === 'primo' && <i className={live.primo ? 'ok' : ''} aria-hidden="true" />}
             </button>
           ))}
         </div>
@@ -283,9 +287,8 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
               onOrder={changeOrder}
             />
           )}
-          {data && tab === 'premios' && <PremiosTab data={data} editable={editable} awards={awards} onChange={changeAward} />}
-          {data && tab === 'primo' && (
-            <PrimoTab data={data} editable={editable} primo={primo} onChange={changePrimo} onVoted={load} />
+          {data && tab === 'premios' && (
+            <PremiosTab data={data} editable={editable} awards={awards} onChange={changeAward} primo={primo} onPrimoChange={changePrimo} onVoted={load} />
           )}
           {data && tab === 'ranking' && <RankingTab data={data} />}
         </div>
@@ -331,7 +334,7 @@ function Rules({ data }: { data: Data }) {
           Máximo posible: <b>{data.maxPoints.total}</b> ({data.maxPoints.ranking} de la clasificación y {data.maxPoints.awards} de
           premios).
         </li>
-        <li>El Trofeo Primo de Oro es aparte: se vota en su pestaña y no da puntos.</li>
+        <li>El premio al Mejor futbolista del mundo se vota en Premios individuales y no da puntos.</li>
       </ul>
     </details>
   );
@@ -389,11 +392,17 @@ function PremiosTab({
   editable,
   awards,
   onChange,
+  primo,
+  onPrimoChange,
+  onVoted,
 }: {
   data: Data;
   editable: boolean;
   awards: Record<string, string>;
   onChange: (key: string, v: string) => void;
+  primo: string;
+  onPrimoChange: (v: string) => void;
+  onVoted: () => void;
 }) {
   const me = data.everyone?.find((e) => e.playerId === data.me.id);
   const groups = (['liga', 'champions', 'europa'] as const).map((g) => ({
@@ -402,6 +411,7 @@ function PremiosTab({
   }));
   return (
     <>
+      <h3>Premios individuales</h3>
       {editable && <p className="sp-hint">Escribe el nombre del jugador. Vale con el apellido (“Mbappé”).</p>}
       {groups.map(({ g, items }) => (
         <section key={g} className="sp-awards">
@@ -441,6 +451,10 @@ function PremiosTab({
           })}
         </section>
       ))}
+      <section className="sp-awards">
+        <h3>Premio individual mundial</h3>
+        <PrimoTab data={data} editable={editable} primo={primo} onChange={onPrimoChange} onVoted={onVoted} />
+      </section>
     </>
   );
 }
@@ -487,46 +501,38 @@ function PrimoTab({
       <div className="sp-primo-hero">
         <span aria-hidden="true">🏅</span>
         <div>
-          <h3>Trofeo Primo de Oro</h3>
-          <p>Al mejor primo de la temporada.</p>
+          <h3>Mejor futbolista del mundo</h3>
+          <p>Elige a quien haga la mejor temporada en todo el fútbol mundial.</p>
         </div>
       </div>
 
       {stage === 'nominate' && (
         <>
           <p className="sp-hint">
-            Ahora, <b>en privado</b>: ¿quién crees que va a hacer la mejor temporada? Al acabar la temporada se votará entre
-            todos los nombres que se hayan dicho. Se publicarán los nombres, <b>nunca quién ha votado a quién</b>.
+            Propón al futbolista que crees que hará la mejor temporada, en cualquier equipo, país o competición. Al acabar
+            la temporada se abrirá la votación final entre los candidatos. Tu propuesta permanece privada hasta que se
+            cierre el plazo; después se publicarán los candidatos, sin indicar quién propuso a quién.
           </p>
           <div className="sp-award">
-            <label htmlFor="primo-in">Mi candidato</label>
+            <label htmlFor="primo-in">Mi futbolista candidato</label>
             <input
               id="primo-in"
               value={primo}
               maxLength={60}
               autoComplete="off"
-              placeholder="Nombre"
+              placeholder="Nombre del futbolista"
               disabled={!editable}
               onChange={(e) => onChange(e.target.value)}
             />
           </div>
-          {editable && data.members.length > 0 && (
-            <div className="sp-chips" aria-label="Sugerencias">
-              {data.members.map((m) => (
-                <button key={m} type="button" className={sameName(m, primo) ? 'on' : ''} onClick={() => onChange(m)}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          )}
         </>
       )}
 
       {stage === 'list' && (
         <>
           <p className="sp-hint">
-            Estos son los candidatos que se han dicho (por orden alfabético, sin decir quién ha votado a quién). Cuando
-            acabe la temporada, el admin abrirá la votación final.
+            Estos son los futbolistas propuestos (por orden alfabético). Cuando acabe la temporada, el administrador abrirá
+            la votación final.
           </p>
           <NomineeList nominees={nominees} />
         </>
@@ -535,30 +541,37 @@ function PrimoTab({
       {stage === 'vote' && (
         <>
           <p className="sp-hint">
-            <b>Votación final abierta.</b> Elige a quien ha hecho la mejor temporada. Tu voto es secreto y no puedes votarte
-            a ti mismo.
+            <b>Votación final abierta.</b> Elige al futbolista que ha hecho la mejor temporada. Se publicará quién votó a
+            quién cuando todos hayan votado o al cerrarse la votación.
           </p>
           <ul className="sp-nominees vote">
             {nominees.map((n) => {
               const mine = !!myVote && sameName(myVote, n);
-              const self = sameName(n, data.me.name);
               return (
                 <li key={n}>
                   <button
                     type="button"
                     className={mine ? 'on' : ''}
-                    disabled={busy || self}
+                    disabled={busy}
                     aria-pressed={mine}
                     onClick={() => vote(n)}
                   >
                     <span>{n}</span>
-                    <i aria-hidden="true">{mine ? '✓' : self ? 'tú' : ''}</i>
+                    <i aria-hidden="true">{mine ? '✓' : ''}</i>
                   </button>
                 </li>
               );
             })}
           </ul>
           {msg && <p className="okmsg">{msg}</p>}
+          {tally && (
+            <>
+              <p className="sp-hint">Todos han votado. Ya se puede ver el recuento y quién eligió a cada futbolista.</p>
+              <ul className="sp-tally">
+                {tally.map((t) => <li key={t.nominee}><span>{t.nominee}</span><b>{t.votes}</b></li>)}
+              </ul>
+            </>
+          )}
         </>
       )}
 
@@ -568,7 +581,7 @@ function PrimoTab({
             <div className="sp-winner">
               <span aria-hidden="true">🏆</span>
               <div>
-                <small>Primo de Oro {data.season}/{String(data.season + 1).slice(2)}</small>
+                <small>Mejor futbolista del mundo {data.season}/{String(data.season + 1).slice(2)}</small>
                 <b>{winner.map((w) => w.nominee).join(' y ')}</b>
               </div>
             </div>
@@ -585,6 +598,14 @@ function PrimoTab({
             ))}
           </ul>
         </>
+      )}
+      {data.primo.votes && data.primo.votes.length > 0 && (
+        <div className="sp-vote-attribution">
+          <h4>Quién votó a quién</h4>
+          <ul>
+            {data.primo.votes.map((v) => <li key={`${v.voter}-${v.nominee}`}><b>{v.voter}</b> votó a {v.nominee}</li>)}
+          </ul>
+        </div>
       )}
     </section>
   );
