@@ -144,10 +144,10 @@ Un aviso fino bajo el selector de competición (y una entrada en el menú de usu
   Champions* y Europa League*: las plazas pueden ampliarse según el rendimiento europeo de LaLiga.
 - **Puntos de la clasificación:** equipo en su posición exacta, 3. En un tramo clave, acertar que acaba dentro
   de ese tramo pero no en su posición, 3; y si además es la posición exacta, 5 (en total, no se suman).
-- **Premios:** Pichichi, máximo asistente y Zamora en LaLiga; goleador, asistente y mejor portero en Champions (3 puntos cada uno).
+- **Premios:** Pichichi, máximo asistente y Zamora en LaLiga; goleador, asistente, mejor portero, campeón y finalista en Champions (3 puntos cada uno).
   Bota de Oro mundial y MVP de la temporada: 5 puntos cada uno. El MVP es un premio subjetivo votado entre los miembros.
   Se escribe el nombre; vale con el apellido y da igual mayúsculas y tildes.
-- **Cierre:** este año, el viernes 6 de noviembre de 2026 a las 20:59 (hora de Madrid). Hasta entonces nadie ve lo
+- **Cierre:** este año, el viernes 6 de noviembre de 2026 a las 21:00 (hora de Madrid). Hasta entonces nadie ve lo
   que ha puesto nadie (el servidor no lo envía); al cerrar, la pestaña **Ranking** muestra las predicciones de todos
   con sus puntos. Los años siguientes cierra 1 minuto antes de que empiece la jornada 1, salvo que el admin fije
   otra hora. El valor de este año está en `DEFAULT_DEADLINES` (`src/lib/seasonPicks.ts`).

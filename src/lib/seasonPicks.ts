@@ -54,7 +54,7 @@ export function zoneOf(pos: number, zones: Zones): ZoneKey | null {
 
 // ---------- Premios de jugadores ----------
 
-export type AwardDef = { key: string; label: string; group: 'liga' | 'champions' | 'mundial'; pts: number; goalkeeper?: boolean };
+export type AwardDef = { key: string; label: string; group: 'liga' | 'champions' | 'mundial'; pts: number; goalkeeper?: boolean; team?: boolean };
 
 export const AWARDS: AwardDef[] = [
   { key: 'liga_pichichi', label: 'Pichichi', group: 'liga', pts: 3 },
@@ -63,6 +63,8 @@ export const AWARDS: AwardDef[] = [
   { key: 'champions_pichichi', label: 'Máximo goleador', group: 'champions', pts: 3 },
   { key: 'champions_asistente', label: 'Máximo asistente', group: 'champions', pts: 3 },
   { key: 'champions_portero', label: 'Mejor portero', group: 'champions', pts: 3, goalkeeper: true },
+  { key: 'champions_campeon', label: 'Campeón', group: 'champions', pts: 3, team: true },
+  { key: 'champions_finalista', label: 'Finalista', group: 'champions', pts: 3, team: true },
   { key: 'bota_oro', label: 'Bota de Oro', group: 'mundial', pts: 5 },
   { key: 'mvp', label: 'MVP de la temporada', group: 'mundial', pts: 5 },
 ];
@@ -151,7 +153,7 @@ export function scoreAwards(picks: Record<string, string> | null | undefined, wi
     const pick = cleanName(picks?.[a.key]);
     const w = (winners?.[a.key] ?? []).filter(Boolean);
     const decided = w.length > 0;
-    const hit = !!pick && decided && w.some((x) => sameName(pick, x));
+    const hit = !!pick && decided && w.some((x) => (a.team ? sameTeam(pick, x) : sameName(pick, x)));
     const pts = hit ? a.pts : 0;
     points += pts;
     rows.push({ key: a.key, pick, pts, hit, decided });
@@ -168,11 +170,11 @@ export function maxPoints(zones: Zones, teamCount = 20): { ranking: number; awar
 
 // ---------- Plazo ----------
 
-// Plazo de este año: viernes 6 de noviembre de 2026 a las 20:59 (hora de Madrid, CET = UTC+1).
+// Plazo de este año: viernes 6 de noviembre de 2026 a las 21:00 (hora de Madrid, CET = UTC+1).
 // En el resto de años cierra 1 minuto antes de que empiece la jornada 1 (ver seasonPicksServer.ts),
 // salvo que el admin fije otra hora.
 export const DEFAULT_DEADLINES: Record<number, string> = {
-  2026: '2026-11-06T20:59:00+01:00',
+  2026: '2026-11-06T21:00:00+01:00',
 };
 
 export const TZ = 'Europe/Madrid';

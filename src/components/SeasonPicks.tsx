@@ -306,7 +306,7 @@ function Rules({ data }: { data: Data }) {
           en total (no se suman).
         </li>
         <li>
-          Premios individuales: <b>3</b> puntos cada uno; Bota de Oro mundial: <b>5</b>.
+          Premios individuales, campeón y finalista de Champions: <b>3</b> puntos cada uno; Bota de Oro mundial: <b>5</b>.
         </li>
         <li>
           * Las plazas de Champions y Europa League pueden variar según el rendimiento europeo de LaLiga.
@@ -382,7 +382,7 @@ function PremiosTab({
   return (
     <>
       <h3>Premios individuales</h3>
-      {editable && <p className="sp-hint">Escribe el nombre del jugador.</p>}
+      {editable && <p className="sp-hint">Escribe el nombre del jugador o del equipo para campeón y finalista.</p>}
       {groups.map(({ g, items }) => (
         <section key={g} className="sp-awards">
           <h3>{AWARD_GROUP_LABEL[g]}</h3>
@@ -401,7 +401,7 @@ function PremiosTab({
                     value={awards[a.key] ?? ''}
                     maxLength={60}
                     autoComplete="off"
-                    placeholder={a.goalkeeper ? 'Portero' : 'Jugador'}
+                    placeholder={a.team ? 'Equipo' : a.goalkeeper ? 'Portero' : 'Jugador'}
                     onChange={(e) => onChange(a.key, e.target.value)}
                   />
                 ) : (

@@ -176,7 +176,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
       <RankEditor order={order} teams={data.teams} zones={zones} onChange={setOrder} />
 
       <h4>Ganadores de los premios</h4>
-      <p className="muted small">Si hay empate, sepáralos con punto y coma. Se acepta con o sin tildes y vale el apellido. Déjalo vacío hasta que se resuelva.</p>
+      <p className="muted small">Si hay empate, sepáralos con punto y coma. Para jugadores vale el apellido; para campeón y finalista, escribe el equipo. Déjalo vacío hasta que se resuelva.</p>
       {(['liga', 'champions', 'mundial'] as const).map((g) => (
         <div key={g} className="sp-admin-awards">
           <b>{AWARD_GROUP_LABEL[g]}</b>
