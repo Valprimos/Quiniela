@@ -59,21 +59,21 @@ export async function loadLigaMatches(supabase: Supa, season: number): Promise<M
   );
 }
 
-export async function loadChampionsTeams(supabase: Supa, season: number): Promise<string[]> {
+export type Team = { name: string; crest: string | null };
+
+export async function loadChampionsTeams(supabase: Supa, season: number): Promise<Team[]> {
   const { data } = await supabase
     .from('matches')
-    .select('home_name,away_name')
+    .select('home_name,away_name,home_crest,away_crest')
     .eq('competition', 'CL')
     .eq('season', season);
-  const names = new Set<string>();
+  const teams = new Map<string, string | null>();
   for (const match of data ?? []) {
-    if (match.home_name) names.add(match.home_name);
-    if (match.away_name) names.add(match.away_name);
+    if (match.home_name && (!teams.has(match.home_name) || !teams.get(match.home_name))) teams.set(match.home_name, match.home_crest);
+    if (match.away_name && (!teams.has(match.away_name) || !teams.get(match.away_name))) teams.set(match.away_name, match.away_crest);
   }
-  return [...names].sort((a, b) => a.localeCompare(b, 'es'));
+  return [...teams].map(([name, crest]) => ({ name, crest })).sort((a, b) => a.name.localeCompare(b.name, 'es'));
 }
-
-export type Team = { name: string; crest: string | null };
 
 // Equipos de La Liga de la temporada (según los partidos cargados), por orden alfabético
 export function teamsOf(matches: MatchLite[]): Team[] {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Avatar from './Avatar';
-import { RankEditor, RankReadOnly, type TeamInfo } from './SeasonRank';
+import { Crest, RankEditor, RankReadOnly, type TeamInfo } from './SeasonRank';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { RowsSkeleton } from './Skeleton';
 import {
@@ -47,7 +47,7 @@ type Data = {
   maxPoints: { ranking: number; awards: number; total: number };
   awardsDef: AwardDef[];
   championsPickDef: typeof CHAMPIONS_PICKS;
-  championsTeams: string[];
+  championsTeams: TeamInfo[];
   mine: { ranking: string[] | null; awards: Record<string, string> };
   progress: { ranking: boolean; awards: boolean; champions: boolean; done: number; total: number };
   pending: string[];
@@ -61,9 +61,9 @@ type Tab = 'clasificacion' | 'premios' | 'champions' | 'ranking';
 type Save = 'idle' | 'saving' | 'saved' | 'error';
 
 const TABS: [Tab, string][] = [
-  ['clasificacion', 'Clasificación'],
-  ['premios', 'Premios individuales'],
+  ['clasificacion', 'La Liga'],
   ['champions', 'Champions'],
+  ['premios', 'Premios'],
   ['ranking', 'Ranking'],
 ];
 
@@ -326,7 +326,7 @@ function Rules({ data }: { data: Data }) {
           en total (no se suman).
         </li>
         <li>
-          Premios individuales y cada finalista de Champions: <b>3</b> puntos; campeón de Champions, Bota de Oro y MVP: <b>5</b>.
+          Premios individuales y cada finalista acertado: <b>3</b> puntos. El campeón acertado suma <b>5</b> en total por su equipo.
         </li>
         <li>
           * Las plazas de Champions y Europa League pueden variar según el rendimiento europeo de LaLiga.
@@ -404,7 +404,10 @@ function PremiosTab({
       {editable && <p className="sp-hint">Escribe el nombre del jugador.</p>}
       {groups.map(({ g, items }) => (
         <section key={g} className="sp-awards">
-          <h3>{AWARD_GROUP_LABEL[g]}</h3>
+          <h3>
+            {g !== 'mundial' && <img src={g === 'liga' ? '/logos/laliga.png' : '/logos/champions.png'} alt="" />}
+            {AWARD_GROUP_LABEL[g]}
+          </h3>
           {items.map((a) => {
             const res = data.results.awards[a.key];
             const row = me?.awardRows.find((r) => r.key === a.key);
@@ -459,7 +462,9 @@ function ChampionsTab({
   const first = awards.champions_finalista1 ?? '';
   const second = awards.champions_finalista2 ?? '';
   const champion = awards.champions_campeon ?? '';
-  const selected = [first, second].filter(Boolean);
+  const firstTeam = data.championsTeams.find((team) => team.name === first) ?? null;
+  const secondTeam = data.championsTeams.find((team) => team.name === second) ?? null;
+  const selected = [firstTeam, secondTeam].filter((team): team is TeamInfo => !!team);
   const noTeams = data.championsTeams.length === 0;
 
   return (
@@ -475,43 +480,67 @@ function ChampionsTab({
         <p className="sp-hint">Todavía no hay equipos de Champions cargados para esta temporada.</p>
       ) : (
         <div className="sp-cl-grid">
-          <label className="sp-cl-field">
-            <span>Finalista 1 <b>+3</b></span>
-            <select
-              value={first}
-              disabled={!editable}
-              onChange={(e) => onChange('champions_finalista1', e.target.value)}
-            >
-              <option value="">Elige equipo</option>
-              {data.championsTeams.filter((team) => team !== second).map((team) => <option key={team}>{team}</option>)}
-            </select>
-          </label>
-          <label className="sp-cl-field">
-            <span>Finalista 2 <b>+3</b></span>
-            <select
-              value={second}
-              disabled={!editable}
-              onChange={(e) => onChange('champions_finalista2', e.target.value)}
-            >
-              <option value="">Elige equipo</option>
-              {data.championsTeams.filter((team) => team !== first).map((team) => <option key={team}>{team}</option>)}
-            </select>
-          </label>
-          <label className="sp-cl-field champion">
-            <span>Campeón <b>+5</b></span>
-            <select
-              value={champion}
-              disabled={!editable || selected.length !== 2}
-              onChange={(e) => onChange('champions_campeon', e.target.value)}
-            >
-              <option value="">Elige entre los finalistas</option>
-              {selected.map((team) => <option key={team}>{team}</option>)}
-            </select>
-          </label>
+          <TeamPicker label="Finalista 1" points={3} selected={firstTeam} teams={data.championsTeams.filter((team) => team.name !== second)} disabled={!editable} onSelect={(name) => onChange('champions_finalista1', name)} />
+          <TeamPicker label="Finalista 2" points={3} selected={secondTeam} teams={data.championsTeams.filter((team) => team.name !== first)} disabled={!editable} onSelect={(name) => onChange('champions_finalista2', name)} />
+          <TeamPicker label="Campeón" points={5} selected={data.championsTeams.find((team) => team.name === champion) ?? null} teams={selected} disabled={!editable || selected.length !== 2} onSelect={(name) => onChange('champions_campeon', name)} highlight />
         </div>
       )}
-      <p className="sp-cl-note">Sumas 3 puntos por cada finalista acertado. Si también eliges al campeón como finalista, sumas 5 puntos más.</p>
+      <p className="sp-cl-note">Cada finalista acertado suma 3 puntos. Si aciertas también al campeón, ese equipo suma 5 en total, no 8.</p>
     </section>
+  );
+}
+
+function TeamPicker({
+  label,
+  points,
+  teams,
+  selected,
+  disabled,
+  onSelect,
+  highlight = false,
+}: {
+  label: string;
+  points: number;
+  teams: TeamInfo[];
+  selected: TeamInfo | null;
+  disabled: boolean;
+  onSelect: (name: string) => void;
+  highlight?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (e: MouseEvent) => {
+      if (root.current && !root.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', closeOutside);
+    return () => document.removeEventListener('mousedown', closeOutside);
+  }, [open]);
+
+  return (
+    <div className={`sp-cl-field${highlight ? ' champion' : ''}`} ref={root}>
+      <span>{label} <b>+{points}</b></span>
+      <button type="button" className="sp-team-picker-button" aria-haspopup="listbox" aria-expanded={open} disabled={disabled} onClick={() => setOpen((v) => !v)}>
+        <Crest src={selected?.crest} size={28} />
+        <span>{selected?.name ?? (disabled && highlight ? 'Elige antes a los dos finalistas' : 'Elige un equipo')}</span>
+        <i aria-hidden="true">⌄</i>
+      </button>
+      {open && (
+        <div className="sp-team-picker-menu" role="listbox" aria-label={label}>
+          <button type="button" role="option" aria-selected={!selected} onClick={() => { onSelect(''); setOpen(false); }}>
+            <span>Sin elegir</span>
+          </button>
+          {teams.map((team) => (
+            <button key={team.name} type="button" role="option" aria-selected={team.name === selected?.name} onClick={() => { onSelect(team.name); setOpen(false); }}>
+              <Crest src={team.crest} size={26} />
+              <span>{team.name}</span>
+              {team.name === selected?.name && <b aria-hidden="true">✓</b>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

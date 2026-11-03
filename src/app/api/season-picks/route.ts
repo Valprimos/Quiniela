@@ -28,10 +28,19 @@ type PickRow = {
 
 const awardsFilled = (a: Record<string, string> | null | undefined, keys = AWARD_KEYS) => keys.filter((k) => cleanName(a?.[k])).length;
 
+function picksOf(row: PickRow | null | undefined): Record<string, string> {
+  const picks: Record<string, string> = { ...row?.awards, mvp: row?.awards?.mvp ?? row?.primo ?? '' };
+  if (!picks.champions_finalista1 && row?.awards?.champions_finalista) picks.champions_finalista1 = row.awards.champions_finalista;
+  if (picks.champions_campeon && ![picks.champions_finalista1, picks.champions_finalista2].includes(picks.champions_campeon)) {
+    picks.champions_campeon = '';
+  }
+  return picks;
+}
+
 // Estado de un jugador: clasificación y premios.
 function progress(row: PickRow | null | undefined, teamCount: number) {
   const ranking = !!row?.ranking && row.ranking.length === teamCount && teamCount > 0;
-  const picks: Record<string, string> = { ...row?.awards, mvp: row?.awards?.mvp ?? row?.primo ?? '' };
+  const picks = picksOf(row);
   const awards = awardsFilled(picks, INDIVIDUAL_AWARD_KEYS) === INDIVIDUAL_AWARD_KEYS.length;
   const champions = CHAMPIONS_PICKS.every((pick) => !!cleanName(picks[pick.key]));
   return { ranking, awards, champions, done: Number(ranking) + Number(awards) + Number(champions), total: 3 };
@@ -100,7 +109,8 @@ export async function GET(req: NextRequest) {
   const byPlayer = new Map(picks.map((p) => [p.player_id, p]));
 
   const real = effectiveOrder(settings, matches);
-  const winners = settings?.results?.awards ?? {};
+  const storedWinners = settings?.results?.awards ?? {};
+  const winners = { ...storedWinners, champions_finalistas: storedWinners.champions_finalistas ?? storedWinners.champions_finalista ?? [] };
 
   // Quién falta por completar (solo nombres: nunca el contenido)
   const pending = playerRows
@@ -114,7 +124,7 @@ export async function GET(req: NextRequest) {
         .map((p) => {
           const row = byPlayer.get(p.id) ?? null;
           const r = scoreRanking(row?.ranking, real.order, zones);
-          const awardPicks = { ...row?.awards, mvp: row?.awards?.mvp ?? row?.primo ?? '' };
+          const awardPicks = picksOf(row);
           const a = scoreAwards(awardPicks, winners);
           const champions = scoreChampions(awardPicks, winners);
           const awardRows = [...a.rows, ...champions.rows];
@@ -157,7 +167,7 @@ export async function GET(req: NextRequest) {
     championsTeams,
     mine: {
       ranking: mine?.ranking ?? null,
-      awards: { ...mine?.awards, mvp: mine?.awards?.mvp ?? mine?.primo ?? '' },
+      awards: picksOf(mine),
     },
     progress: prog,
     pending,
@@ -218,7 +228,8 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  let awards = { ...(existing?.awards ?? {}) };
+  let awards = picksOf(existing);
+  delete awards.champions_finalista;
   if (!awards.mvp && existing?.primo) awards.mvp = existing.primo;
   if (body.awards !== undefined) {
     if (!body.awards || typeof body.awards !== 'object') return fail('Los premios no son válidos.');
@@ -230,9 +241,9 @@ export async function PUT(req: NextRequest) {
           continue;
         }
         if (CHAMPIONS_PICKS.some((pick) => pick.key === k)) {
-          const team = championsTeams.find((name) => sameTeam(name, v));
+          const team = championsTeams.find((team) => sameTeam(team.name, v));
           if (!team) return fail('Elige un equipo de la Champions de esta temporada.');
-          awards[k] = team;
+          awards[k] = team.name;
         } else awards[k] = v;
       }
     }

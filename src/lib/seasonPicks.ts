@@ -72,6 +72,7 @@ export const CHAMPIONS_PICKS = [
   { key: 'champions_finalista2', label: 'Finalista 2', pts: 3 },
   { key: 'champions_campeon', label: 'Campeón', pts: 5 },
 ] as const;
+export const CHAMPIONS_MAX_POINTS = 8; // campeón (5) y el otro finalista (3); no se suman 3 extra por el campeón
 
 export const CHAMPIONS_RESULT_KEYS = ['champions_campeon', 'champions_finalistas'] as const;
 export const AWARD_RESULT_KEYS = [...AWARDS.map((a) => a.key), ...CHAMPIONS_RESULT_KEYS];
@@ -171,12 +172,17 @@ export function scoreAwards(picks: Record<string, string> | null | undefined, wi
 
 export function scoreChampions(picks: Record<string, string> | null | undefined, winners: Record<string, string[]> | null | undefined) {
   const finalists = (winners?.champions_finalistas ?? []).filter(Boolean);
+  const champions = (winners?.champions_campeon ?? []).filter(Boolean);
+  const championPick = cleanName(picks?.champions_campeon);
+  const championHit = !!championPick && champions.some((team) => sameTeam(championPick, team));
   const rows = CHAMPIONS_PICKS.map((p) => {
     const pick = cleanName(picks?.[p.key]);
-    const actual = p.key === 'champions_campeon' ? (winners?.champions_campeon ?? []).filter(Boolean) : finalists;
+    const actual = p.key === 'champions_campeon' ? champions : finalists;
     const decided = actual.length > 0;
     const hit = !!pick && decided && actual.some((team) => sameTeam(pick, team));
-    return { key: p.key, pick, pts: hit ? p.pts : 0, hit, decided };
+    const duplicateChampionCredit = p.key.startsWith('champions_finalista') && championHit && sameTeam(pick, championPick);
+    const pts = p.key === 'champions_campeon' ? (championHit ? p.pts : 0) : hit && !duplicateChampionCredit ? p.pts : 0;
+    return { key: p.key, pick, pts, hit, decided };
   });
   return { points: rows.reduce((sum, row) => sum + row.pts, 0), rows };
 }
@@ -184,7 +190,7 @@ export function scoreChampions(picks: Record<string, string> | null | undefined,
 export function maxPoints(zones: Zones, teamCount = 20): { ranking: number; awards: number; total: number } {
   let ranking = 0;
   for (let p = 1; p <= teamCount; p++) ranking += zoneOf(p, zones) ? PTS_ZONE_EXACT : PTS_EXACT;
-  const awards = AWARDS.reduce((s, a) => s + a.pts, 0) + CHAMPIONS_PICKS.reduce((s, a) => s + a.pts, 0);
+  const awards = AWARDS.reduce((s, a) => s + a.pts, 0) + CHAMPIONS_MAX_POINTS;
   return { ranking, awards, total: ranking + awards };
 }
 
