@@ -5,6 +5,7 @@ import Avatar from './Avatar';
 import { RowsSkeleton } from './Skeleton';
 import { useTheme } from './ThemeToggle';
 import { fetchJson, load, peek } from '@/lib/clientCache';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 type Me = { id: string; name: string; admin: boolean; avatar: number | null; group: string };
 type Saved = { pid: string; name: string; group: string; admin: boolean; current: boolean; avatar: number | null };
@@ -36,6 +37,7 @@ export default function UserMenu({
   onLeave: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  useBodyScrollLock(open);
   const [theme, toggleTheme] = useTheme();
   // Las ligas guardadas se piden una vez y se reutilizan (se actualizan si cambias tu perfil)
   const key = `accounts:${me.id}`;

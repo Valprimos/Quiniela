@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 type Row = {
   matchId: number;
@@ -237,6 +238,7 @@ export default function TeamModal({
   onNavigate: (name: string, crest: string | null) => void;
   onBack?: () => void;
 }) {
+  useBodyScrollLock();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [record, setRecord] = useState<Record_ | null>(null);
   const [error, setError] = useState(false);

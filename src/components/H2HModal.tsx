@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from 'react';
 import { pairTeamColors, teamFill } from '@/lib/league';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 type Row = {
   matchId: number;
@@ -272,6 +273,7 @@ export default function H2HModal({
   crestB: string | null;
   onClose: () => void;
 }) {
+  useBodyScrollLock();
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div

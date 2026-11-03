@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Avatar from './Avatar';
 import { RankEditor, RankReadOnly, type TeamInfo } from './SeasonRank';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { RowsSkeleton } from './Skeleton';
 import {
   AWARD_GROUP_LABEL,
@@ -71,6 +72,7 @@ const TABS: [Tab, string][] = [
 ];
 
 export default function SeasonPicks({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }) {
+  useBodyScrollLock();
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('clasificacion');

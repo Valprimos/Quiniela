@@ -9,6 +9,7 @@ import FormDotsTip from './FormDotsTip';
 import { ProfileSkeleton } from './Skeleton';
 import { fetchJson, load, peek } from '@/lib/clientCache';
 import { fmt, pctOf } from './statsUtil';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 export type ProfileTarget = { id: string; name: string; avatar: number | null };
 
@@ -139,6 +140,7 @@ export default function PlayerProfileModal({
   onClose: () => void;
   onEdit: () => void;
 }) {
+  useBodyScrollLock();
   // Usa las estadísticas que ya se cargaron (pestaña Estadísticas u otro perfil): se ven al instante
   const key = `stats:${meId}:ALL`;
   const [stats, setStats] = useState<StatsDTO | null>(() => peek<StatsDTO>(key) ?? null);

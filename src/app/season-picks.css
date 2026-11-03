@@ -61,7 +61,7 @@
 .sp-tabs button i { display: inline-block; width: 7px; height: 7px; margin-left: 5px; border-radius: 50%; border: 1.5px solid var(--muted); vertical-align: 1px; }
 .sp-tabs button i.ok { background: var(--ok); border-color: var(--ok); }
 
-.sp-body { padding: 12px 14px 16px; overflow-y: auto; flex: 1; min-height: 240px; overscroll-behavior: contain; }
+.sp-body { padding: 12px 14px 16px; overflow-y: auto; flex: 1; min-height: 240px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .sp-hint { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
 .sp-hint b { color: var(--text); }
 .sp-foot { display: flex; justify-content: space-between; gap: 10px; padding: 9px 16px calc(9px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
