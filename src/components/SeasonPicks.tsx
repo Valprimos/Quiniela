@@ -382,7 +382,7 @@ function PremiosTab({
   return (
     <>
       <h3>Premios individuales</h3>
-      {editable && <p className="sp-hint">Escribe el nombre del jugador. Vale con el apellido (“Mbappé”).</p>}
+      {editable && <p className="sp-hint">Escribe el nombre del jugador.</p>}
       {groups.map(({ g, items }) => (
         <section key={g} className="sp-awards">
           <h3>{AWARD_GROUP_LABEL[g]}</h3>
