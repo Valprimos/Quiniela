@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
     .map((p) => p.name)
     .sort((a, b) => a.localeCompare(b, 'es'));
 
-  // Premio al Mejor futbolista del mundo
+  // MVP mundial de la temporada
   let stage: 'nominate' | 'list' | 'vote' | 'closed' = 'nominate';
   const pStage = settings?.primo_stage ?? 'nominate';
   if (closed) stage = pStage === 'vote' ? 'vote' : pStage === 'closed' ? 'closed' : 'list';
@@ -282,7 +282,7 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ ok: true, progress: progress({ player_id: session.pid, ranking, awards, primo }, teams.length) });
 }
 
-// Votación final al Mejor futbolista del mundo (cuando el admin la abre)
+// Votación final al MVP de la temporada (cuando el admin la abre)
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return fail('Sesión caducada. Vuelve a entrar.', 401);
@@ -294,7 +294,7 @@ export async function POST(req: NextRequest) {
   const season = currentSeason();
   const { settings, error: settingsError } = await loadSettings(supabase, session.gid, season);
   if (missingTable(settingsError)) return fail('Esta sección todavía no está activada.', 503);
-  if (settings?.primo_stage !== 'vote') return fail('La votación al Mejor futbolista del mundo no está abierta.', 409);
+  if (settings?.primo_stage !== 'vote') return fail('La votación al MVP de la temporada no está abierta.', 409);
 
   const { data: members } = await supabase.from('players').select('id').eq('group_id', session.gid);
   const ids = (members ?? []).map((m: { id: string }) => m.id);

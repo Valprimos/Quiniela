@@ -137,7 +137,7 @@
 .sp-award-ro.hit span { color: var(--ok); font-weight: 700; }
 .sp-award-ro.miss span { color: var(--muted); }
 
-/* ---- Premio al mejor futbolista del mundo ---- */
+/* ---- MVP de la temporada ---- */
 .sp-primo-hero { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin: 0 0 12px; border-radius: 10px; border: 1px solid var(--foco); background: rgba(255, 210, 63, 0.1); }
 .sp-primo-hero > span { font-size: 32px; }
 .sp-primo-hero h3 { margin: 0; font-family: var(--font-display); font-size: 22px; line-height: 1.05; }

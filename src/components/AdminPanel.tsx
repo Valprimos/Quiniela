@@ -833,7 +833,7 @@ const TOOLS: { id: Tool; title: string; hint: string }[] = [
   { id: 'pronosticos', title: 'Pronósticos', hint: 'Poner o cambiar lo de un jugador' },
   { id: 'pendientes', title: 'Sin pronosticar', hint: 'Ver quién falta en una jornada' },
   { id: 'pleno', title: 'Pleno al 15', hint: 'Elegir a mano o corregir jornadas' },
-  { id: 'predicciones', title: 'Predicciones de temporada', hint: 'Cierre, tramos, resultados y premio al Mejor futbolista del mundo' },
+  { id: 'predicciones', title: 'Predicciones de temporada', hint: 'Cierre, tramos y premios' },
   { id: 'sync', title: 'Sincronización', hint: 'Ver y forzar la actualización de resultados' },
   { id: 'jornada', title: 'Bloquear jornada', hint: 'Cerrar o abrir los pronósticos' },
   { id: 'temporada', title: 'Archivar temporada', hint: 'Guardar la clasificación final' },

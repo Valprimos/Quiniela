@@ -332,12 +332,12 @@ function Rules({ data }: { data: Data }) {
           Premios individuales: <b>3</b> puntos cada uno; Bota de Oro mundial: <b>5</b>.
         </li>
         <li>
-          * LaLiga podría obtener plazas adicionales de Champions.
+          * Las plazas de Champions y Europa League pueden variar según el rendimiento europeo de LaLiga.
         </li>
         <li>
           Máximo posible: <b>{data.maxPoints.total}</b> ({data.maxPoints.ranking} de clasificación y {data.maxPoints.awards} de premios).
         </li>
-        <li>El premio al Mejor futbolista del mundo se vota en Premios individuales y no da puntos.</li>
+        <li>El MVP mundial no da puntos.</li>
       </ul>
     </details>
   );
@@ -448,12 +448,9 @@ function PremiosTab({
               </div>
             );
           })}
+        {g === 'mundial' && <PrimoTab data={data} editable={editable} primo={primo} onChange={onPrimoChange} onVoted={onVoted} />}
         </section>
       ))}
-      <section className="sp-awards">
-        <h3>Premio individual mundial</h3>
-        <PrimoTab data={data} editable={editable} primo={primo} onChange={onPrimoChange} onVoted={onVoted} />
-      </section>
     </>
   );
 }
@@ -500,17 +497,14 @@ function PrimoTab({
       <div className="sp-primo-hero">
         <span aria-hidden="true">🏅</span>
         <div>
-          <h3>Mejor futbolista del mundo</h3>
-          <p>Elige a quien haga la mejor temporada en todo el fútbol mundial.</p>
+          <h3>MVP de la temporada</h3>
         </div>
       </div>
 
       {stage === 'nominate' && (
         <>
           <p className="sp-hint">
-            Propón al futbolista que crees que hará la mejor temporada, en cualquier equipo, país o competición. Al acabar
-            la temporada se abrirá la votación final entre los candidatos. Tu propuesta permanece privada hasta que se
-            cierre el plazo; después se publicarán los candidatos, sin indicar quién propuso a quién.
+            Propón tu MVP mundial de la temporada. Al terminar, se votará entre los candidatos.
           </p>
           <div className="sp-award">
             <label htmlFor="primo-in">Mi futbolista candidato</label>
@@ -530,8 +524,7 @@ function PrimoTab({
       {stage === 'list' && (
         <>
           <p className="sp-hint">
-            Estos son los futbolistas propuestos (por orden alfabético). Cuando acabe la temporada, el administrador abrirá
-            la votación final.
+            Candidatos a MVP. La votación final se abrirá al acabar la temporada.
           </p>
           <NomineeList nominees={nominees} />
         </>
@@ -540,8 +533,7 @@ function PrimoTab({
       {stage === 'vote' && (
         <>
           <p className="sp-hint">
-            <b>Votación final abierta.</b> Elige al futbolista que ha hecho la mejor temporada. Se publicará quién votó a
-            quién cuando todos hayan votado o al cerrarse la votación.
+            <b>Votación final abierta.</b> Vota al MVP. Los votos se revelan cuando todos hayan votado o al cerrar.
           </p>
           <ul className="sp-nominees vote">
             {nominees.map((n) => {
@@ -580,7 +572,7 @@ function PrimoTab({
             <div className="sp-winner">
               <span aria-hidden="true">🏆</span>
               <div>
-                <small>Mejor futbolista del mundo {data.season}/{String(data.season + 1).slice(2)}</small>
+                <small>MVP de la temporada {data.season}/{String(data.season + 1).slice(2)}</small>
                 <b>{winner.map((w) => w.nominee).join(' y ')}</b>
               </div>
             </div>

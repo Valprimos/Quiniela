@@ -141,16 +141,14 @@ Un aviso fino bajo el selector de competición (y una entrada en el menú de usu
 **Predicciones de temporada**. Se rellena una vez y se guarda sola.
 
 - **Clasificación:** parte de la tabla actual. Los equipos se pueden arrastrar o mover con flechas y números.
-  Champions* marca las plazas, que podrían ampliarse para LaLiga.
+  Champions* y Europa League*: las plazas pueden ampliarse según el rendimiento europeo de LaLiga.
 - **Puntos de la clasificación:** equipo en su posición exacta, 3. En un tramo clave, acertar que acaba dentro
   de ese tramo pero no en su posición, 3; y si además es la posición exacta, 5 (en total, no se suman).
 - **Premios:** Pichichi, máximo asistente y Zamora en LaLiga; goleador y asistente en Champions (3 puntos cada uno).
   Bota de Oro mundial: 5 puntos.
   Se escribe el nombre; vale con el apellido y da igual mayúsculas y tildes.
-- **Mejor futbolista del mundo:** en Premios individuales, cada jugador propone en privado al futbolista que crea
-  que hará la mejor temporada en todo el fútbol mundial, sin limitarse a una liga o competición. Al cerrar el plazo
-  se publica la lista de candidatos, sin decir quién propuso a quién. Al acabar la temporada, el admin abre la
-  votación final; quién votó a quién se muestra cuando todos hayan votado o al cerrarse la votación. No da puntos.
+- **MVP de la temporada:** va en el grupo Mundial, junto a la Bota de Oro. La votación final se abre al acabar la
+  temporada; quién votó a quién se muestra cuando todos hayan votado o al cerrar. No da puntos.
 - **Cierre:** este año, el viernes 6 de noviembre de 2026 a las 20:59 (hora de Madrid). Hasta entonces nadie ve lo
   que ha puesto nadie (el servidor no lo envía); al cerrar, la pestaña **Ranking** muestra las predicciones de todos
   con sus puntos. Los años siguientes cierra 1 minuto antes de que empiece la jornada 1, salvo que el admin fije
@@ -159,7 +157,7 @@ Un aviso fino bajo el selector de competición (y una entrada en el menú de usu
   resultados de hoy hasta que acabe la liga, o la oficial si el admin la guarda).
 - **Admin > Predicciones de temporada:** cambiar el cierre, ajustar los tramos clave (por si cambia el reparto
   europeo), guardar una clasificación final oficial (para desempates del reglamento), escribir los ganadores de
-  los premios y llevar las fases del premio al Mejor futbolista del mundo.
+  los premios y llevar las fases del MVP de la temporada.
 
 Requiere ejecutar `supabase/migration-10-predicciones-temporada.sql` una vez (hasta entonces la sección no aparece).
 

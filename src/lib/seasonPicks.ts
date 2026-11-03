@@ -18,7 +18,7 @@ export const ZONE_ORDER: ZoneKey[] = ['champions', 'europa', 'conference', 'rele
 
 export const ZONE_LABEL: Record<ZoneKey, string> = {
   champions: 'Champions*',
-  europa: 'Europa League',
+  europa: 'Europa League*',
   conference: 'Conference',
   relegation: 'Descenso',
 };

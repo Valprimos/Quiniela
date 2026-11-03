@@ -123,7 +123,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
       <p className="muted small">Hora de Madrid. Un año normal cierra 1 minuto antes de la jornada 1.</p>
 
       <h4>Tramos clave</h4>
-      <p className="muted small">Posiciones de cada tramo. LaLiga podría sumar plazas de Champions*.</p>
+      <p className="muted small">* Las plazas de Champions y Europa League pueden variar según el rendimiento europeo de LaLiga.</p>
       <div className="sp-zones">
         {ZONE_ORDER.map((k) => (
           <div key={k} className={`sp-zone-row z-${k}`}>
@@ -194,7 +194,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
         Guardar premios
       </button>
 
-      <h4>Mejor futbolista del mundo</h4>
+      <h4>MVP de la temporada</h4>
       <p className="muted small">
         Fase actual:{' '}
         <b>
@@ -206,7 +206,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
               ? 'votación final abierta'
               : 'resultado publicado'}
         </b>
-        . Los futbolistas propuestos se publican cuando cierra el plazo; la votación final la abres tú al acabar la temporada.
+        . La lista de candidatos se publica al cerrar el plazo; la votación final se abre al acabar la temporada.
       </p>
       <div className="row">
         <button type="button" className="seg-btn" disabled={busy || !data.closed || stage === 'vote'} onClick={() => run({ action: 'primo', stage: 'vote' }, 'Votación final abierta.')}>
