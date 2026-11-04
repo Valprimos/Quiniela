@@ -132,6 +132,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .chip.miss { border-color: var(--ko); color: var(--ko); }
 .chip.miss b { color: var(--ko); }
 
+/* Pronósticos de los demás en vista compacta: fila de fotos con el pronóstico debajo */
+.matches-tools { display: flex; justify-content: flex-end; margin: 4px 0 0; }
+.chipstoggle { padding: 8px 4px; font-size: 14px; }
+.chipstoggle[aria-pressed='true'] { color: var(--foco-ink); }
+.minis { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 4px; margin: 0; padding: 0; list-style: none; }
+.mini .plink { flex-direction: column; gap: 3px; min-width: 40px; padding: 3px 2px; justify-content: center; }
+.mini .avatar { box-shadow: 0 0 0 2px var(--line); }
+.mini.hit .avatar { box-shadow: 0 0 0 2px var(--ok); }
+.mini.miss .avatar { box-shadow: 0 0 0 2px var(--ko); }
+.mini b { font-size: 13px; line-height: 1; color: var(--text); }
+.mini.hit b { color: var(--ok); }
+.mini.miss b { color: var(--ko); }
+.mini .plink:hover .avatar, .mini .plink:focus-visible .avatar { box-shadow: 0 0 0 2px var(--foco); }
+
 /* Clasificación */
 .seg { display: flex; gap: 6px; margin-top: 16px; }
 .seg button {

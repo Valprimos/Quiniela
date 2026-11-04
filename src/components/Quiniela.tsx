@@ -278,12 +278,14 @@ function MatchRow({
   onSavePleno,
   onOpenTeam,
   onOpenH2H,
+  showNames,
 }: {
   m: MatchDTO;
   onPick: (m: MatchDTO, p: Pick) => void;
   onSavePleno: (m: MatchDTO, home: number, away: number) => void;
   onOpenTeam: (name: string, crest: string | null) => void;
   onOpenH2H: (home: Team, away: Team) => void;
+  showNames: boolean;
 }) {
   const openProfile = useProfile();
   return (
@@ -345,30 +347,43 @@ function MatchRow({
 
       <Consensus m={m} />
 
-      {m.picks.length > 0 && (
-        <ul className="chips" aria-label="Pronósticos de los jugadores">
-          {m.picks.map((c, i) => {
-            if (m.isPleno) {
-              const hit = m.result != null && c.plenoGuess != null && c.plenoGuess.home === m.homeScore && c.plenoGuess.away === m.awayScore;
-              const state = m.result ? (c.plenoGuess ? (hit ? 'hit' : 'miss') : '') : '';
-              return (
-                <li key={i} className={`chip ${state}`}>
+      {m.picks.length > 0 && (() => {
+        const real = m.result ?? (m.provisional ? m.liveResult : null);
+        const items = m.picks.map((c) => {
+          if (m.isPleno) {
+            const hit = m.result != null && c.plenoGuess != null && c.plenoGuess.home === m.homeScore && c.plenoGuess.away === m.awayScore;
+            return {
+              c,
+              label: c.plenoGuess ? `${c.plenoGuess.home}-${c.plenoGuess.away}` : '–',
+              state: m.result ? (c.plenoGuess ? (hit ? 'hit' : 'miss') : '') : '',
+            };
+          }
+          return { c, label: c.pick as string, state: real ? (c.pick === real ? 'hit' : 'miss') : '' };
+        });
+        // Vista compacta (por defecto): una fila de fotos con el pronóstico debajo y el aro en verde/rojo según acierto.
+        if (!showNames) {
+          return (
+            <ul className="minis" aria-label="Pronósticos de los jugadores">
+              {items.map(({ c, label, state }, i) => (
+                <li key={i} className={`mini ${state}`}>
                   <button
                     type="button"
                     className="plink"
-                    aria-label={`Ver perfil de ${c.name}`}
+                    title={c.name}
+                    aria-label={`${c.name}: ${label}. Ver perfil`}
                     onClick={() => openProfile({ id: c.playerId, name: c.name, avatar: c.avatar })}
                   >
-                    <Avatar id={c.playerId} name={c.name} v={c.avatar} size={28} />
-                    {c.name}
+                    <Avatar id={c.playerId} name={c.name} v={c.avatar} size={32} />
+                    <b>{label}</b>
                   </button>
-                  <b>{c.plenoGuess ? `${c.plenoGuess.home}-${c.plenoGuess.away}` : '–'}</b>
                 </li>
-              );
-            }
-            const real = m.result ?? (m.provisional ? m.liveResult : null);
-            const state = real ? (c.pick === real ? 'hit' : 'miss') : '';
-            return (
+              ))}
+            </ul>
+          );
+        }
+        return (
+          <ul className="chips" aria-label="Pronósticos de los jugadores">
+            {items.map(({ c, label, state }, i) => (
               <li key={i} className={`chip ${state}`}>
                 <button
                   type="button"
@@ -379,12 +394,12 @@ function MatchRow({
                   <Avatar id={c.playerId} name={c.name} v={c.avatar} size={28} />
                   {c.name}
                 </button>
-                <b>{c.pick}</b>
+                <b>{label}</b>
               </li>
-            );
-          })}
-        </ul>
-      )}
+            ))}
+          </ul>
+        );
+      })()}
     </li>
   );
 }
@@ -563,6 +578,20 @@ export default function Quiniela() {
   const [md, setMd] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<TabKey>('pronosticos');
+  // Pronósticos de los demás: fila compacta de fotos (por defecto) o chips con nombre. Se recuerda en el dispositivo.
+  const [showNames, setShowNames] = useState(false);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('quiniela:chips-nombres') === '1') setShowNames(true);
+    } catch {}
+  }, []);
+  const toggleNames = () => {
+    const next = !showNames;
+    setShowNames(next);
+    try {
+      localStorage.setItem('quiniela:chips-nombres', next ? '1' : '0');
+    } catch {}
+  };
   // Pestañas accesibles (patrón WAI-ARIA): flechas, Inicio y Fin mueven el foco y activan la pestaña.
   const tabRefs = useRef<Partial<Record<TabKey, HTMLButtonElement | null>>>({});
   const onTabKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -1110,9 +1139,16 @@ export default function Quiniela() {
                   {nextClose != null && `Próximo cierre ${untilLabel(Math.max(0, nextClose))}.`}
                 </p>
               )}
+              {data.matches.some((m) => m.picks.length > 0) && (
+                <div className="matches-tools">
+                  <button type="button" className="link chipstoggle" aria-pressed={showNames} onClick={toggleNames}>
+                    Mostrar nombres
+                  </button>
+                </div>
+              )}
               <ul className="matches">
                 {data.matches.map((m) => (
-                  <MatchRow key={m.id} m={m} onPick={choose} onSavePleno={savePleno} onOpenTeam={openTeamModal} onOpenH2H={(a, b) => setH2h({ a, b })} />
+                  <MatchRow key={m.id} m={m} showNames={showNames} onPick={choose} onSavePleno={savePleno} onOpenTeam={openTeamModal} onOpenH2H={(a, b) => setH2h({ a, b })} />
                 ))}
               </ul>
             </>
