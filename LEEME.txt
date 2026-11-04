@@ -1,18 +1,19 @@
-PRONÓSTICOS COMPACTOS + PESTAÑAS ACCESIBLES
+PRONÓSTICOS EN COLUMNAS 1 · X · 2 + PESTAÑAS ACCESIBLES
 
 Sube estos 2 archivos a GitHub respetando las rutas (reemplazan a los actuales):
   src/components/Quiniela.tsx
   src/app/globals.css
 
-Estos archivos incluyen también el cambio anterior de pestañas accesibles, así que
-si aún no subiste el ZIP "pestanas-accesibles" no hace falta: este lo contiene.
+Incluyen también el cambio de pestañas accesibles y sustituyen al ZIP "pronosticos-compactos".
 
-Qué cambia en la jornada:
-- Debajo de cada partido, los pronósticos de la pandilla pasan a una fila compacta de fotos
-  con el pronóstico (1, X, 2 o el marcador del pleno) debajo y el aro en verde/rojo cuando
-  hay acierto/fallo. Cada foto sigue abriendo el perfil; al pasar el ratón se ve el nombre.
-- Sobre la lista de partidos aparece "Mostrar nombres": al activarlo se vuelve a ver la lista
-  con nombres de antes. Un solo botón para toda la jornada; se recuerda en ese dispositivo.
-- El botón solo aparece si hay pronósticos visibles en la jornada.
+Debajo de cada partido:
+- Tres columnas en el orden de la quiniela (1, X, 2) con las fotos de quien ha puesto cada una.
+  Cada columna muestra arriba la letra grande y cuántos la han puesto.
+- Fotos de 44 px (antes 32). Se cambia en una línea: const MINI_AVATAR = 44; en Quiniela.tsx.
+- Aro verde/rojo en cada foto al haber acierto/fallo; la columna del resultado real se marca con borde verde
+  (en directo, con borde amarillo).
+- "Mostrar nombres" (sobre la lista de partidos): las columnas pasan a lista con foto de 36 px y nombre,
+  una persona por línea. Se recuerda en el dispositivo.
+- El partido del pleno al 15 sigue en una sola fila (son marcadores, no 1/X/2), con fotos de 44 px.
 
 No hay migraciones ni variables nuevas.
