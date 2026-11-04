@@ -23,8 +23,6 @@ import SeasonPicks from './SeasonPicks';
 import SeasonChip, { useSeasonBrief } from './SeasonChip';
 
 type Pick = '1' | 'X' | '2';
-// Tamaño (px) de las fotos en la vista compacta de pronósticos: grande para que se vean bien.
-const MINI_AVATAR = 44;
 const TABS = [
   { key: 'pronosticos', label: 'Pronósticos' },
   { key: 'clasificacion', label: 'Clasificación' },
@@ -351,81 +349,55 @@ function MatchRow({
 
       {m.picks.length > 0 && (() => {
         const real = m.result ?? (m.provisional ? m.liveResult : null);
-        const open1 = (c: MatchDTO['picks'][number]) => openProfile({ id: c.playerId, name: c.name, avatar: c.avatar });
-        // Pleno al 15: los pronósticos son marcadores, no 1/X/2, así que van en una sola fila.
-        if (m.isPleno) {
-          const items = m.picks.map((c) => {
+        const items = m.picks.map((c) => {
+          if (m.isPleno) {
             const hit = m.result != null && c.plenoGuess != null && c.plenoGuess.home === m.homeScore && c.plenoGuess.away === m.awayScore;
-            return { c, label: c.plenoGuess ? `${c.plenoGuess.home}-${c.plenoGuess.away}` : '–', state: m.result ? (c.plenoGuess ? (hit ? 'hit' : 'miss') : '') : '' };
-          });
-          if (!showNames) {
-            return (
-              <ul className="minis" aria-label="Pronósticos de los jugadores">
-                {items.map(({ c, label, state }, i) => (
-                  <li key={i} className={`mini ${state}`}>
-                    <button type="button" className="plink" title={c.name} aria-label={`${c.name}: ${label}. Ver perfil`} onClick={() => open1(c)}>
-                      <Avatar id={c.playerId} name={c.name} v={c.avatar} size={MINI_AVATAR} />
-                      <b>{label}</b>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            );
+            return {
+              c,
+              label: c.plenoGuess ? `${c.plenoGuess.home}-${c.plenoGuess.away}` : '–',
+              state: m.result ? (c.plenoGuess ? (hit ? 'hit' : 'miss') : '') : '',
+            };
           }
+          return { c, label: c.pick as string, state: real ? (c.pick === real ? 'hit' : 'miss') : '' };
+        });
+        // Vista compacta (por defecto): una fila de fotos con el pronóstico debajo y el aro en verde/rojo según acierto.
+        if (!showNames) {
           return (
-            <ul className="chips" aria-label="Pronósticos de los jugadores">
+            <ul className="minis" aria-label="Pronósticos de los jugadores">
               {items.map(({ c, label, state }, i) => (
-                <li key={i} className={`chip ${state}`}>
-                  <button type="button" className="plink" aria-label={`Ver perfil de ${c.name}`} onClick={() => open1(c)}>
-                    <Avatar id={c.playerId} name={c.name} v={c.avatar} size={36} />
-                    {c.name}
+                <li key={i} className={`mini ${state}`}>
+                  <button
+                    type="button"
+                    className="plink"
+                    title={c.name}
+                    aria-label={`${c.name}: ${label}. Ver perfil`}
+                    onClick={() => openProfile({ id: c.playerId, name: c.name, avatar: c.avatar })}
+                  >
+                    <Avatar id={c.playerId} name={c.name} v={c.avatar} size={32} />
+                    <b>{label}</b>
                   </button>
-                  <b>{label}</b>
                 </li>
               ))}
             </ul>
           );
         }
-        // Partido normal: tres columnas en el mismo orden que la quiniela (1 · X · 2) con quién ha puesto cada una.
         return (
-          <div className={`pgroups${showNames ? ' named' : ''}`} role="group" aria-label="Pronósticos de los jugadores">
-            {PICKS.map((p) => {
-              const list = m.picks.filter((c) => c.pick === p);
-              const colState = real === p ? (m.result ? ' real' : ' live') : '';
-              return (
-                <div key={p} className={`pcol${colState}`}>
-                  <div className="pcol-h" aria-hidden="true">
-                    <span>{p}</span>
-                    <small>{list.length}</small>
-                  </div>
-                  <ul className="pcol-list" aria-label={`Han puesto ${p}: ${list.length}`}>
-                    {list.length === 0 && (
-                      <li className="pcol-empty" aria-hidden="true">
-                        –
-                      </li>
-                    )}
-                    {list.map((c) => {
-                      const state = real ? (c.pick === real ? 'hit' : 'miss') : '';
-                      return showNames ? (
-                        <li key={c.playerId} className={`chip ${state}`}>
-                          <button type="button" className="plink" aria-label={`Ver perfil de ${c.name}`} onClick={() => open1(c)}>
-                            <Avatar id={c.playerId} name={c.name} v={c.avatar} size={36} />
-                            <span>{c.name}</span>
-                          </button>
-                        </li>
-                      ) : (
-                        <li key={c.playerId} className={`mini ${state}`}>
-                          <button type="button" className="plink" title={c.name} aria-label={`${c.name}: ${p}. Ver perfil`} onClick={() => open1(c)}>
-                            <Avatar id={c.playerId} name={c.name} v={c.avatar} size={MINI_AVATAR} />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
+          <ul className="chips" aria-label="Pronósticos de los jugadores">
+            {items.map(({ c, label, state }, i) => (
+              <li key={i} className={`chip ${state}`}>
+                <button
+                  type="button"
+                  className="plink"
+                  aria-label={`Ver perfil de ${c.name}`}
+                  onClick={() => openProfile({ id: c.playerId, name: c.name, avatar: c.avatar })}
+                >
+                  <Avatar id={c.playerId} name={c.name} v={c.avatar} size={28} />
+                  {c.name}
+                </button>
+                <b>{label}</b>
+              </li>
+            ))}
+          </ul>
         );
       })()}
     </li>
