@@ -1,7 +1,7 @@
 'use client';
 
 import Brand from './Brand';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Stats from './Stats';
 import CompLogo from './CompLogo';
@@ -23,6 +23,12 @@ import SeasonPicks from './SeasonPicks';
 import SeasonChip, { useSeasonBrief } from './SeasonChip';
 
 type Pick = '1' | 'X' | '2';
+const TABS = [
+  { key: 'pronosticos', label: 'Pronósticos' },
+  { key: 'clasificacion', label: 'Clasificación' },
+  { key: 'estadisticas', label: 'Estadísticas' },
+] as const;
+type TabKey = (typeof TABS)[number]['key'];
 type Mark = 'G' | 'E' | 'P';
 type Team = { name: string; crest: string | null; pos: number | null; form: Mark[] };
 type MatchDTO = {
@@ -556,7 +562,22 @@ export default function Quiniela() {
   const resolved = useRef<string | null>(null);
   const [md, setMd] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<'pronosticos' | 'clasificacion' | 'estadisticas'>('pronosticos');
+  const [tab, setTab] = useState<TabKey>('pronosticos');
+  // Pestañas accesibles (patrón WAI-ARIA): flechas, Inicio y Fin mueven el foco y activan la pestaña.
+  const tabRefs = useRef<Partial<Record<TabKey, HTMLButtonElement | null>>>({});
+  const onTabKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const i = TABS.findIndex((t) => t.key === tab);
+    let next = -1;
+    if (e.key === 'ArrowRight') next = (i + 1) % TABS.length;
+    else if (e.key === 'ArrowLeft') next = (i - 1 + TABS.length) % TABS.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = TABS.length - 1;
+    if (next < 0) return;
+    e.preventDefault();
+    const key = TABS[next].key;
+    setTab(key);
+    tabRefs.current[key]?.focus();
+  };
   // Estadísticas se queda montada (oculta) una vez abierta: al volver conserva la subpestaña (Grupo, Equipos…),
   // el filtro y el orden donde estaban, en vez de empezar siempre en Jugadores.
   const [statsSeen, setStatsSeen] = useState(false);
@@ -1054,20 +1075,20 @@ export default function Quiniela() {
         </p>
       )}
 
-      <div className="tabs" role="tablist">
-        {(
-          [
-            ['pronosticos', 'Pronósticos'],
-            ['clasificacion', 'Clasificación'],
-            ['estadisticas', 'Estadísticas'],
-          ] as const
-        ).map(([key, label]) => (
+      <div className="tabs" role="tablist" aria-label="Secciones" onKeyDown={onTabKeyDown}>
+        {TABS.map(({ key, label }) => (
           <button
             key={key}
+            ref={(el) => {
+              tabRefs.current[key] = el;
+            }}
             type="button"
             role="tab"
+            id={`tab-${key}`}
             className="tab"
             aria-selected={tab === key}
+            aria-controls={`panel-${key}`}
+            tabIndex={tab === key ? 0 : -1}
             onClick={() => setTab(key)}
           >
             {label}
@@ -1077,6 +1098,7 @@ export default function Quiniela() {
 
       <div className={`fadebox${loading ? ' loading' : ''}${showSk ? ' showsk' : ''}`}>
         {showSk && (tab === 'clasificacion' ? <RankingSkeleton /> : <MatchesSkeleton />)}
+        <div role="tabpanel" id="panel-pronosticos" aria-labelledby="tab-pronosticos" className="tabpanel" tabIndex={0} hidden={tab !== 'pronosticos'}>
         {tab === 'pronosticos' &&
           (data.matches.length ? (
             <>
@@ -1097,7 +1119,9 @@ export default function Quiniela() {
           ) : (
             <p className="muted empty">Aún no hay partidos cargados para esta jornada.</p>
           ))}
+        </div>
 
+        <div role="tabpanel" id="panel-clasificacion" aria-labelledby="tab-clasificacion" className="tabpanel" tabIndex={0} hidden={tab !== 'clasificacion'}>
         {tab === 'clasificacion' && (
           <>
             <div className="seg seg-fit" role="group" aria-label="Tipo de clasificación">
@@ -1162,12 +1186,13 @@ export default function Quiniela() {
             {showArchive && <Archive competition={competition} />}
           </>
         )}
+        </div>
 
+        <div role="tabpanel" id="panel-estadisticas" aria-labelledby="tab-estadisticas" className="tabpanel" tabIndex={0} hidden={tab !== 'estadisticas'}>
         {(tab === 'estadisticas' || statsSeen) && (
-          <div hidden={tab !== 'estadisticas'}>
-            <Stats meId={data.me.id} competition={competition} version={statsVersion} onTeamClick={openTeamModal} />
-          </div>
+          <Stats meId={data.me.id} competition={competition} version={statsVersion} onTeamClick={openTeamModal} />
         )}
+        </div>
       </div>
 
       {showSeason && (

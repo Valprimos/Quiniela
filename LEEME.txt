@@ -1,7 +1,15 @@
-CAMBIOS PARA QUINIELA: PREDICCIONES DE TEMPORADA
+PESTAÑAS ACCESIBLES (Pronósticos / Clasificación / Estadísticas)
 
-1. Descomprime este ZIP en la carpeta del proyecto. Los archivos conservan sus rutas.
-2. Sube a GitHub los archivos nuevos y modificados (src/, supabase/, README.md).
-3. En Supabase, abre SQL Editor y ejecuta supabase/migration-10-predicciones-temporada.sql (una vez).
-4. Los datos de este año ya vienen puestos: cierre el viernes 6 de noviembre de 2026 a las 20:59 (hora de Madrid).
-   Cambiarlo: Panel de admin > Predicciones de temporada.
+Sube estos 2 archivos a GitHub respetando las rutas (reemplazan a los actuales):
+  src/components/Quiniela.tsx
+  src/app/globals.css
+
+Qué cambia:
+- Flechas izquierda/derecha cambian de pestaña (en bucle); Inicio y Fin van a la primera y la última.
+- Solo la pestaña activa entra con Tab (tabindex itinerante); el foco se mueve con las flechas.
+- Cada pestaña lleva id y aria-controls; cada contenido es un role="tabpanel" con aria-labelledby.
+- El grupo de pestañas tiene aria-label="Secciones".
+- Los paneles inactivos quedan ocultos (hidden). Estadísticas sigue montada una vez abierta, así que conserva su subpestaña.
+- Contorno visible al enfocar un panel (.tabpanel:focus-visible).
+
+No hay migraciones ni variables nuevas.
