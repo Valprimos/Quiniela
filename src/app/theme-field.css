@@ -31,10 +31,12 @@ html[data-theme='light'] {
   --ok: #158a46;
   --ko: #d23a3a;
   --chalk: rgba(255, 255, 255, 0.5);
-  --grass-a: #2d7f39;
-  --grass-b: #348842;
+  /* Césped y brillo ajustados para que el texto blanco pequeño sobre el campo (.progress, .stagelabel,
+     enlaces) llegue a 4,5:1 incluso en la franja clara y en el centro del degradado (peor caso: 4,64:1). */
+  --grass-a: #2a7736;
+  --grass-b: #31803e;
   --vignette: rgba(0, 38, 8, 0.28);
-  --glow: rgba(255, 255, 255, 0.1);
+  --glow: rgba(255, 255, 255, 0.03);
   --card-shadow: rgba(0, 38, 8, 0.35);
   --on-grass-shadow: rgba(0, 38, 8, 0.55);
   --pitch-p: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 740 1110%22 preserveAspectRatio=%22xMidYMid slice%22%3E%3Cg fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.5%22 stroke-width=%223.2%22 stroke-linejoin=%22round%22%3E%3Crect x=%2230.0%22 y=%2230.0%22 width=%22680.0%22 height=%221050.0%22/%3E%3Cline x1=%2230.0%22 y1=%22555.0%22 x2=%22710.0%22 y2=%22555.0%22/%3E%3Ccircle cx=%22370.0%22 cy=%22555.0%22 r=%2291.5%22/%3E%3Ccircle cx=%22370.0%22 cy=%22555.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Crect x=%22168.4%22 y=%2230.0%22 width=%22403.2%22 height=%22165.0%22/%3E%3Crect x=%22278.4%22 y=%2230.0%22 width=%22183.2%22 height=%2255.0%22/%3E%3Ccircle cx=%22370.0%22 cy=%22140.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Cpath d=%22M296.9 195.0 A91.5 91.5 0 0 0 443.1 195.0%22/%3E%3Crect x=%22168.4%22 y=%22915.0%22 width=%22403.2%22 height=%22165.0%22/%3E%3Crect x=%22278.4%22 y=%221025.0%22 width=%22183.2%22 height=%2255.0%22/%3E%3Ccircle cx=%22370.0%22 cy=%22970.0%22 r=%224%22 fill=%22%23fff%22 stroke=%22none%22/%3E%3Cpath d=%22M296.9 915.0 A91.5 91.5 0 0 1 443.1 915.0%22/%3E%3Cpath d=%22M40.0 30.0 A10 10 0 0 1 30.0 40.0%22/%3E%3Cpath d=%22M700.0 30.0 A10 10 0 0 0 710.0 40.0%22/%3E%3Cpath d=%22M40.0 1080.0 A10 10 0 0 0 30.0 1070.0%22/%3E%3Cpath d=%22M700.0 1080.0 A10 10 0 0 1 710.0 1070.0%22/%3E%3C/g%3E%3C/svg%3E");

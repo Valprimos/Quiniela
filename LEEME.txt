@@ -1,22 +1,18 @@
-ACCESO: "TENGO UN CÓDIGO" / "CREAR UNA PANDILLA NUEVA"
+CONTRASTE DEL TEXTO SOBRE EL CÉSPED (MODO CLARO)
 
-Sube estos 4 archivos a GitHub respetando las rutas (reemplazan a los actuales):
-  src/components/LoginForm.tsx
-  src/app/api/auth/route.ts
-  src/app/globals.css      (solo añade 3 reglas de estilo para las pestañas y el texto de ayuda)
-  README.md                (solo cambia el paso 5 de la puesta en marcha)
+Sube este archivo a GitHub respetando la ruta (reemplaza al actual):
+  src/app/theme-field.css
 
-Importante: LoginForm.tsx y route.ts van JUNTOS (el formulario envía los nuevos modos "join" y "create").
-No hay migraciones SQL ni variables nuevas: groups.name ya existía.
+Qué cambia (solo el bloque del modo claro; el modo oscuro no se toca):
+  --grass-a  #2d7f39 -> #2a7736
+  --grass-b  #348842 -> #31803e
+  --glow     rgba(255,255,255,0.10) -> rgba(255,255,255,0.03)
 
-Cómo queda:
-- Dos pestañas: "Tengo un código" y "Crear una pandilla nueva".
-- Campos siempre en este orden: Nombre de la pandilla, Código, Tu nombre, PIN.
-- Crear: nunca se une a una pandilla existente. Si el código ya está cogido, pide otro.
-- Tengo un código: hay que acertar nombre Y código. Mayúsculas, tildes y espacios de más no importan.
-  Dentro hay un enlace para alternar "Soy nuevo en esta pandilla" / "Ya tengo jugador".
-- Un solo mensaje de error ("El nombre de la pandilla o el código no coinciden") para no revelar qué códigos existen.
-- Enlaces y QR de invitación: la pandilla y el código vienen rellenos y ocultos; solo se pide nombre y PIN.
+Contraste del texto blanco pequeño (.progress, .stagelabel, enlaces) medido sobre el césped REAL
+(franja + degradado radial), en el peor punto:
+  antes:   3,72:1  (franja clara, centro)
+  después: 4,63:1  (franja clara, centro) / 5,21:1 (franja oscura)
+El texto grande (.brand, .jlabel, .jnum) también queda por encima de 3:1.
 
-Ojo: quien ya estaba en una pandilla tendrá que escribir su nombre exacto (el que se vea en "Tus ligas guardadas"
-o en el menú). Si algún grupo antiguo tiene un nombre raro, se puede corregir en Supabase: tabla groups, columna name.
+Nota: src/app/theme-light.css NO se importa en ningún sitio (layout.tsx carga theme-field.css),
+así que es un archivo sobrante. Se puede borrar cuando quieras.
