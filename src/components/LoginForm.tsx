@@ -21,11 +21,13 @@ export default function LoginForm({
 } = {}) {
   const router = useRouter();
   const [saved, setSaved] = useState<Saved[]>([]);
-  const [mode, setMode] = useState<'login' | 'register'>(invite ? 'register' : 'login');
+  // Dos caminos claros: "Tengo un código" (entrar o unirme a una pandilla que ya existe) y "Crear una pandilla nueva"
+  const [tab, setTab] = useState<'code' | 'create'>('code');
+  const [joining, setJoining] = useState(!!invite); // dentro de "Tengo un código": jugador nuevo (true) o ya existente (false)
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [code, setCode] = useState(invite?.code ?? '');
-  const [groupName, setGroupName] = useState('');
+  const [groupName, setGroupName] = useState(invite?.groupName ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -50,7 +52,7 @@ export default function LoginForm({
       router.refresh();
     } else {
       setBusy(false);
-      setError('No se pudo entrar. Usa tu código, nombre y PIN.');
+      setError('No se pudo entrar. Usa el nombre y el código de tu pandilla, tu nombre y tu PIN.');
     }
   }
 
@@ -77,7 +79,9 @@ export default function LoginForm({
     router.refresh();
   }
 
-  const registering = mode === 'register';
+  const creating = tab === 'create';
+  const mode: 'login' | 'join' | 'create' = creating ? 'create' : joining ? 'join' : 'login';
+  const newPlayer = mode !== 'login'; // se elige un PIN nuevo
 
   const form = (
       <form className={embedded ? 'login-form embedded' : 'login-form'} onSubmit={submit}>
@@ -96,14 +100,14 @@ export default function LoginForm({
         )}
         <p className="muted">
           {invite
-            ? registering
+            ? joining
               ? 'Elige tu nombre y un PIN para unirte.'
               : 'Entra con tu nombre y tu PIN.'
-            : registering
-            ? 'Únete a una pandilla o crea una con un código nuevo.'
-            : embedded
-              ? 'Entra con el código, tu nombre y tu PIN.'
-              : 'Entra con el código de tu pandilla, tu nombre y tu PIN.'}
+            : creating
+              ? 'Ponle nombre a tu pandilla e inventa un código para que tus colegas puedan unirse. Tú serás el administrador.'
+              : joining
+                ? 'Pide a un colega el nombre y el código de su pandilla, y elige tu nombre y un PIN.'
+                : 'Entra con el nombre y el código de tu pandilla, tu nombre y tu PIN.'}
         </p>
 
         {!embedded && saved.length > 0 && (
@@ -119,31 +123,57 @@ export default function LoginForm({
         )}
 
         {!invite && (
-          <div className="field">
-            <label htmlFor="code">Código de pandilla</label>
-            <input
-              id="code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              autoComplete="off"
-              maxLength={30}
-              required
-            />
+          <div className="seg login-tabs" role="group" aria-label="¿Qué quieres hacer?">
+            <button
+              type="button"
+              aria-pressed={!creating}
+              onClick={() => {
+                setTab('code');
+                setError(null);
+              }}
+            >
+              Tengo un código
+            </button>
+            <button
+              type="button"
+              aria-pressed={creating}
+              onClick={() => {
+                setTab('create');
+                setError(null);
+              }}
+            >
+              Crear una pandilla nueva
+            </button>
           </div>
         )}
 
-        {registering && !invite && (
-          <div className="field">
-            <label htmlFor="groupName">Nombre de la pandilla (solo si es nueva)</label>
-            <input
-              id="groupName"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              autoComplete="off"
-              maxLength={40}
-              placeholder="Los del bar de Paco"
-            />
-          </div>
+        {!invite && (
+          <>
+            <div className="field">
+              <label htmlFor="groupName">Nombre de la pandilla</label>
+              <input
+                id="groupName"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                autoComplete="off"
+                maxLength={40}
+                placeholder="Los del bar de Paco"
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="code">{creating ? 'Código de la pandilla (invéntalo)' : 'Código de la pandilla'}</label>
+              <input
+                id="code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                autoComplete="off"
+                maxLength={30}
+                required
+              />
+              {creating && <span className="hint">Es lo que compartirás para que se unan. De 3 a 30 caracteres.</span>}
+            </div>
+          </>
         )}
 
         <div className="field">
@@ -167,7 +197,7 @@ export default function LoginForm({
             pattern="\d{4,6}"
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-            autoComplete={registering ? 'new-password' : 'current-password'}
+            autoComplete={newPlayer ? 'new-password' : 'current-password'}
             maxLength={6}
             required
           />
@@ -176,18 +206,20 @@ export default function LoginForm({
         {error && <p className="notice" role="alert">{error}</p>}
 
         <button className="primary" type="submit" disabled={busy}>
-          {invite && registering ? 'Unirme a la pandilla' : registering ? 'Entrar o crear pandilla' : 'Entrar'}
+          {mode === 'create' ? 'Crear pandilla' : mode === 'join' ? 'Unirme a la pandilla' : 'Entrar'}
         </button>
-        <button
-          className="link"
-          type="button"
-          onClick={() => {
-            setMode(registering ? 'login' : 'register');
-            setError(null);
-          }}
-        >
-          {registering ? 'Ya tengo jugador' : invite ? 'Soy nuevo en la pandilla' : 'Soy nuevo o quiero crear una pandilla'}
-        </button>
+        {!creating && (
+          <button
+            className="link"
+            type="button"
+            onClick={() => {
+              setJoining((v) => !v);
+              setError(null);
+            }}
+          >
+            {joining ? 'Ya tengo jugador' : 'Soy nuevo en esta pandilla'}
+          </button>
+        )}
         {!embedded && <ThemeToggle />}
       </form>
   );

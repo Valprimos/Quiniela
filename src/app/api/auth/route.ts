@@ -7,53 +7,49 @@ export const dynamic = 'force-dynamic';
 
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
+// Para comparar nombres de pandilla sin que importen mayúsculas, tildes ni espacios de más
+const norm = (t: string) =>
+  t
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
-  const mode = body?.mode === 'register' ? 'register' : 'login';
+  // login: jugador que ya existe · join: jugador nuevo en una pandilla que ya existe · create: pandilla nueva
+  const mode = body?.mode === 'create' ? 'create' : body?.mode === 'join' ? 'join' : 'login';
   const name = String(body?.name ?? '').trim().replace(/\s+/g, ' ');
   const pin = String(body?.pin ?? '');
   const code = String(body?.code ?? '').trim();
-  const groupName = String(body?.groupName ?? '').trim().slice(0, 40);
+  const groupName = String(body?.groupName ?? '').trim().replace(/\s+/g, ' ').slice(0, 40);
 
+  if (!groupName) return fail('Escribe el nombre de la pandilla.');
+  if (mode === 'create' && groupName.length < 2) return fail('El nombre de la pandilla debe tener entre 2 y 40 caracteres.');
   if (name.length < 2 || name.length > 20) return fail('El nombre debe tener entre 2 y 20 caracteres.');
   if (!/^\d{4,6}$/.test(pin)) return fail('El PIN tiene entre 4 y 6 números.');
   if (code.length < 3 || code.length > 30) return fail('El código de pandilla debe tener entre 3 y 30 caracteres.');
 
   const supabase = db();
-  const { data: group } = await supabase
+  const { data: found } = await supabase
     .from('groups')
     .select('id,name')
     .eq('invite_code', code)
     .maybeSingle();
 
-  if (mode === 'register') {
-    if (group) {
-      const pin_hash = await bcrypt.hash(pin, 10);
-      const { data, error } = await supabase
-        .from('players')
-        .insert({ name, pin_hash, group_id: group.id })
-        .select('id,name')
-        .single();
+  if (mode === 'create') {
+    // Crear nunca se une a una pandilla existente: si el código está cogido, se pide otro
+    if (found) return fail('Ese código de pandilla ya está en uso. Elige otro.', 409);
 
-      if (error) {
-        if (error.code === '23505') return fail('Ese nombre ya está en uso en tu pandilla. Elige otro.');
-        return fail('No se pudo crear el jugador. Inténtalo otra vez.', 500);
-      }
-
-      await setSession(data.id, data.name, group.id, false);
-      await rememberAccount({ pid: data.id, gid: group.id, name: data.name, group: group.name, admin: false });
-      return NextResponse.json({ ok: true, created: false, groupName: group.name });
-    }
-
-    // El código no existe todavía: se crea una pandilla nueva y quien la crea es el admin.
     const { data: newGroup, error: gErr } = await supabase
       .from('groups')
-      .insert({ name: groupName || `Pandilla de ${name}`, invite_code: code })
+      .insert({ name: groupName, invite_code: code })
       .select('id,name')
       .single();
 
     if (gErr) {
-      if (gErr.code === '23505') return fail('Ese código de pandilla ya está en uso. Elige otro.');
+      if (gErr.code === '23505') return fail('Ese código de pandilla ya está en uso. Elige otro.', 409);
       return fail('No se pudo crear la pandilla. Inténtalo otra vez.', 500);
     }
 
@@ -72,9 +68,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, created: true, groupName: newGroup.name });
   }
 
-  // login
-  if (!group) return fail('Código de pandilla incorrecto.', 401);
+  // join y login: hace falta acertar el nombre Y el código. Un solo mensaje para ambos fallos,
+  // así no se puede averiguar qué códigos existen probando.
+  const group = found && norm(found.name) === norm(groupName) ? found : null;
+  if (!group) return fail('El nombre de la pandilla o el código no coinciden.', 401);
 
+  if (mode === 'join') {
+    const pin_hash = await bcrypt.hash(pin, 10);
+    const { data, error } = await supabase
+      .from('players')
+      .insert({ name, pin_hash, group_id: group.id })
+      .select('id,name')
+      .single();
+
+    if (error) {
+      if (error.code === '23505') return fail('Ese nombre ya está en uso en tu pandilla. Elige otro.');
+      return fail('No se pudo crear el jugador. Inténtalo otra vez.', 500);
+    }
+
+    await setSession(data.id, data.name, group.id, false);
+    await rememberAccount({ pid: data.id, gid: group.id, name: data.name, group: group.name, admin: false });
+    return NextResponse.json({ ok: true, created: false, groupName: group.name });
+  }
+
+  // login
   const { data: player } = await supabase
     .from('players')
     .select('id,name,pin_hash,is_admin')

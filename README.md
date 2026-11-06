@@ -19,8 +19,9 @@ detalladas, varias pandillas independientes y panel de admin.
 2. **football-data.org**: regístrate y copia tu token.
 3. Copia `.env.example` a `.env.local` y rellena las variables.
 4. `npm install` y `npm run dev`.
-5. Entra, pulsa "Soy nuevo o quiero crear una pandilla", inventa un código de pandilla y crea tu
-   jugador. Serás admin de esa pandilla automáticamente.
+5. Entra, pulsa "Crear una pandilla nueva", ponle nombre, inventa un código y crea tu jugador.
+   Serás admin de esa pandilla automáticamente. Tus colegas usan "Tengo un código" e indican el
+   nombre y el código de la pandilla (o entran con el enlace o el QR de invitación).
 
 ## Si ya tenías la versión anterior en marcha
 

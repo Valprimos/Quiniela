@@ -1,22 +1,22 @@
-COMPARTIR CLASIFICACIÓN COMO IMAGEN
+ACCESO: "TENGO UN CÓDIGO" / "CREAR UNA PANDILLA NUEVA"
 
-Sube estos 3 archivos a GitHub respetando las rutas:
-  src/lib/shareImage.ts            (NUEVO)
-  src/components/Quiniela.tsx      (reemplaza al actual)
-  src/components/Avatar.tsx        (reemplaza al actual; solo exporta 2 funciones que ya existían)
+Sube estos 4 archivos a GitHub respetando las rutas (reemplazan a los actuales):
+  src/components/LoginForm.tsx
+  src/app/api/auth/route.ts
+  src/app/globals.css      (solo añade 3 reglas de estilo para las pestañas y el texto de ayuda)
+  README.md                (solo cambia el paso 5 de la puesta en marcha)
 
-Parte de la versión que tienes ahora en GitHub (pestañas accesibles + pronósticos compactos).
+Importante: LoginForm.tsx y route.ts van JUNTOS (el formulario envía los nuevos modos "join" y "create").
+No hay migraciones SQL ni variables nuevas: groups.name ya existía.
 
-Qué hace el botón "Compartir clasificación":
-- Genera una imagen PNG de 1080 px de ancho con el estilo oscuro de la web: logo de la competición,
-  título, jornada o tipo de clasificación, y una fila por jugador con posición, foto, nombre y puntos.
-  Oro/plata/bronce para el podio, ▲▼ si hay cambios y 🏆 para el ganador de la jornada completa.
-- Comparte lo que se está viendo en pantalla: si la clasificación "si acaban así" está activada,
-  la imagen lo indica ("En directo") y suma los puntos provisionales.
-- En móvil abre el menú de compartir del sistema con la imagen adjunta (WhatsApp, etc.).
-- En ordenador copia la imagen al portapapeles para pegarla con Ctrl+V / Cmd+V;
-  si el navegador no lo permite, la descarga como PNG.
-- Si algo falla al crear la imagen, vuelve a copiar el texto como antes.
-- Los jugadores sin foto salen con sus iniciales, igual que en la web.
+Cómo queda:
+- Dos pestañas: "Tengo un código" y "Crear una pandilla nueva".
+- Campos siempre en este orden: Nombre de la pandilla, Código, Tu nombre, PIN.
+- Crear: nunca se une a una pandilla existente. Si el código ya está cogido, pide otro.
+- Tengo un código: hay que acertar nombre Y código. Mayúsculas, tildes y espacios de más no importan.
+  Dentro hay un enlace para alternar "Soy nuevo en esta pandilla" / "Ya tengo jugador".
+- Un solo mensaje de error ("El nombre de la pandilla o el código no coinciden") para no revelar qué códigos existen.
+- Enlaces y QR de invitación: la pandilla y el código vienen rellenos y ocultos; solo se pide nombre y PIN.
 
-No hay migraciones, variables ni dependencias nuevas (se dibuja con el <canvas> del navegador).
+Ojo: quien ya estaba en una pandilla tendrá que escribir su nombre exacto (el que se vea en "Tus ligas guardadas"
+o en el menú). Si algún grupo antiguo tiene un nombre raro, se puede corregir en Supabase: tabla groups, columna name.
