@@ -926,32 +926,114 @@ export default function Quiniela() {
 
   async function shareRanking() {
     if (!data) return;
-    const compLabel = data.competitions.find((c) => c.code === data.competition)?.short ?? '';
+    const compInfo = data.competitions.find((c) => c.code === data.competition);
+    const compLabel = compInfo?.short ?? '';
     const title =
       scope === 'jornada'
         ? `Quiniela ${compLabel} ${seasonLabel}, jornada ${data.matchday}`
         : scope === 'general'
           ? `Quiniela ${compLabel} ${seasonLabel}, clasificación general`
           : `Quiniela ${seasonLabel}, clasificación combinada`;
+    // Se comparte lo que se está viendo (incluida la clasificación "si acaban así")
     let pos = 0;
     let prev: number | null = null;
-    const lines = rankRows.map((r, i) => {
+    const ranked = shownRows.map((r, i) => {
       if (r.points !== prev) {
         pos = i + 1;
         prev = r.points;
       }
-      return `${pos}. ${r.name}: ${r.points}`;
+      return { r, pos };
     });
-    const text = `${title}\n${lines.join('\n')}`;
+    const text = `${title}${showLive ? ' (en directo)' : ''}\n${ranked.map(({ r, pos: p }) => `${p}. ${r.name}: ${r.points}`).join('\n')}`;
+
+    const LOGOS: Record<string, string> = { PD: '/logos/laliga.png', CL: '/logos/champions.png' };
+    const logos = (scope === 'combinada' ? data.competitions : compInfo ? [compInfo] : []).map((c) => LOGOS[c.code]).filter(Boolean);
+    const showDeltaImg = scope === 'general' || showLive;
+    const winnerCrown = scope === 'jornada' && data.jornadaComplete && !showLive;
+    const dateLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    const imgOpts = {
+      title: scope === 'combinada' ? `Quiniela ${seasonLabel}` : `Quiniela ${compLabel} ${seasonLabel}`,
+      subtitle:
+        scope === 'jornada'
+          ? data.matchday >= 100
+            ? data.stageLabel ?? `Jornada ${data.matchday}`
+            : `Jornada ${data.matchday}`
+          : scope === 'general'
+            ? 'Clasificación general'
+            : 'Clasificación combinada',
+      badge: showLive ? 'En directo · si acaban así' : undefined,
+      logos,
+      dateLabel: dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1),
+      rows: ranked.map(({ r, pos: p }) => ({
+        id: r.playerId,
+        name: r.name,
+        avatar: r.avatar,
+        points: r.points,
+        pos: p,
+        delta: showDeltaImg && r.delta !== 0 ? r.delta : null,
+        live: showLive ? r.live : 0,
+        crown: winnerCrown && p === 1 && r.points > 0,
+      })),
+    };
+    const fileName = `quiniela-${scope}${scope === 'jornada' ? `-${data.matchday}` : ''}.png`;
+
+    let blob: Blob | null = null;
+    const download = (b: Blob) => {
+      const url = URL.createObjectURL(b);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    };
+    const done = (msg: string) => {
+      setShareMsg(msg);
+      setTimeout(() => setShareMsg(null), 7000);
+    };
+
+    setShareMsg('Creando la imagen…');
     try {
-      if (navigator.share) {
-        await navigator.share({ text });
+      const { renderRankingImage } = await import('@/lib/shareImage');
+      const canShareFiles = (() => {
+        try {
+          return typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File([''], 'q.png', { type: 'image/png' })] });
+        } catch {
+          return false;
+        }
+      })();
+      if (canShareFiles) {
+        // Móvil: se abre el menú de compartir del sistema (WhatsApp, etc.) con la imagen adjunta
+        blob = await renderRankingImage(imgOpts);
+        await navigator.share({ files: [new File([blob], fileName, { type: 'image/png' })], title });
+        setShareMsg(null);
+      } else if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+        // Ordenador: la imagen queda en el portapapeles lista para pegar (Ctrl+V)
+        const pending = renderRankingImage(imgOpts).then((b) => (blob = b));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': pending })]);
+        done('Imagen copiada. Ya puedes pegarla en el grupo.');
       } else {
-        await navigator.clipboard.writeText(text);
-        setShareMsg('Copiado. Ya puedes pegarlo en el grupo.');
+        blob = await renderRankingImage(imgOpts);
+        download(blob);
+        done('Imagen descargada. Ya puedes enviarla al grupo.');
       }
-    } catch {
-      /* el usuario canceló */
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setShareMsg(null); // el usuario cerró el menú de compartir
+        return;
+      }
+      try {
+        if (blob) {
+          download(blob);
+          done('Imagen descargada. Ya puedes enviarla al grupo.');
+        } else {
+          await navigator.clipboard.writeText(text);
+          done('No pude crear la imagen; he copiado el texto.');
+        }
+      } catch {
+        done('No se pudo compartir ahora mismo.');
+      }
     }
   }
 

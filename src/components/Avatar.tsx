@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const hueOf = (name: string) => {
+export const hueOf = (name: string) => {
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360;
   return h;
 };
-const initialsOf = (name: string) =>
+export const initialsOf = (name: string) =>
   name
     .trim()
     .split(/\s+/)

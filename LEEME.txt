@@ -1,19 +1,22 @@
-PRONÓSTICOS EN COLUMNAS 1 · X · 2 + PESTAÑAS ACCESIBLES
+COMPARTIR CLASIFICACIÓN COMO IMAGEN
 
-Sube estos 2 archivos a GitHub respetando las rutas (reemplazan a los actuales):
-  src/components/Quiniela.tsx
-  src/app/globals.css
+Sube estos 3 archivos a GitHub respetando las rutas:
+  src/lib/shareImage.ts            (NUEVO)
+  src/components/Quiniela.tsx      (reemplaza al actual)
+  src/components/Avatar.tsx        (reemplaza al actual; solo exporta 2 funciones que ya existían)
 
-Incluyen también el cambio de pestañas accesibles y sustituyen al ZIP "pronosticos-compactos".
+Parte de la versión que tienes ahora en GitHub (pestañas accesibles + pronósticos compactos).
 
-Debajo de cada partido:
-- Tres columnas en el orden de la quiniela (1, X, 2) con las fotos de quien ha puesto cada una.
-  Cada columna muestra arriba la letra grande y cuántos la han puesto.
-- Fotos de 44 px (antes 32). Se cambia en una línea: const MINI_AVATAR = 44; en Quiniela.tsx.
-- Aro verde/rojo en cada foto al haber acierto/fallo; la columna del resultado real se marca con borde verde
-  (en directo, con borde amarillo).
-- "Mostrar nombres" (sobre la lista de partidos): las columnas pasan a lista con foto de 36 px y nombre,
-  una persona por línea. Se recuerda en el dispositivo.
-- El partido del pleno al 15 sigue en una sola fila (son marcadores, no 1/X/2), con fotos de 44 px.
+Qué hace el botón "Compartir clasificación":
+- Genera una imagen PNG de 1080 px de ancho con el estilo oscuro de la web: logo de la competición,
+  título, jornada o tipo de clasificación, y una fila por jugador con posición, foto, nombre y puntos.
+  Oro/plata/bronce para el podio, ▲▼ si hay cambios y 🏆 para el ganador de la jornada completa.
+- Comparte lo que se está viendo en pantalla: si la clasificación "si acaban así" está activada,
+  la imagen lo indica ("En directo") y suma los puntos provisionales.
+- En móvil abre el menú de compartir del sistema con la imagen adjunta (WhatsApp, etc.).
+- En ordenador copia la imagen al portapapeles para pegarla con Ctrl+V / Cmd+V;
+  si el navegador no lo permite, la descarga como PNG.
+- Si algo falla al crear la imagen, vuelve a copiar el texto como antes.
+- Los jugadores sin foto salen con sus iniciales, igual que en la web.
 
-No hay migraciones ni variables nuevas.
+No hay migraciones, variables ni dependencias nuevas (se dibuja con el <canvas> del navegador).
