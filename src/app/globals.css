@@ -235,6 +235,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--foco); outl
 .login-tabs { margin: 0; }
 .login-tabs button { flex: 1; min-height: 44px; padding: 8px 10px; line-height: 1.15; }
 .field .hint { font-size: 13px; color: var(--muted); }
+.pin-wrap { position: relative; display: grid; }
+.pin-wrap input { width: 100%; box-sizing: border-box; padding-right: 98px; }
+.pin-toggle {
+  position: absolute; top: 2px; right: 2px; bottom: 2px; min-width: 88px; padding: 0 12px;
+  border: 0; border-radius: 3px; background: transparent; cursor: pointer;
+  font: inherit; font-size: 15px; font-weight: 600; color: var(--foco-ink);
+}
+.pin-toggle:hover { color: var(--text); }
 
 /* ===== Ampliaciones ===== */
 select {

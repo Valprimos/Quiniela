@@ -1,6 +1,7 @@
 'use client';
 
 import ThemeToggle from './ThemeToggle';
+import PinInput from './PinInput';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -190,17 +191,7 @@ export default function LoginForm({
 
         <div className="field">
           <label htmlFor="pin">PIN (4 a 6 números)</label>
-          <input
-            id="pin"
-            type="password"
-            inputMode="numeric"
-            pattern="\d{4,6}"
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-            autoComplete={newPlayer ? 'new-password' : 'current-password'}
-            maxLength={6}
-            required
-          />
+          <PinInput id="pin" value={pin} onChange={setPin} pattern="\d{4,6}" autoComplete={newPlayer ? 'new-password' : 'current-password'} />
         </div>
 
         {error && <p className="notice" role="alert">{error}</p>}

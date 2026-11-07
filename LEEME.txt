@@ -1,18 +1,18 @@
-CONTRASTE DEL TEXTO SOBRE EL CÉSPED (MODO CLARO)
+BOTÓN "MOSTRAR PIN"
 
-Sube este archivo a GitHub respetando la ruta (reemplaza al actual):
-  src/app/theme-field.css
+Sube estos 4 archivos a GitHub respetando las rutas:
+  src/components/PinInput.tsx     (NUEVO)
+  src/components/LoginForm.tsx    (reemplaza al actual)
+  src/components/Quiniela.tsx     (reemplaza al actual)
+  src/app/globals.css             (reemplaza al actual; solo añade 8 líneas de estilo al final de .field)
 
-Qué cambia (solo el bloque del modo claro; el modo oscuro no se toca):
-  --grass-a  #2d7f39 -> #2a7736
-  --grass-b  #348842 -> #31803e
-  --glow     rgba(255,255,255,0.10) -> rgba(255,255,255,0.03)
+Parten de lo que hay ahora mismo en tu GitHub (incluye imagen de clasificación, pandillas y contraste).
 
-Contraste del texto blanco pequeño (.progress, .stagelabel, enlaces) medido sobre el césped REAL
-(franja + degradado radial), en el peor punto:
-  antes:   3,72:1  (franja clara, centro)
-  después: 4,63:1  (franja clara, centro) / 5,21:1 (franja oscura)
-El texto grande (.brand, .jlabel, .jnum) también queda por encima de 3:1.
+Qué hace:
+- Los tres campos de PIN de la app (acceso, "PIN actual" y "PIN nuevo") llevan dentro un botón
+  "Mostrar" / "Ocultar" con texto visible (no solo un icono) y zona táctil de 44 px.
+- Al mostrarlo, el PIN se ve en claro; el valor no se pierde al alternar.
+- Se vuelve a ocultar solo a los 15 s sin escribir (cada pulsación reinicia la cuenta) y al salir de la app o pestaña.
+- El teclado numérico, el filtro de solo números y el autocompletado del navegador siguen igual.
 
-Nota: src/app/theme-light.css NO se importa en ningún sitio (layout.tsx carga theme-field.css),
-así que es un archivo sobrante. Se puede borrar cuando quieras.
+No hay migraciones ni variables nuevas.

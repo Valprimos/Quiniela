@@ -21,6 +21,7 @@ import Archive from './Archive';
 import AdminPanel from './AdminPanel';
 import SeasonPicks from './SeasonPicks';
 import SeasonChip, { useSeasonBrief } from './SeasonChip';
+import PinInput from './PinInput';
 
 type Pick = '1' | 'X' | '2';
 const TABS = [
@@ -526,29 +527,11 @@ function PinPanel({ onClose }: { onClose: () => void }) {
     <form className="pinpanel" onSubmit={submit}>
       <div className="field">
         <label htmlFor="pin-old">PIN actual</label>
-        <input
-          id="pin-old"
-          type="password"
-          inputMode="numeric"
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-          maxLength={6}
-          autoComplete="current-password"
-          required
-        />
+        <PinInput id="pin-old" value={pin} onChange={setPin} autoComplete="current-password" />
       </div>
       <div className="field">
         <label htmlFor="pin-new">PIN nuevo (4 a 6 números)</label>
-        <input
-          id="pin-new"
-          type="password"
-          inputMode="numeric"
-          value={newPin}
-          onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
-          maxLength={6}
-          autoComplete="new-password"
-          required
-        />
+        <PinInput id="pin-new" value={newPin} onChange={setNewPin} pattern="\d{4,6}" autoComplete="new-password" />
       </div>
       {msg && (
         <p className={msg.ok ? 'okmsg' : 'notice'} role="status">
