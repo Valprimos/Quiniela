@@ -12,9 +12,13 @@
 /* ---- Ventana ---- */
 .sp-backdrop { align-items: center; padding: 16px; }
 .sp-modal {
-  width: min(520px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column;
+  /* Altura fija (no depende de la pestaña): así la ventana no pega saltos al cambiar de Liga a Media, Champions... */
+  width: min(520px, 100%); height: min(720px, calc(100dvh - 32px)); display: flex; flex-direction: column;
   background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
 }
+/* Solo el cuerpo se encoge y hace scroll. Sin esto, el navegador aplasta la barra de pestañas (tiene overflow, así que su
+   altura mínima es 0) cuando la pestaña tiene mucho contenido: Premios la dejaba en 5px y Media/Champions a medias. */
+.sp-head, .sp-deadline, .sp-tabs, .sp-foot { flex: none; }
 .sp-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 6px; }
 .sp-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .sp-trophy { font-size: 26px; }
@@ -140,7 +144,8 @@
 .sp-cl-field.champion { grid-column: 1 / -1; margin-top: 2px; }
 .sp-cl-field.champion .sp-team-picker-button { border-color: var(--foco); background: var(--panel-2); font-weight: 650; }
 .sp-cl-note { margin: 14px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--panel-2); color: var(--muted); font-size: 13px; line-height: 1.4; }
-@media (max-width: 400px) { .sp-tabs button { font-size: 11px; } .sp-cl-grid { grid-template-columns: 1fr; } .sp-cl-field.champion { grid-column: auto; } }
+@media (max-width: 400px) { .sp-tabs { padding: 0 4px; } .sp-tabs button { font-size: 12px; padding: 10px 7px; } .sp-cl-grid { grid-template-columns: 1fr; } .sp-cl-field.champion { grid-column: auto; } }
+@media (max-width: 340px) { .sp-tabs { padding: 0 2px; } .sp-tabs button { font-size: 11px; padding: 10px 4px; } }
 
 /* ---- Ranking ---- */
 .sp-locked { text-align: center; padding: 22px 8px; }
@@ -200,7 +205,16 @@
 .sp-btn.urgent { border-color: var(--foco); background: rgba(255, 210, 63, 0.14); }
 .sp-btn-n { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--foco); color: #1a1500; font-size: 12px; font-weight: 800; line-height: 18px; text-align: center; }
 .sp-btn-ok { color: var(--ok); font-weight: 800; }
-@media (max-width: 359px) { .sp-btn-txt { display: none; } }
+.sp-btn-sub { display: none; }
+/* Cuando el botón no cabe junto a La Liga y Champions (móviles), pasa a ser una barra a todo el ancho, con el estado escrito */
+@media (max-width: 441px) {
+  .comprow { gap: 10px; }
+  .comprow .sp-btn { flex: 1 1 100%; justify-content: space-between; min-height: 42px; padding: 5px 14px; }
+  .comprow .sp-btn-n, .comprow .sp-btn-ok { display: none; }
+  .comprow .sp-btn-sub { display: inline; margin-left: auto; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .comprow .sp-btn.todo .sp-btn-sub, .comprow .sp-btn.urgent .sp-btn-sub { color: var(--foco-ink); }
+  .comprow .sp-btn.done .sp-btn-sub { color: var(--ok); }
+}
 
 /* ===== Premios: lo de todos, junto ===== */
 .sp-bd { display: grid; gap: 10px; }
