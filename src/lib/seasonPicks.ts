@@ -118,6 +118,162 @@ export function sameTeam(a: string, b: string): boolean {
   return tokens(a).join('') === tokens(b).join('');
 }
 
+// ---------- Unificar nombres de jugadores ----------
+// La gente escribe "Yamal", "Lamine" o "Lamine Yamal". Para ver lo de todos junto y para elegir ganadores
+// agrupamos esas escrituras. El admin puede corregir la agrupación (se guarda como "alias").
+
+export type Aliases = Record<string, string>; // lo que escribieron (normalizado) -> nombre unificado
+
+export const nameKey = (s: string): string => tokens(s).join(' ');
+
+export type NameVariant = { key: string; text: string; count: number };
+
+function pretty(s: string): string {
+  const letters = s.replace(/[^\p{L}]/gu, '');
+  if (!letters || (letters !== letters.toLowerCase() && letters !== letters.toUpperCase())) return s;
+  return s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (_m, a: string, b: string) => a + b.toUpperCase());
+}
+
+// Escrituras distintas (sin tildes ni mayúsculas) con la forma más usada y cuántas veces aparece
+export function variantsOf(names: string[]): NameVariant[] {
+  const by = new Map<string, Map<string, number>>();
+  for (const raw of names) {
+    const text = cleanName(raw);
+    const key = nameKey(text);
+    if (!key) continue;
+    const spellings = by.get(key) ?? new Map<string, number>();
+    spellings.set(text, (spellings.get(text) ?? 0) + 1);
+    by.set(key, spellings);
+  }
+  const hasCaps = (t: string) => (/\p{Lu}/u.test(t) ? 1 : 0);
+  return [...by]
+    .map(([key, spellings]) => {
+      const best = [...spellings].sort((a, b) => b[1] - a[1] || hasCaps(b[0]) - hasCaps(a[0]))[0][0];
+      return { key, text: pretty(best), count: [...spellings.values()].reduce((x, y) => x + y, 0) };
+    })
+    .sort((a, b) => b.count - a.count || a.text.localeCompare(b.text, 'es'));
+}
+
+// Propuesta automática: mismas reglas que la puntuación (sameName). Se queda con el nombre más completo.
+export function autoCanonical(variants: NameVariant[]): Record<string, string> {
+  const parent = variants.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let i = 0; i < variants.length; i++) {
+    for (let j = i + 1; j < variants.length; j++) {
+      if (sameName(variants[i].text, variants[j].text)) parent[find(j)] = find(i);
+    }
+  }
+  const best = new Map<number, NameVariant>();
+  const score = (v: NameVariant) => [tokens(v.text).length, v.text.length, v.count];
+  const better = (a: NameVariant, b: NameVariant) => {
+    const sa = score(a);
+    const sb = score(b);
+    for (let i = 0; i < sa.length; i++) if (sa[i] !== sb[i]) return sa[i] > sb[i];
+    return false;
+  };
+  variants.forEach((v, i) => {
+    const root = find(i);
+    const cur = best.get(root);
+    if (!cur || better(v, cur)) best.set(root, v);
+  });
+  const out: Record<string, string> = {};
+  variants.forEach((v, i) => (out[v.key] = best.get(find(i))!.text));
+  return out;
+}
+
+// Nombre unificado de cada escritura: lo que haya fijado el admin y, si no, la propuesta automática
+export function resolveNames(variants: NameVariant[], aliases?: Aliases | null): Record<string, string> {
+  const auto = autoCanonical(variants);
+  const out: Record<string, string> = {};
+  for (const v of variants) out[v.key] = cleanName(aliases?.[v.key]) || auto[v.key];
+  return out;
+}
+
+export type NameCluster = { id: string; name: string; keys: string[] };
+
+export function clustersFrom(variants: NameVariant[], resolved: Record<string, string>): NameCluster[] {
+  const byName = new Map<string, NameCluster>();
+  for (const v of variants) {
+    const name = resolved[v.key] ?? v.text;
+    const c = byName.get(name) ?? { id: `c${byName.size}`, name, keys: [] };
+    c.keys.push(v.key);
+    byName.set(name, c);
+  }
+  return [...byName.values()];
+}
+
+// Si un grupo se llamaba como la escritura que se va, pasa a llamarse como la mejor de las que se quedan
+// (si no, "Nico Williams" seguiría unificado como "Iñaki Williams" al separar a este último).
+function renameAfterLeave(c: NameCluster, leftKey: string, variants: NameVariant[]): NameCluster {
+  if (!c.keys.length || nameKey(c.name) !== leftKey) return c;
+  const byKey = new Map(variants.map((v) => [v.key, v]));
+  const rest = c.keys.map((k) => byKey.get(k)).filter((v): v is NameVariant => !!v);
+  if (!rest.length) return c;
+  rest.sort((a, b) => tokens(b.text).length - tokens(a.text).length || b.text.length - a.text.length || b.count - a.count);
+  return { ...c, name: rest[0].text };
+}
+
+export function moveVariant(clusters: NameCluster[], key: string, toId: string, variants: NameVariant[]): NameCluster[] {
+  return clusters
+    .map((c) => {
+      const keys = c.keys.filter((k) => k !== key);
+      if (c.id === toId) return { ...c, keys: [...keys, key] };
+      return c.keys.includes(key) ? renameAfterLeave({ ...c, keys }, key, variants) : { ...c, keys };
+    })
+    .filter((c) => c.keys.length > 0);
+}
+
+export function separateVariant(clusters: NameCluster[], key: string, text: string, variants: NameVariant[]): NameCluster[] {
+  const rest = clusters
+    .map((c) => (c.keys.includes(key) ? renameAfterLeave({ ...c, keys: c.keys.filter((k) => k !== key) }, key, variants) : c))
+    .filter((c) => c.keys.length > 0);
+  return [...rest, { id: `s:${key}`, name: text, keys: [key] }];
+}
+
+export function renameCluster(clusters: NameCluster[], id: string, name: string): NameCluster[] {
+  return clusters.map((c) => (c.id === id ? { ...c, name } : c));
+}
+
+export function buildAliases(clusters: NameCluster[], variants: NameVariant[]): Aliases {
+  const text = new Map(variants.map((v) => [v.key, v.text]));
+  const out: Aliases = {};
+  for (const c of clusters) for (const k of c.keys) out[k] = cleanName(c.name) || text.get(k) || k;
+  return out;
+}
+
+// ---------- Clasificación media de La Liga ----------
+
+export type AvgRow = { team: string; avg: number; median: number; min: number; max: number; firsts: number; n: number };
+
+// Posición media de cada equipo según las clasificaciones de todos. Arriba, la media más baja;
+// si empatan, la mediana, luego la mejor posición y, por último, el nombre.
+export function averageRanking(rankings: string[][], teams: string[]): AvgRow[] {
+  const keyOf = (t: string) => tokens(t).join('');
+  const positions = new Map<string, number[]>(teams.map((t) => [keyOf(t), []]));
+  for (const r of rankings) r.forEach((t, i) => positions.get(keyOf(t))?.push(i + 1));
+  const median = (a: number[]) => {
+    const s = [...a].sort((x, y) => x - y);
+    const m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+  return teams
+    .map((team) => {
+      const a = positions.get(keyOf(team)) ?? [];
+      if (!a.length) return null;
+      return {
+        team,
+        avg: a.reduce((x, y) => x + y, 0) / a.length,
+        median: median(a),
+        min: Math.min(...a),
+        max: Math.max(...a),
+        firsts: a.filter((x) => x === 1).length,
+        n: a.length,
+      };
+    })
+    .filter((r): r is AvgRow => !!r)
+    .sort((x, y) => x.avg - y.avg || x.median - y.median || x.min - y.min || x.team.localeCompare(y.team, 'es'));
+}
+
 // ---------- Puntos ----------
 
 export type TeamScore = {
@@ -155,14 +311,20 @@ export function scoreRanking(pred: string[] | null | undefined, actual: string[]
 
 export type AwardScore = { key: string; pick: string; pts: number; hit: boolean; decided: boolean };
 
-export function scoreAwards(picks: Record<string, string> | null | undefined, winners: Record<string, string[]> | null | undefined) {
+export function scoreAwards(
+  picks: Record<string, string> | null | undefined,
+  winners: Record<string, string[]> | null | undefined,
+  aliases?: Aliases | null
+) {
   const rows: AwardScore[] = [];
   let points = 0;
   for (const a of AWARDS) {
     const pick = cleanName(picks?.[a.key]);
     const w = (winners?.[a.key] ?? []).filter(Boolean);
     const decided = w.length > 0;
-    const hit = !!pick && decided && w.some((x) => sameName(pick, x));
+    // Si el admin unificó este nombre, cuenta el nombre unificado (así "Williams" puede ser Nico o Iñaki a propósito)
+    const effective = aliases?.[nameKey(pick)] || pick;
+    const hit = !!pick && decided && w.some((x) => sameName(effective, x));
     const pts = hit ? a.pts : 0;
     points += pts;
     rows.push({ key: a.key, pick, pts, hit, decided });

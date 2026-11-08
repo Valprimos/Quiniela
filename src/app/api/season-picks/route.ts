@@ -111,6 +111,8 @@ export async function GET(req: NextRequest) {
   const real = effectiveOrder(settings, matches);
   const storedWinners = settings?.results?.awards ?? {};
   const winners = { ...storedWinners, champions_finalistas: storedWinners.champions_finalistas ?? storedWinners.champions_finalista ?? [] };
+  // Nombres unificados por el admin (p. ej. "Yamal" y "Lamine" -> "Lamine Yamal")
+  const aliases = settings?.results?.aliases ?? {};
 
   // Quién falta por completar (solo nombres: nunca el contenido)
   const pending = playerRows
@@ -125,7 +127,7 @@ export async function GET(req: NextRequest) {
           const row = byPlayer.get(p.id) ?? null;
           const r = scoreRanking(row?.ranking, real.order, zones);
           const awardPicks = picksOf(row);
-          const a = scoreAwards(awardPicks, winners);
+          const a = scoreAwards(awardPicks, winners, aliases);
           const champions = scoreChampions(awardPicks, winners);
           const awardRows = [...a.rows, ...champions.rows];
           return {
@@ -178,6 +180,7 @@ export async function GET(req: NextRequest) {
       source: real.source,
       final: real.final,
       awards: winners,
+      aliases,
     },
     everyone,
     admin,

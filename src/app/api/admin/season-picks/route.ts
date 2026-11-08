@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
-import { AWARD_RESULT_KEYS, ZONE_ORDER, cleanName, sameTeam } from '@/lib/seasonPicks';
+import { AWARD_RESULT_KEYS, ZONE_ORDER, cleanName, nameKey, sameTeam } from '@/lib/seasonPicks';
 import {
   SettingsRow,
   loadLigaMatches,
@@ -20,6 +20,7 @@ const fail = (error: string, status = 400) => NextResponse.json({ error }, { sta
 //   zones    : { zones: { champions:[a,b], ... } }            tramos clave
 //   order    : { order: [equipos] | null }                    clasificación final oficial (null = la calculada)
 //   awards   : { awards: { clave: 'Nombre; Otro' } }          ganadores de los premios (varios si hay empate)
+//   aliases  : { aliases: { 'lo que escribieron': 'Nombre unificado' } | null }   unificar nombres de jugadores (null = quitarlos)
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (session instanceof NextResponse) return session;
@@ -89,6 +90,20 @@ export async function POST(req: NextRequest) {
       else delete awards[k];
     }
     next.results = { ...(next.results ?? {}), awards };
+  } else if (action === 'aliases') {
+    const aliases: Record<string, string> = {};
+    if (body.aliases !== null) {
+      if (!body.aliases || typeof body.aliases !== 'object' || Array.isArray(body.aliases)) return fail('Nombres no válidos.');
+      const entries = Object.entries(body.aliases as Record<string, unknown>);
+      if (entries.length > 600) return fail('Demasiados nombres.');
+      for (const [rawKey, rawValue] of entries) {
+        const key = nameKey(rawKey); // siempre normalizado, venga como venga
+        const value = cleanName(rawValue);
+        if (key && value) aliases[key] = value;
+      }
+    }
+    const { aliases: _old, ...rest } = next.results ?? {};
+    next.results = Object.keys(aliases).length ? { ...rest, aliases } : rest;
   } else {
     return fail('Acción no válida.');
   }

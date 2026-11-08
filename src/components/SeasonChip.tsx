@@ -39,7 +39,7 @@ export function useSeasonBrief(meId: string | null) {
   return { brief, badge, refresh };
 }
 
-// Una línea fina bajo el selector de competición: no estorba, pero siempre está a un toque
+// Botón compacto junto a las competiciones (La Liga · Champions · 🏆 Temporada): siempre a un toque, sin ocupar una fila
 export default function SeasonChip({ brief, now, onOpen }: { brief: SeasonBrief | null; now: number; onOpen: () => void }) {
   if (!brief?.available) return null;
 
@@ -50,31 +50,34 @@ export default function SeasonChip({ brief, now, onOpen }: { brief: SeasonBrief 
   const missing = total - done;
   const urgent = !closed && missing > 0 && left != null && left < 24 * 3600e3;
 
-  let text: string;
   let tone = '';
+  let label = 'Predicciones de temporada';
   if (closed) {
-    text = 'Cerradas · ya se ven las de todos';
+    label += ': cerradas, ya se ven las de todos';
   } else if (missing > 0) {
-    text = `${done === 0 ? 'Haz' : 'Termina'} tus predicciones${left != null ? ` · cierran en ${untilText(left)}` : ''}`;
     tone = urgent ? 'urgent' : 'todo';
+    label += `: te ${missing === 1 ? 'falta 1 apartado' : `faltan ${missing} apartados`}${left != null ? `, cierran en ${untilText(left)}` : ''}`;
   } else {
-    text = `Hechas ✓${left != null ? ` · cierran en ${untilText(left)}` : ''}`;
     tone = 'done';
+    label += `: hechas${left != null ? `, cierran en ${untilText(left)}` : ''}`;
   }
 
   return (
-    <button type="button" className={`sp-chip ${tone}`} onClick={onOpen}>
-      <span className="sp-chip-ico" aria-hidden="true">
-        🏆
+    <button type="button" className={`sp-btn ${tone}`} onClick={onOpen} aria-label={label} title={label}>
+      <span aria-hidden="true">🏆</span>
+      <span className="sp-btn-txt" aria-hidden="true">
+        Temporada
       </span>
-      <span className="sp-chip-txt">
-        <b>Predicciones de temporada</b>
-        <small>{text}</small>
-      </span>
-      {!closed && missing > 0 && <span className="sp-chip-n">{done}/{total}</span>}
-      <span className="sp-chip-go" aria-hidden="true">
-        ›
-      </span>
+      {!closed && missing > 0 && (
+        <span className="sp-btn-n" aria-hidden="true">
+          {missing}
+        </span>
+      )}
+      {!closed && missing === 0 && (
+        <span className="sp-btn-ok" aria-hidden="true">
+          ✓
+        </span>
+      )}
     </button>
   );
 }

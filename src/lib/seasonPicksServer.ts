@@ -10,7 +10,7 @@ export type SettingsRow = {
   season: number;
   deadline: string | null;
   zones: unknown;
-  results: { order?: string[] | null; awards?: Record<string, string[]> } | null;
+  results: { order?: string[] | null; awards?: Record<string, string[]>; aliases?: Record<string, string> } | null;
 };
 
 // ¿Existen ya las tablas? Mientras no se ejecute la migración, la sección no se ofrece.

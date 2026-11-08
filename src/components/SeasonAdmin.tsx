@@ -1,16 +1,27 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RankEditor, type TeamInfo } from './SeasonRank';
 import {
   AWARDS,
   AWARD_GROUP_LABEL,
+  INDIVIDUAL_AWARD_KEYS,
+  NameCluster,
+  NameVariant,
   ZONE_LABEL,
   ZONE_ORDER,
   Zones,
+  buildAliases,
+  clustersFrom,
   fmtDeadline,
   isoToMadridLocal,
   madridLocalToIso,
+  moveVariant,
+  nameKey,
+  renameCluster,
+  resolveNames,
+  separateVariant,
+  variantsOf,
 } from '@/lib/seasonPicks';
 import { clear as clearCache } from '@/lib/clientCache';
 
@@ -21,7 +32,8 @@ type AdminData = {
   closed: boolean;
   teams: TeamInfo[];
   zones: Zones;
-  results: { order: string[] | null; source: string; awards: Record<string, string[]> };
+  results: { order: string[] | null; source: string; awards: Record<string, string[]>; aliases?: Record<string, string> };
+  everyone: { playerId: string; name: string; awards: Record<string, string> }[] | null;
   members: string[];
   progress: { done: number };
   pending: string[];
@@ -87,9 +99,64 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
     }
   }
 
+  const everyone = data?.everyone ?? null;
+  const variants = useMemo(
+    () => variantsOf((everyone ?? []).flatMap((e) => INDIVIDUAL_AWARD_KEYS.map((k) => e.awards?.[k]).filter((x): x is string => !!x))),
+    [everyone]
+  );
+  const resolved = useMemo(() => resolveNames(variants, data?.results.aliases), [variants, data?.results.aliases]);
+
   if (!data || !zones) return <p className="muted">{msg ? '' : 'Cargando…'}{msg && <span className="notice">{msg.text}</span>}</p>;
 
   const teamCount = data.teams.length || 20;
+
+  // Opciones de ganador: lo que ha puesto la gente (jugadores con el nombre ya unificado), con cuántos lo eligieron
+  const chipsFor = (key: string): { name: string; n: number }[] => {
+    const counts = new Map<string, { name: string; n: number }>();
+    for (const e of everyone ?? []) {
+      const picks =
+        key === 'champions_finalistas' ? [e.awards?.champions_finalista1, e.awards?.champions_finalista2] : [e.awards?.[key]];
+      const seen = new Set<string>();
+      for (const raw of picks) {
+        if (!raw) continue;
+        const name = INDIVIDUAL_AWARD_KEYS.includes(key) ? (resolved[nameKey(raw)] ?? raw) : raw;
+        const k = nameKey(name);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const cur = counts.get(k) ?? { name, n: 0 };
+        cur.n += 1;
+        counts.set(k, cur);
+      }
+    }
+    return [...counts.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'es'));
+  };
+  const winnerList = (key: string) => (winners[key] ?? '').split(/[;,\n]/).map((x) => x.trim()).filter(Boolean);
+  const toggleWinner = (key: string, name: string) => {
+    const list = winnerList(key);
+    const has = list.some((x) => nameKey(x) === nameKey(name));
+    const next = has ? list.filter((x) => nameKey(x) !== nameKey(name)) : [...list, name];
+    setWinners({ ...winners, [key]: next.join('; ') });
+  };
+  const renderChips = (k: string) => {
+    const chips = chipsFor(k);
+    if (!chips.length) return null;
+    const picked = winnerList(k);
+    return (
+      <div className="sp-win-chips" role="group" aria-label="Elegir ganador entre lo que ha puesto la gente">
+        {chips.map((c) => (
+          <button
+            key={c.name}
+            type="button"
+            className="sp-win-chip"
+            aria-pressed={picked.some((x) => nameKey(x) === nameKey(c.name))}
+            onClick={() => toggleWinner(k, c.name)}
+          >
+            {c.name} <small>×{c.n}</small>
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="sp-admin">
@@ -175,8 +242,23 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
       </div>
       <RankEditor order={order} teams={data.teams} zones={zones} onChange={setOrder} />
 
+      <h4>Unificar nombres de jugadores</h4>
+      {everyone ? (
+        <NameUnifier
+          key={JSON.stringify(data.results.aliases ?? {}) + variants.length}
+          variants={variants}
+          aliases={data.results.aliases}
+          busy={busy}
+          onSave={(aliases) =>
+            run({ action: 'aliases', aliases }, aliases ? 'Nombres unificados.' : 'Vuelve la propuesta automática.')
+          }
+        />
+      ) : (
+        <p className="muted small">Se podrán unificar cuando cierre el plazo, que es cuando se ven las predicciones de todos.</p>
+      )}
+
       <h4>Ganadores de los premios</h4>
-      <p className="muted small">Si hay empate, sepáralos con punto y coma. Para jugadores vale el apellido; para campeón y finalista, escribe el equipo. Déjalo vacío hasta que se resuelva.</p>
+      <p className="muted small">Toca un nombre de lo que ha puesto la gente para marcarlo como ganador (si hay empate, toca varios). También puedes escribirlo; separa con punto y coma. Déjalo vacío hasta que se resuelva.</p>
       {(['liga', 'champions', 'mundial'] as const).map((g) => (
         <div key={g} className="sp-admin-awards">
           <b>{AWARD_GROUP_LABEL[g]}</b>
@@ -184,6 +266,7 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
             <label key={a.key} className="sp-award">
               <span>{a.label}</span>
               <input value={winners[a.key] ?? ''} maxLength={120} onChange={(e) => setWinners({ ...winners, [a.key]: e.target.value })} />
+              {renderChips(a.key)}
             </label>
           ))}
         </div>
@@ -193,10 +276,12 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
         <label className="sp-award">
           <span>Campeón</span>
           <input value={winners.champions_campeon ?? ''} maxLength={120} onChange={(e) => setWinners({ ...winners, champions_campeon: e.target.value })} />
+          {renderChips('champions_campeon')}
         </label>
         <label className="sp-award">
           <span>Finalistas (separados por punto y coma)</span>
           <input value={winners.champions_finalistas ?? ''} maxLength={120} onChange={(e) => setWinners({ ...winners, champions_finalistas: e.target.value })} />
+          {renderChips('champions_finalistas')}
         </label>
       </div>
       <button type="button" className="seg-btn" disabled={busy} onClick={() => run({ action: 'awards', awards: winners }, 'Premios guardados.')}>
@@ -204,6 +289,125 @@ export default function SeasonAdmin({ onChanged }: { onChanged: () => void }) {
       </button>
 
 
+    </div>
+  );
+}
+
+// Agrupa las distintas formas en que se ha escrito cada jugador. La propuesta automática une "Yamal", "Lamine" y
+// "Lamine Yamal"; aquí se puede corregir (unir un apodo, separar a dos jugadores con el mismo apellido, renombrar).
+function NameUnifier({
+  variants,
+  aliases,
+  busy,
+  onSave,
+}: {
+  variants: NameVariant[];
+  aliases?: Record<string, string>;
+  busy: boolean;
+  onSave: (aliases: Record<string, string> | null) => void;
+}) {
+  const [clusters, setClusters] = useState<NameCluster[]>(() => clustersFrom(variants, resolveNames(variants, aliases)));
+  const [touched, setTouched] = useState(false);
+  const byKey = new Map(variants.map((v) => [v.key, v]));
+  const countOf = (c: NameCluster) => c.keys.reduce((n, k) => n + (byKey.get(k)?.count ?? 0), 0);
+  const multi = clusters.filter((c) => c.keys.length > 1).sort((a, b) => countOf(b) - countOf(a));
+  const single = clusters.filter((c) => c.keys.length === 1).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  const saved = !!aliases && Object.keys(aliases).length > 0;
+
+  const change = (next: NameCluster[]) => {
+    setClusters(next);
+    setTouched(true);
+  };
+
+  const row = (c: NameCluster, k: string) => {
+    const v = byKey.get(k)!;
+    return (
+      <li key={k} className="sp-un-var">
+        <span>
+          {v.text} <small>×{v.count}</small>
+        </span>
+        <select
+          aria-label={`Mover «${v.text}» a otro jugador`}
+          value=""
+          onChange={(e) => {
+            const to = e.target.value;
+            if (to === '__sep') change(separateVariant(clusters, k, v.text, variants));
+            else if (to) change(moveVariant(clusters, k, to, variants));
+          }}
+        >
+          <option value="">Mover a…</option>
+          {c.keys.length > 1 && <option value="__sep">Separar (es otro jugador)</option>}
+          {clusters
+            .filter((o) => o.id !== c.id)
+            .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+            .map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+        </select>
+      </li>
+    );
+  };
+
+  if (!variants.length) return <p className="muted small">Todavía no hay premios de jugadores escritos.</p>;
+
+  return (
+    <div className="sp-un">
+      <p className="muted small">
+        {multi.length > 0
+          ? 'Estas escrituras parecen el mismo jugador. Cambia el nombre unificado si quieres, o mueve/separa lo que no encaje.'
+          : 'No hay nombres que unir automáticamente. Si alguien escribió un apodo, muévelo al jugador que toca.'}
+      </p>
+      {multi.map((c) => (
+        <div key={c.id} className="sp-un-cluster">
+          <div className="sp-un-head">
+            <input value={c.name} maxLength={60} aria-label="Nombre unificado" onChange={(e) => change(renameCluster(clusters, c.id, e.target.value))} />
+            <small>{countOf(c)} votos</small>
+          </div>
+          <ul>{c.keys.map((k) => row(c, k))}</ul>
+        </div>
+      ))}
+      {single.length > 0 && (
+        <details className="sp-un-single">
+          <summary>Nombres sueltos ({single.length})</summary>
+          <p className="muted small">Si alguno es un apodo o una errata de otro jugador, muévelo a él.</p>
+          <ul>
+            {single.map((c) => (
+              <li key={c.id} className="sp-un-var">
+                <span>
+                  {c.name} <small>×{countOf(c)}</small>
+                </span>
+                <select
+                  aria-label={`Mover «${c.name}» a otro jugador`}
+                  value=""
+                  onChange={(e) => e.target.value && change(moveVariant(clusters, c.keys[0], e.target.value, variants))}
+                >
+                  <option value="">Mover a…</option>
+                  {clusters
+                    .filter((o) => o.id !== c.id)
+                    .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+                    .map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                </select>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <div className="row">
+        <button type="button" className="seg-btn" disabled={busy || (!touched && saved)} onClick={() => onSave(buildAliases(clusters, variants))}>
+          {saved && !touched ? 'Guardado' : 'Guardar nombres'}
+        </button>
+        {saved && (
+          <button type="button" className="link danger" disabled={busy} onClick={() => onSave(null)}>
+            Volver a la propuesta automática
+          </button>
+        )}
+      </div>
     </div>
   );
 }

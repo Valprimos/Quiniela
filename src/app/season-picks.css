@@ -9,28 +9,6 @@
   --z-relegation: var(--ko);
 }
 
-/* ---- Aviso fino bajo el selector de competición ---- */
-.sp-chip {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  margin: 10px 0 0; padding: 7px 12px;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-  text-align: left; cursor: pointer;
-}
-.sp-chip:hover { border-color: var(--foco); }
-.sp-chip-ico { font-size: 18px; line-height: 1; }
-.sp-chip-txt { display: grid; min-width: 0; flex: 1; line-height: 1.2; }
-.sp-chip-txt b { font-size: 14px; font-weight: 700; }
-.sp-chip-txt small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sp-chip-n { font-size: 12px; font-weight: 700; color: var(--foco-ink); border: 1px solid var(--foco); border-radius: 999px; padding: 1px 8px; }
-.sp-chip-go { color: var(--muted); font-size: 20px; line-height: 1; }
-.sp-chip.todo .sp-chip-txt small { color: var(--foco-ink); }
-.sp-chip.urgent, .sp-chip.hot { border-color: var(--foco); background: rgba(255, 210, 63, 0.12); }
-.sp-chip.urgent .sp-chip-txt small, .sp-chip.hot .sp-chip-txt small { color: var(--foco-ink); font-weight: 600; }
-.sp-chip.done { padding-top: 5px; padding-bottom: 5px; }
-.sp-chip.done .sp-chip-txt small { color: var(--ok); }
-.um-season { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.um-badge { background: var(--foco); color: #2a2200; border-radius: 999px; padding: 1px 8px; font-weight: 700; font-size: 11px; white-space: nowrap; }
-
 /* ---- Ventana ---- */
 .sp-backdrop { align-items: center; padding: 16px; }
 .sp-modal {
@@ -50,10 +28,11 @@
 .sp-deadline.urgent b { color: var(--foco-ink); }
 .sp-deadline.closed b { color: var(--ok); }
 
-.sp-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); padding: 0 8px; }
+.sp-tabs { display: flex; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); padding: 0 8px; }
+.sp-tabs::-webkit-scrollbar { display: none; }
 .sp-tabs button {
   position: relative; background: none; border: 0; border-bottom: 2px solid transparent;
-  padding: 9px 2px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap;
+  flex: 1 0 auto; padding: 9px 9px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap;
 }
 .sp-tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--foco); }
 .sp-tabs button i { display: inline-block; width: 7px; height: 7px; margin-left: 5px; border-radius: 50%; border: 1.5px solid var(--muted); vertical-align: 1px; }
@@ -208,3 +187,73 @@
   .sp-modal { animation: sp-up 0.18s ease-out; }
   @keyframes sp-up { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
 }
+
+/* ===== Botón "Temporada" junto a las competiciones ===== */
+.comprow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: -12px; margin-bottom: 22px; }
+.comprow .complist { margin: 0; flex: 1 1 auto; }
+.sp-btn {
+  position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 5px 12px;
+  background: var(--panel); color: var(--text); border: 1.5px solid var(--line); border-radius: 4px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.sp-btn:hover { border-color: var(--foco); }
+.sp-btn.todo { border-color: var(--foco); }
+.sp-btn.urgent { border-color: var(--foco); background: rgba(255, 210, 63, 0.14); }
+.sp-btn-n { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--foco); color: #1a1500; font-size: 12px; font-weight: 800; line-height: 18px; text-align: center; }
+.sp-btn-ok { color: var(--ok); font-weight: 800; }
+@media (max-width: 359px) { .sp-btn-txt { display: none; } }
+
+/* ===== Premios: lo de todos, junto ===== */
+.sp-bd { display: grid; gap: 10px; }
+.sp-bd-card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); padding: 10px 12px 12px; }
+.sp-bd-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin: 0 0 8px; }
+.sp-bd-head b { font-size: 15px; }
+.sp-bd-head small { color: var(--foco-ink); font-weight: 700; }
+.sp-bd-winner { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--ok); }
+.sp-bd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sp-bd-item { padding: 8px 10px 9px; border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; background: var(--panel); }
+.sp-bd-item.win { border-color: var(--ok); }
+.sp-bd-item.lose { opacity: 0.78; }
+.sp-bd-top { display: flex; align-items: center; gap: 8px; }
+.sp-bd-name { flex: 1; min-width: 0; font-size: 15px; overflow-wrap: anywhere; }
+.sp-bd-n { font-size: 13px; font-weight: 700; color: var(--muted); }
+.sp-bd-pts { font-style: normal; font-size: 13px; font-weight: 800; color: var(--ok); }
+.sp-bd-bar { height: 5px; margin: 6px 0 8px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.sp-bd-bar i { display: block; height: 100%; background: var(--muted); border-radius: 3px; }
+.sp-bd-item.win .sp-bd-bar i { background: var(--ok); }
+.sp-bd-who { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-bd-who li { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; background: var(--panel-2); }
+.sp-bd-who li.me { border-color: var(--foco); }
+.sp-bd-none { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+
+/* ===== Clasificación media ===== */
+.sp-avg { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sp-avg-row { padding: 7px 10px 8px; border: 1px solid var(--line); border-left: 4px solid var(--zc, var(--line)); border-radius: 6px; background: var(--panel-2); }
+.sp-avg-row.z-champions { --zc: var(--z-champions); }
+.sp-avg-row.z-europa { --zc: var(--z-europa); }
+.sp-avg-row.z-conference { --zc: var(--z-conference); }
+.sp-avg-row.z-relegation { --zc: var(--z-relegation); }
+.sp-avg-top { display: flex; align-items: center; gap: 8px; }
+.sp-avg-top .sp-team { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-avg-num { font-family: var(--font-display); font-size: 20px; font-variant-numeric: tabular-nums; }
+.sp-avg-line { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.sp-avg-bar { position: relative; flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+.sp-avg-range { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--zc, var(--muted)); opacity: 0.55; }
+.sp-avg-mark { position: absolute; top: -3px; width: 3px; height: 12px; margin-left: -1.5px; border-radius: 2px; background: var(--text); }
+.sp-avg-rng { flex: none; max-width: 52%; font-size: 12px; color: var(--muted); text-align: right; }
+
+/* ===== Admin: unificar nombres y elegir ganadores ===== */
+.sp-un { display: grid; gap: 8px; }
+.sp-un-cluster { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--panel-2); }
+.sp-un-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.sp-un-head input { flex: 1; min-width: 0; height: 40px; font-weight: 700; }
+.sp-un-head small { color: var(--muted); white-space: nowrap; }
+.sp-un ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sp-un-var { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+.sp-un-var span { min-width: 0; overflow-wrap: anywhere; }
+.sp-un-var small { color: var(--muted); }
+.sp-un-var select { max-width: 48%; height: 36px; font: inherit; font-size: 13px; background: var(--panel); color: var(--text); border: 1.5px solid var(--line); border-radius: 4px; }
+.sp-un-single summary { cursor: pointer; font-size: 14px; font-weight: 600; padding: 6px 0; }
+.sp-win-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.sp-win-chip { min-height: 36px; padding: 4px 12px; font: inherit; font-size: 14px; color: var(--text); background: var(--panel); border: 1.5px solid var(--line); border-radius: 999px; cursor: pointer; }
+.sp-win-chip small { color: var(--muted); }
+.sp-win-chip[aria-pressed='true'] { border-color: var(--ok); background: rgba(21, 138, 70, 0.14); font-weight: 700; }

@@ -19,8 +19,6 @@ export default function UserMenu({
   onAdmin,
   onAddLeague,
   onInvite,
-  onSeason,
-  seasonBadge,
   onLeave,
 }: {
   me: Me;
@@ -31,8 +29,6 @@ export default function UserMenu({
   onAdmin: () => void;
   onAddLeague: () => void;
   onInvite: () => void;
-  onSeason: () => void;
-  seasonBadge?: string | null;
   onLeave: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -162,10 +158,6 @@ export default function UserMenu({
           </button>
 
           <hr />
-          <button type="button" role="menuitem" className="um-item um-season" onClick={pick(onSeason)}>
-            <span>🏆 Predicciones de temporada</span>
-            {seasonBadge && <small className="um-badge">{seasonBadge}</small>}
-          </button>
           <button type="button" role="menuitem" className="um-item" onClick={editProfile()}>
             Editar perfil
           </button>

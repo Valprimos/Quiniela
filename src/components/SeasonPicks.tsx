@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Avatar from './Avatar';
 import { Crest, RankEditor, RankReadOnly, type TeamInfo } from './SeasonRank';
+import { AverageTable, AwardsBoard, type BoardDef } from './SeasonBoard';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { RowsSkeleton } from './Skeleton';
 import {
@@ -53,15 +54,16 @@ type Data = {
   pending: string[];
   members: string[];
   me: { id: string; name: string };
-  results: { order: string[] | null; source: 'oficial' | 'provisional' | 'calculada' | 'ninguna'; final: boolean; awards: Record<string, string[]> };
+  results: { order: string[] | null; source: 'oficial' | 'provisional' | 'calculada' | 'ninguna'; final: boolean; awards: Record<string, string[]>; aliases: Record<string, string> };
   everyone: Everyone[] | null;
 };
 
-type Tab = 'clasificacion' | 'premios' | 'champions' | 'ranking';
+type Tab = 'clasificacion' | 'media' | 'premios' | 'champions' | 'ranking';
 type Save = 'idle' | 'saving' | 'saved' | 'error';
 
 const TABS: [Tab, string][] = [
   ['clasificacion', 'La Liga'],
+  ['media', 'Media'],
   ['champions', 'Champions'],
   ['premios', 'Premios'],
   ['ranking', 'Ranking'],
@@ -283,6 +285,7 @@ export default function SeasonPicks({ onClose, onChanged }: { onClose: () => voi
               onOrder={changeOrder}
             />
           )}
+          {data && tab === 'media' && <MediaTab data={data} />}
           {data && tab === 'premios' && (
             <PremiosTab data={data} editable={editable} awards={awards} onChange={changeAward} />
           )}
@@ -398,6 +401,29 @@ function PremiosTab({
     g,
     items: data.awardsDef.filter((a) => a.group === g),
   }));
+  // Con el plazo cerrado: lo que hemos puesto todos, junto y por premio
+  if (!editable && data.everyone) {
+    return (
+      <>
+        <h3>Premios individuales</h3>
+        <p className="sp-hint">Lo que ha puesto cada uno, todo junto. En verde, los aciertos.</p>
+        {groups.map(({ g, items }) => (
+          <section key={g} className="sp-awards">
+            <h3>
+              {g !== 'mundial' && <img src={g === 'liga' ? '/logos/laliga.png' : '/logos/champions.png'} alt="" />}
+              {AWARD_GROUP_LABEL[g]}
+            </h3>
+            <AwardsBoard
+              defs={items.map((a): BoardDef => ({ id: a.key, label: a.label, pts: a.pts, keys: [a.key], winners: data.results.awards[a.key] ?? [] }))}
+              everyone={data.everyone!}
+              meId={data.me.id}
+              aliases={data.results.aliases ?? {}}
+            />
+          </section>
+        ))}
+      </>
+    );
+  }
   return (
     <>
       <h3>Premios individuales</h3>
@@ -466,6 +492,27 @@ function ChampionsTab({
   const secondTeam = data.championsTeams.find((team) => team.name === second) ?? null;
   const selected = [firstTeam, secondTeam].filter((team): team is TeamInfo => !!team);
   const noTeams = data.championsTeams.length === 0;
+
+  if (!editable && data.everyone) {
+    const w = data.results.awards;
+    const defs: BoardDef[] = [
+      { id: 'campeon', label: 'Campeón', pts: 5, keys: ['champions_campeon'], winners: w.champions_campeon ?? [], team: true },
+      { id: 'finalistas', label: 'Finalistas', pts: 3, keys: ['champions_finalista1', 'champions_finalista2'], winners: w.champions_finalistas ?? [], team: true },
+    ];
+    return (
+      <section className="sp-cl-picks">
+        <header className="sp-cl-hero">
+          <span aria-hidden="true">🏆</span>
+          <div>
+            <h3>Final de la Champions</h3>
+            <p>Lo que ha puesto cada uno, todo junto.</p>
+          </div>
+        </header>
+        <AwardsBoard defs={defs} everyone={data.everyone} meId={data.me.id} aliases={{}} teams={data.championsTeams} />
+        <p className="sp-cl-note">Cada finalista acertado suma 3 puntos. Si aciertas también al campeón, ese equipo suma 5 en total, no 8.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="sp-cl-picks">
@@ -544,27 +591,37 @@ function TeamPicker({
   );
 }
 
+function Locked({ data }: { data: Data }) {
+  const total = data.members.length;
+  const sent = total - data.pending.length;
+  return (
+    <div className="sp-locked">
+      <span aria-hidden="true">🔒</span>
+      <b>Se publican al cerrar</b>
+      <p>
+        Hasta {data.deadline ? fmtShort(data.deadline) : 'que cierre el plazo'} nadie ve lo que ha puesto nadie. Entonces
+        aparecerá aquí lo de todos.
+      </p>
+      <p className="sp-lockcount">
+        {sent} de {total} lo tienen completo
+        {data.pending.length > 0 && <> · faltan: {data.pending.join(', ')}</>}
+      </p>
+    </div>
+  );
+}
+
+// Clasificación media de La Liga según lo que hemos puesto todos
+function MediaTab({ data }: { data: Data }) {
+  if (!data.closed || !data.everyone) return <Locked data={data} />;
+  const lists = data.everyone.filter((e) => e.ranking?.length).map((e) => ({ name: e.name, ranking: e.ranking! }));
+  if (!lists.length) return <p className="muted empty">Nadie hizo su clasificación a tiempo.</p>;
+  return <AverageTable lists={lists} teams={data.teams} zones={data.zones} real={data.results.order} />;
+}
+
 function RankingTab({ data }: { data: Data }) {
   const [open, setOpen] = useState<string | null>(null);
 
-  if (!data.closed || !data.everyone) {
-    const total = data.members.length;
-    const sent = total - data.pending.length;
-    return (
-      <div className="sp-locked">
-        <span aria-hidden="true">🔒</span>
-        <b>Se publican al cerrar</b>
-        <p>
-          Hasta {data.deadline ? fmtShort(data.deadline) : 'que cierre el plazo'} nadie ve lo que ha puesto nadie. Entonces
-          aparecerá aquí lo de todos, con los puntos.
-        </p>
-        <p className="sp-lockcount">
-          {sent} de {total} lo tienen completo
-          {data.pending.length > 0 && <> · faltan: {data.pending.join(', ')}</>}
-        </p>
-      </div>
-    );
-  }
+  if (!data.closed || !data.everyone) return <Locked data={data} />;
 
   const src =
     data.results.source === 'oficial'

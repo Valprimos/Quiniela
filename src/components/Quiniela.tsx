@@ -1034,27 +1034,26 @@ export default function Quiniela() {
           onAdmin={() => openPanel('admin')}
           onAddLeague={() => openPanel('league')}
           onInvite={() => openPanel('invite')}
-          onSeason={() => setShowSeason(true)}
-          seasonBadge={season.badge}
           onLeave={logout}
         />
       </header>
 
-      <div className="seg complist" role="group" aria-label="Competición">
-        {data.competitions.map((c) => (
-          <button
-            key={c.code}
-            type="button"
-            aria-pressed={competition === c.code}
-            onClick={() => changeCompetition(c.code)}
-          >
-            <CompLogo code={c.code} />
-            {c.short}
-          </button>
-        ))}
+      <div className="comprow">
+        <div className="seg complist" role="group" aria-label="Competición">
+          {data.competitions.map((c) => (
+            <button
+              key={c.code}
+              type="button"
+              aria-pressed={competition === c.code}
+              onClick={() => changeCompetition(c.code)}
+            >
+              <CompLogo code={c.code} />
+              {c.short}
+            </button>
+          ))}
+        </div>
+        <SeasonChip brief={season.brief} now={now} onOpen={() => setShowSeason(true)} />
       </div>
-
-      <SeasonChip brief={season.brief} now={now} onOpen={() => setShowSeason(true)} />
 
       <div ref={panelRef}>
       {showProfile && (

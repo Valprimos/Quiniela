@@ -1,18 +1,41 @@
-BOTÓN "MOSTRAR PIN"
+PREDICCIONES DE TEMPORADA: BOTÓN, PREMIOS JUNTOS, MEDIA Y NOMBRES UNIFICADOS
 
-Sube estos 4 archivos a GitHub respetando las rutas:
-  src/components/PinInput.tsx     (NUEVO)
-  src/components/LoginForm.tsx    (reemplaza al actual)
-  src/components/Quiniela.tsx     (reemplaza al actual)
-  src/app/globals.css             (reemplaza al actual; solo añade 8 líneas de estilo al final de .field)
+Sube estos 11 archivos a GitHub respetando las rutas (10 reemplazan a los actuales y 1 es NUEVO):
+  src/components/SeasonBoard.tsx            (NUEVO)
+  src/components/SeasonPicks.tsx
+  src/components/SeasonAdmin.tsx
+  src/components/SeasonChip.tsx
+  src/components/UserMenu.tsx
+  src/components/Quiniela.tsx
+  src/lib/seasonPicks.ts
+  src/lib/seasonPicksServer.ts
+  src/app/api/season-picks/route.ts
+  src/app/api/admin/season-picks/route.ts
+  src/app/season-picks.css
 
-Parten de lo que hay ahora mismo en tu GitHub (incluye imagen de clasificación, pandillas y contraste).
+Súbelos TODOS a la vez: se necesitan entre sí.
+No hay migraciones SQL ni variables nuevas (los nombres unificados se guardan en season_settings.results, que ya existe).
 
-Qué hace:
-- Los tres campos de PIN de la app (acceso, "PIN actual" y "PIN nuevo") llevan dentro un botón
-  "Mostrar" / "Ocultar" con texto visible (no solo un icono) y zona táctil de 44 px.
-- Al mostrarlo, el PIN se ve en claro; el valor no se pierde al alternar.
-- Se vuelve a ocultar solo a los 15 s sin escribir (cada pulsación reinicia la cuenta) y al salir de la app o pestaña.
-- El teclado numérico, el filtro de solo números y el autocompletado del navegador siguen igual.
+1) ACCESO
+- Botón "🏆 Temporada" en la misma fila que La Liga y Champions. Muestra cuántos apartados te faltan (1-3),
+  un ✓ cuando está todo hecho y nada cuando ya cerró. En pantallas muy estrechas (<360 px) solo el trofeo.
+- Quitados: el aviso largo de debajo de las competiciones y la entrada del menú de usuario.
 
-No hay migraciones ni variables nuevas.
+2) PESTAÑAS DE LA VENTANA: La Liga · Media · Champions · Premios · Ranking
+
+3) PREMIOS (cuando cierra el plazo): por cada premio, cada nombre con TODOS los que lo eligieron (foto + nombre),
+   barra de votos, ganador en verde con sus puntos, y "Sin elegir: ...". Tu chip lleva borde amarillo.
+   Igual en Champions: Campeón y Finalistas, con escudos.
+
+4) MEDIA: clasificación media de La Liga según las clasificaciones de todos (posición media con coma decimal,
+   barra de rango mín-máx con marca en la media, "hoy N.º" y cuántos lo ponen campeón). Colores de zona.
+
+5) ADMIN > Predicciones de temporada
+   - "Unificar nombres de jugadores": propone juntar "Yamal", "Lamine" y "Lamine Yamal". Puedes cambiar el nombre
+     unificado, mover una escritura a otro jugador (p. ej. "Lewa" -> "Robert Lewandowski") o separar (dos Williams).
+     Guardar nombres / Volver a la propuesta automática.
+   - "Ganadores de los premios": botones con lo que ha puesto la gente (ya unificado, con cuántos); toca para marcar
+     ganador (varios si hay empate). Sigue pudiendo escribirse a mano.
+   - La puntuación respeta los nombres unificados: si fijas "Williams" como Nico, no puntúa a quien puso Iñaki.
+
+Orden recomendado para el admin: Unificar nombres -> Guardar nombres -> Marcar ganadores -> Guardar premios.
