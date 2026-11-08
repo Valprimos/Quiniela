@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/admin';
+import { requireSuperAdmin } from '@/lib/admin';
 import { fetchAll } from '@/lib/paging';
 import { normalizeTeamName } from '@/lib/league';
 
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 // Editor de Supabase. Si un mismo equipo aparece con dos nombres distintos sin agrupar,
 // significa que el normalizador no los está igualando.
 export async function GET(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
 
   const competition = req.nextUrl.searchParams.get('competition') === 'CL' ? 'CL' : 'PD';

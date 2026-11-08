@@ -843,10 +843,14 @@ const TOOLS: { id: Tool; title: string; hint: string }[] = [
   { id: 'equipos', title: 'Equipos guardados', hint: 'Revisar nombres de equipos' },
 ];
 
+// Herramientas que modifican (o diagnostican) datos compartidos por todas las pandillas: solo el administrador general
+const GLOBAL_TOOLS: Tool[] = ['resultados', 'pleno', 'sync', 'jornada', 'xg', 'historial', 'equipos'];
+
 export default function AdminPanel({
   competition,
   matchday,
   meId,
+  superAdmin,
   onClose,
   onChanged,
 }: {
@@ -854,6 +858,7 @@ export default function AdminPanel({
   matchday: number;
   matches?: MatchOpt[];
   meId: string;
+  superAdmin: boolean;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -996,7 +1001,7 @@ export default function AdminPanel({
 
       {!tool && (
         <div className="admin-tiles">
-          {TOOLS.map((t) => (
+          {TOOLS.filter((t) => superAdmin || !GLOBAL_TOOLS.includes(t.id)).map((t) => (
             <button key={t.id} type="button" className="admin-tile" onClick={() => open(t.id)}>
               <b>{t.title}</b>
               <small>{t.hint}</small>

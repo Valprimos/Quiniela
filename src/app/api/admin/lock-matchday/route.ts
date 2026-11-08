@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/admin';
+import { requireSuperAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
 import { isCompetitionCode } from '@/lib/competitions';
 
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 // Bloquea o desbloquea a mano todos los partidos de una jornada (por si hace falta
 // cerrar los pronósticos antes de tiempo, o reabrir algo por error).
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
 
   const body = await req.json().catch(() => null);

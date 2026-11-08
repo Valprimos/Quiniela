@@ -1,41 +1,31 @@
-PREDICCIONES DE TEMPORADA: BOTÓN, PREMIOS JUNTOS, MEDIA Y NOMBRES UNIFICADOS
+ADMINISTRADOR GENERAL: SOLO TÚ PUEDES TOCAR LOS DATOS COMPARTIDOS
 
-Sube estos 11 archivos a GitHub respetando las rutas (10 reemplazan a los actuales y 1 es NUEVO):
-  src/components/SeasonBoard.tsx            (NUEVO)
-  src/components/SeasonPicks.tsx
-  src/components/SeasonAdmin.tsx
-  src/components/SeasonChip.tsx
-  src/components/UserMenu.tsx
+Sube estos 13 archivos a GitHub respetando las rutas (todos reemplazan a los actuales):
+  src/lib/admin.ts                              (nuevo requireSuperAdmin / isSuperAdmin)
+  src/app/api/state/route.ts                    (devuelve me.superAdmin)
   src/components/Quiniela.tsx
-  src/lib/seasonPicks.ts
-  src/lib/seasonPicksServer.ts
-  src/app/api/season-picks/route.ts
-  src/app/api/admin/season-picks/route.ts
-  src/app/season-picks.css
+  src/components/AdminPanel.tsx                 (oculta las herramientas globales a los demás admins)
+  src/app/api/admin/fix-result/route.ts
+  src/app/api/admin/lock-matchday/route.ts
+  src/app/api/admin/sync/route.ts
+  src/app/api/admin/xg/route.ts
+  src/app/api/admin/pleno/route.ts
+  src/app/api/admin/pleno-recalc/route.ts
+  src/app/api/admin/backfill-history/route.ts
+  src/app/api/admin/team-names/route.ts
+  README.md
+Súbelos TODOS a la vez: se necesitan entre sí. No hay migraciones SQL.
 
-Súbelos TODOS a la vez: se necesitan entre sí.
-No hay migraciones SQL ni variables nuevas (los nombres unificados se guardan en season_settings.results, que ya existe).
+QUÉ CAMBIA
+- Antes, ser admin de CUALQUIER pandilla (y cualquiera puede crear una) bastaba para corregir resultados, cerrar
+  jornadas, tocar el pleno o el xG de todas las pandillas. Ahora esas rutas exigen ser administrador general.
+- El resto del panel (jugadores, PIN, pronósticos, pendientes, temporada, copia, predicciones) no cambia.
+- Los demás admins dejan de ver las herramientas globales; si llamaran a la API a mano, reciben un 403.
+- Se comprueba en la base de datos que sigues siendo admin, así que quitar el rol surte efecto al momento.
 
-1) ACCESO
-- Botón "🏆 Temporada" en la misma fila que La Liga y Champions. Muestra cuántos apartados te faltan (1-3),
-  un ✓ cuando está todo hecho y nada cuando ya cerró. En pantallas muy estrechas (<360 px) solo el trofeo.
-- Quitados: el aviso largo de debajo de las competiciones y la entrada del menú de usuario.
-
-2) PESTAÑAS DE LA VENTANA: La Liga · Media · Champions · Premios · Ranking
-
-3) PREMIOS (cuando cierra el plazo): por cada premio, cada nombre con TODOS los que lo eligieron (foto + nombre),
-   barra de votos, ganador en verde con sus puntos, y "Sin elegir: ...". Tu chip lleva borde amarillo.
-   Igual en Champions: Campeón y Finalistas, con escudos.
-
-4) MEDIA: clasificación media de La Liga según las clasificaciones de todos (posición media con coma decimal,
-   barra de rango mín-máx con marca en la media, "hoy N.º" y cuántos lo ponen campeón). Colores de zona.
-
-5) ADMIN > Predicciones de temporada
-   - "Unificar nombres de jugadores": propone juntar "Yamal", "Lamine" y "Lamine Yamal". Puedes cambiar el nombre
-     unificado, mover una escritura a otro jugador (p. ej. "Lewa" -> "Robert Lewandowski") o separar (dos Williams).
-     Guardar nombres / Volver a la propuesta automática.
-   - "Ganadores de los premios": botones con lo que ha puesto la gente (ya unificado, con cuántos); toca para marcar
-     ganador (varios si hay empate). Sigue pudiendo escribirse a mano.
-   - La puntuación respeta los nombres unificados: si fijas "Williams" como Nico, no puntúa a quien puso Iñaki.
-
-Orden recomendado para el admin: Unificar nombres -> Guardar nombres -> Marcar ganadores -> Guardar premios.
+CONFIGURACIÓN (recomendado, opcional)
+- Por defecto, administrador general = admin de la pandilla más antigua (la primera que se creó).
+- Para fijarlo: variable de entorno SUPERADMIN_PLAYER_IDS en Vercel con tu id de jugador (varios, separados por comas).
+  Tu id: select id, name from players where name_key = 'tu nombre';   (SQL Editor de Supabase)
+  Después, redeploy.
+- Si al entrar no te aparecen Resultados, Pleno, Sincronización... es que tu pandilla no es la más antigua: define la variable.

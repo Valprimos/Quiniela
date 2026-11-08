@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/admin';
+import { requireSuperAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
 import { isCompetitionCode } from '@/lib/competitions';
 import { applyPleno, planPleno } from '@/lib/pleno';
@@ -13,7 +13,7 @@ const MISSING_TABLE = 'Falta ejecutar supabase/migration-7-pleno-manual.sql en S
 // Elige a mano el pleno al 15 de una jornada ({ matchId }) o lo devuelve a automático ({ auto: true }).
 // Los partidos son comunes a todas las pandillas, así que el cambio se ve en todas.
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
 
   const body = await req.json().catch(() => null);

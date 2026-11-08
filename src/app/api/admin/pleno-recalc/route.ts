@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/admin';
+import { requireSuperAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
 import { STAGE_LABEL, isCompetitionCode } from '@/lib/competitions';
 import { applyPleno, hasStarted, manualMatchdays, planPleno } from '@/lib/pleno';
@@ -21,7 +21,7 @@ async function load(competition: string) {
 // Jornadas (también las ya jugadas) cuyo pleno no es el penúltimo partido, sin cambiar nada.
 // Las jornadas con el pleno elegido a mano no se tocan y se cuentan aparte.
 export async function GET(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
 
   const competition = req.nextUrl.searchParams.get('competition');
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 // Corrige las jornadas indicadas (o todas las pendientes de corregir si no se indica ninguna).
 // Cambia los puntos de quien tenga pronósticos en el pleno antiguo o en el nuevo.
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
 
   const body = await req.json().catch(() => null);

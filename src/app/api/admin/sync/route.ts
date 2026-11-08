@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/admin';
+import { requireSuperAdmin } from '@/lib/admin';
 import { syncIfStale } from '@/lib/sync';
 import { COMPETITIONS } from '@/lib/competitions';
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 // Estado de la sincronización de resultados: cuándo fue la última vez que salió bien y si hubo un error
 export async function GET() {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
 
   const supabase = db();
@@ -39,7 +39,7 @@ export async function GET() {
 
 // Fuerza una sincronización ahora mismo y devuelve el resultado de cada competición
 export async function POST() {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
   const results = await syncIfStale(true);
   return NextResponse.json({

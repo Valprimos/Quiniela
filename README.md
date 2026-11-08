@@ -194,6 +194,24 @@ herramientas de Resultados, Pronósticos y Bloquear jornada llevan su propio sel
 y jornada, así que se puede corregir cualquier jornada sin salir del panel ni cambiar la que se ve
 en la app. Desde ahí se puede:
 
+### Administrador general y administrador de pandilla
+
+Hay dos niveles. El **admin de pandilla** (cualquiera con `is_admin`) gestiona solo su pandilla: jugadores y PIN,
+pronósticos, pendientes, archivo de temporada, copia de seguridad y predicciones de temporada. El **administrador
+general** es el único que ve y puede usar lo que afecta a TODAS las pandillas, porque los partidos son compartidos:
+Resultados, Pleno al 15, Sincronización, Bloquear jornada, xG, Historial y Equipos guardados. Como cualquiera puede
+crear una pandilla y queda como admin de ella, sin esta separación un desconocido podría cambiar marcadores a todos.
+
+Quién es administrador general:
+
+- Si defines la variable `SUPERADMIN_PLAYER_IDS` (ids de jugador de la tabla `players`, separados por comas), solo esos.
+- Si no la defines, los admins de la pandilla más antigua (la primera que se creó).
+
+Se recomienda definirla: en Supabase, `select id, name from players where name_key = 'tu nombre'`, y pega el id en las
+variables de entorno de Vercel. Se comprueba en la base de datos en cada petición, así que quitar el rol de admin
+surte efecto al instante.
+
+
 - Resetear el PIN de un colega que lo haya olvidado.
 - Dar o quitar el rol de admin a otro jugador (no al propio, para no dejar la pandilla sin
   ningún admin por error).

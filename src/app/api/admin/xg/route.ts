@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/admin';
+import { requireSuperAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
 import { fetchAll } from '@/lib/paging';
 import { XgError, fetchUnderstatLaLiga, pairWithDb } from '@/lib/xg';
@@ -44,7 +44,7 @@ async function finishedMatches(competition: 'PD' | 'CL'): Promise<Row[] | null> 
 
 // Estado: cuántos partidos terminados tienen xG y cuáles faltan (los más recientes primero)
 export async function GET(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
   const competition = req.nextUrl.searchParams.get('competition') === 'CL' ? 'CL' : 'PD';
   const rows = await finishedMatches(competition);
@@ -75,7 +75,7 @@ const validXg = (v: unknown) => {
 };
 
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
   const body = await req.json().catch(() => null);
   const action = body?.action;

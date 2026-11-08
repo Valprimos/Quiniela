@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession, clearSession } from '@/lib/session';
+import { isSuperAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
 import { syncIfStale } from '@/lib/sync';
 import { LIVE_STATUSES, isLocked, liveResultOf, pointsForPrediction, resultOf } from '@/lib/scoring';
@@ -344,6 +345,8 @@ export async function GET(req: NextRequest) {
       id: session.pid,
       name: nameById.get(session.pid) ?? session.name,
       admin: session.admin,
+      // Administrador general: el único que ve y usa las herramientas que afectan a todas las pandillas
+      superAdmin: session.admin ? await isSuperAdmin(session) : false,
       avatar: avatarOf(session.pid),
       group: groupRow?.name ?? '',
     },

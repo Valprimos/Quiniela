@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/admin';
+import { requireSuperAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
 import { AF_LEAGUE_ID, ApiFootballError, fetchApiFootballMatches } from '@/lib/apifootball';
 
@@ -13,7 +13,7 @@ type SeasonResult = { season: number; count?: number; error?: string };
 // api-football.com, para sembrar de historial el "cara a cara" entre equipos.
 // No toca la sincronización en directo de la temporada actual.
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireSuperAdmin();
   if (session instanceof NextResponse) return session;
 
   const body = await req.json().catch(() => null);

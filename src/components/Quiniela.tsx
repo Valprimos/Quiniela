@@ -53,7 +53,7 @@ type MatchDTO = {
 type RankRow = { playerId: string; name: string; avatar: number | null; points: number; delta: number; maxPts: number; live: number };
 type CompetitionInfo = { code: string; name: string; short: string };
 type StateDTO = {
-  me: { id: string; name: string; admin: boolean; avatar: number | null; group: string };
+  me: { id: string; name: string; admin: boolean; superAdmin?: boolean; avatar: number | null; group: string };
   season: number;
   competition: string;
   competitions: CompetitionInfo[];
@@ -1077,6 +1077,7 @@ export default function Quiniela() {
           matchday={data.matchday}
           matches={data.matches}
           meId={data.me.id}
+          superAdmin={!!data.me.superAdmin}
           onClose={() => setPanel(null)}
           onChanged={refreshNow}
         />
