@@ -205,6 +205,9 @@
 .sp-btn.urgent { border-color: var(--foco); background: rgba(255, 210, 63, 0.14); }
 .sp-btn-n { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--foco); color: #1a1500; font-size: 12px; font-weight: 800; line-height: 18px; text-align: center; }
 .sp-btn-ok { color: var(--ok); font-weight: 800; }
+/* Texto de estado de versiones anteriores del botón: ya no se usa, se oculta siempre */
+.sp-btn-sub { display: none; }
+
 /* En móvil, La Liga · Champions · 🏆 van siempre en UNA fila: el botón se queda en icono + insignia (con forma de píldora,
    como los de al lado) y las píldoras de las competiciones bajan de tamaño por escalones, igual que en Clasificación. */
 @media (max-width: 441px) {

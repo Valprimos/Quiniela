@@ -62,17 +62,11 @@ export default function SeasonChip({ brief, now, onOpen }: { brief: SeasonBrief 
     label += `: hechas${left != null ? `, cierran en ${untilText(left)}` : ''}`;
   }
 
-  // Texto corto del estado: solo se ve en móvil, donde el botón ocupa toda la fila (en el resto basta la insignia)
-  const sub = closed ? 'Ya se ven las de todos' : missing > 0 ? `${missing} por hacer` : 'Hechas ✓';
-
   return (
     <button type="button" className={`sp-btn ${tone}`} onClick={onOpen} aria-label={label} title={label}>
       <span aria-hidden="true">🏆</span>
       <span className="sp-btn-txt" aria-hidden="true">
         Temporada
-      </span>
-      <span className="sp-btn-sub" aria-hidden="true">
-        {sub}
       </span>
       {!closed && missing > 0 && (
         <span className="sp-btn-n" aria-hidden="true">
