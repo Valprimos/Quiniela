@@ -43,7 +43,7 @@ create table matches (
   is_pleno boolean not null default false,         -- el "pleno al 15" de la jornada (marcador exacto)
   home_xg numeric(4,2),                            -- xG del local (índice de suerte); ver migration-8-xg.sql
   away_xg numeric(4,2),
-  xg_source text,                                  -- 'understat' o 'manual'
+  xg_source text,                                  -- 'sofascore' (scripts/import-xg.py), 'manual' o 'understat' (antiguo)
   updated_at timestamptz not null default now()
 );
 create index matches_comp_season_matchday_idx on matches (competition, season, matchday);

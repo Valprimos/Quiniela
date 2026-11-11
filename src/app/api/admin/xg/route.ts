@@ -3,7 +3,6 @@ import { db } from '@/lib/db';
 import { requireSuperAdmin } from '@/lib/admin';
 import { currentSeason } from '@/lib/season';
 import { fetchAll } from '@/lib/paging';
-import { XgError, fetchUnderstatLaLiga, pairWithDb } from '@/lib/xg';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,40 +98,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'import') {
-    const rows = await finishedMatches('PD');
-    if (!rows) return NextResponse.json({ error: NEEDS_MIGRATION, needsMigration: true }, { status: 400 });
-    let remote;
-    try {
-      remote = await fetchUnderstatLaLiga(currentSeason());
-    } catch (e) {
-      return NextResponse.json({ error: e instanceof XgError ? e.message : 'No se pudo leer Understat.' }, { status: 502 });
-    }
-    // Lo puesto a mano manda sobre lo importado
-    const manual = new Set(rows.filter((r) => r.xg_source === 'manual').map((r) => r.id));
-    const pairs = pairWithDb(
-      remote,
-      rows.filter((r) => !manual.has(r.id)).map((r) => ({ id: r.id, home_name: r.home_name, away_name: r.away_name, utc_date: r.utc_date }))
-    );
-    const unchanged = new Map(rows.map((r) => [r.id, r]));
-    const todo = pairs.filter((p) => {
-      const cur = unchanged.get(p.id);
-      return !cur || cur.home_xg !== p.xgH || cur.away_xg !== p.xgA;
-    });
-    for (let i = 0; i < todo.length; i += 20) {
-      const results = await Promise.all(
-        todo.slice(i, i + 20).map((p) => supabase.from('matches').update({ home_xg: p.xgH, away_xg: p.xgA, xg_source: 'understat' }).eq('id', p.id))
-      );
-      if (results.some((r) => r.error)) return NextResponse.json({ error: 'No se pudo guardar el xG importado.' }, { status: 500 });
-    }
-    const covered = new Set([...pairs.map((p) => p.id), ...manual, ...rows.filter((r) => r.home_xg != null && r.away_xg != null).map((r) => r.id)]);
-    return NextResponse.json({
-      ok: true,
-      imported: todo.length,
-      found: remote.length,
-      skippedManual: manual.size,
-      finished: rows.length,
-      stillMissing: rows.length - covered.size,
-    });
+    return NextResponse.json({ error: 'El xG se importa ejecutando scripts/import-xg.py en local.' }, { status: 410 });
   }
 
   return NextResponse.json({ error: 'Acción no válida.' }, { status: 400 });

@@ -46,3 +46,9 @@ El sitio se sirve por HTTPS. En iPhone, ábrelo en Safari y usa **Compartir → 
 ## Especificación
 
 Los requisitos completos están en [docs/REQUISITOS.md](docs/REQUISITOS.md).
+
+## Quiniela: importar el xG de La Liga
+
+El xG de La Liga se importa de Sofascore ejecutando `scripts/import-xg.py` en tu ordenador después de cada jornada
+(`pip install -U curl_cffi`, variables `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`, y `python3 scripts/import-xg.py --dry-run`
+para probar). Guía completa en [scripts/README.md](scripts/README.md).

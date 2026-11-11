@@ -24,6 +24,8 @@ async function post(body: unknown): Promise<{ ok: boolean; error?: string; [k: s
 }
 
 const PAGE_SIZE = 30;
+// 'understat' sigue siendo válido en filas antiguas
+const sourceLabel = (source: string) => (source === 'manual' ? 'manual' : source === 'sofascore' ? 'Sofascore' : source === 'understat' ? 'Understat' : source);
 const dateFormatter = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 export default function XgAdmin({ onChanged }: { onChanged: () => void }) {
@@ -31,7 +33,7 @@ export default function XgAdmin({ onChanged }: { onChanged: () => void }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState<number | 'import' | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
   const [draft, setDraft] = useState<Record<number, { h: string; a: string }>>({});
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -53,18 +55,6 @@ export default function XgAdmin({ onChanged }: { onChanged: () => void }) {
     const q = search.trim().toLocaleLowerCase('es');
     return (status?.matches ?? []).filter((m) => !q || `${m.home} ${m.away} ${m.stage ?? ''}`.toLocaleLowerCase('es').includes(q));
   }, [status, search]);
-
-  async function importNow() {
-    setBusy('import');
-    setMsg(null);
-    const r = await post({ action: 'import' });
-    setBusy(null);
-    if (!r.ok) return setError(r.error ?? 'No se pudo importar.');
-    setError(null);
-    setMsg(`Importados ${r.imported} partidos de Understat. xG disponible en ${r.found} partidos; faltan ${r.stillMissing} de ${r.finished} finalizados.`);
-    load();
-    onChanged();
-  }
 
   async function save(m: Match) {
     const d = draft[m.id];
@@ -99,14 +89,11 @@ export default function XgAdmin({ onChanged }: { onChanged: () => void }) {
             xG cargado en <b>{status.withXg}</b> de {status.finished} partidos finalizados de {competition === 'PD' ? 'La Liga' : 'Champions'}.
             {' '}Puedes añadir o corregir el xG local y visitante en cualquier partido de esta temporada.
           </p>
-          {competition === 'PD' && (
-            <>
-              <button type="button" className="primary" onClick={importNow} disabled={busy !== null}>
-                {busy === 'import' ? 'Importando…' : 'Importar xG de Understat'}
-              </button>
-              <p className="hint">La importación de Understat actualiza los xG automáticos y respeta los que hayas guardado manualmente. Para Champions, introduce los valores manualmente.</p>
-            </>
-          )}
+          <p className="hint">
+            {competition === 'PD'
+              ? 'El xG se importa ejecutando scripts/import-xg.py en local. Lo que guardes aquí a mano no lo pisa.'
+              : 'Para Champions, introduce los valores manualmente.'}
+          </p>
           <label className="hint xg-search">
             Buscar equipo o fase
             <input value={search} onChange={(e) => { setSearch(e.target.value); setVisibleCount(PAGE_SIZE); }} placeholder="Ej. Barcelona, Arsenal…" />
@@ -121,7 +108,7 @@ export default function XgAdmin({ onChanged }: { onChanged: () => void }) {
                   <li key={m.id}>
                     <span className="xg-t">
                       <b>{m.home} – {m.away}</b>
-                      <small>{dateFormatter.format(new Date(m.date))} · {competition === 'PD' ? `J${m.matchday}` : (m.stage || `J${m.matchday}`)} · {m.score}{m.source ? ` · ${m.source === 'manual' ? 'manual' : 'Understat'}` : ' · sin xG'}</small>
+                      <small>{dateFormatter.format(new Date(m.date))} · {competition === 'PD' ? `J${m.matchday}` : (m.stage || `J${m.matchday}`)} · {m.score}{m.source ? ` · ${sourceLabel(m.source)}` : ' · sin xG'}</small>
                     </span>
                     <input
                       inputMode="decimal"
