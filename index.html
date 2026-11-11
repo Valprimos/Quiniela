@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f3f5f2" />
+    <meta name="description" content="27: hábitos, formación, estudios y experiencias personales." />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <link rel="stylesheet" href="./src/temas.css" />
+    <title>27</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <a class="brand" href="#hoy" aria-label="27, ir a hoy"><span class="brand-mark" aria-hidden="true"><img src="./icons/icon.svg" alt="" /></span><span><b>27</b><small>Hábitos · aprendizaje</small></span></a>
+        <nav class="main-nav" aria-label="Navegación principal">
+          <p class="nav-label">MI DÍA</p>
+          <button class="nav-item active" data-view="today"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></span> Hoy</button>
+          <button class="nav-item" data-view="calendar"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M16 2.5v4M8 2.5v4M3 10h18"/></svg></span> Calendario</button>
+          <p class="nav-label">AVANZAR</p>
+          <button class="nav-item" data-view="habits"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="m8 12.2 3 3 5-6"/></svg></span> Hábitos</button>
+          <button class="nav-item" data-view="learning"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.5 4.5H8a4 4 0 0 1 4 4V21a3 3 0 0 0-3-3H2.5z"/><path d="M21.5 4.5H16a4 4 0 0 0-4 4V21a3 3 0 0 1 3-3h6.500z"/></svg></span> Formación personal</button>
+          <button class="nav-item" data-view="books"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3.5h11a3 3 0 0 1 3 3V21H8a3 3 0 0 1-3-3z"/><path d="M5 18a3 3 0 0 1 3-3h11"/></svg></span> Libros</button>
+          <button class="nav-item" data-view="quiz"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.4a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2.2-2.6 4"/><path d="M12 17.4v.1"/></svg></span> Repaso</button>
+          <button class="nav-item" data-view="academics"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M22 9.500 12 4.500 2 9.500l10 5z"/><path d="M6 12v4.500c0 1.600 2.700 3 6 3s6-1.400 6-3V12"/><path d="M22 9.500v6"/></svg></span> Notas académicas</button>
+          <button class="nav-item" data-view="extras"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 2.800 2.800 5.800 6.300.9-4.600 4.400 1.100 6.300L12 17.200l-5.600 3 1.100-6.300L2.900 9.500l6.300-.9z"/></svg></span> Extras y experiencias</button>
+          <button class="nav-item" data-view="goals"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.200"/></svg></span> Objetivos</button>
+          <p class="nav-label">MIRAR ATRÁS</p>
+          <button class="nav-item" data-view="statistics"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.500 3.500v17h17"/><path d="M8 16v-5M12.500 16V7.500M17 16v-3"/></svg></span> Estadísticas</button>
+          <button class="nav-item" data-view="settings"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6.500h9M17 6.500h3M4 12h3M11 12h9M4 17.500h11M19 17.500h1"/><circle cx="15" cy="6.500" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17.500" r="2"/></svg></span> Configuración</button>
+        </nav>
+        <div class="sidebar-footer"><span class="privacy-dot"></span> Datos guardados en este dispositivo</div>
+      </aside>
+      <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" aria-label="Cerrar menú"></button>
+      <main class="main-area">
+        <header class="topbar">
+          <button class="mobile-menu" id="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+          <div class="crumb"><span id="today-date"></span><span class="crumb-dot">·</span><span id="page-crumb">Hoy</span></div>
+          <div class="top-actions"><span class="save-status" id="save-status">Guardado en este dispositivo</span></div>
+        </header>
+        <div class="view-root" id="view-root" aria-live="polite"></div>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <dialog id="dialog" class="app-dialog"><div class="dialog-frame"><button class="dialog-close" type="button" data-action="close-dialog" aria-label="Cerrar">×</button><div id="dialog-content"></div></div></dialog>
+    <script type="module" src="./src/app.js"></script>
+    <script src="./src/register-sw.js" defer></script>
+  </body>
+</html>
