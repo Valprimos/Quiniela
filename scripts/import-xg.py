@@ -9,7 +9,7 @@ Sofascore bloquea las IPs de centros de datos, así que no sirve desde Vercel ni
 
 Variables de entorno (o fichero .env en la raíz del repo, que NO se sube a GitHub):
     SUPABASE_URL                 igual que en src/lib/db.ts
-    SUPABASE_SERVICE_ROLE_KEY    igual que en src/lib/db.ts
+    SUPABASE_SERVICE_ROLE_KEY    igual que en src/lib/db.ts (service_role 'eyJ...' o secret key 'sb_secret_...')
     SEASON                       (opcional) igual que en src/lib/season.ts
     SOFASCORE_USER_AGENT         (opcional) User-Agent de un Chrome actual
     SOFASCORE_API_BASE           (opcional) por si Sofascore cambia el host de su API
@@ -40,8 +40,10 @@ except ImportError:  # pragma: no cover
 # ---------------------------------------------------------------------------------------------
 
 COMPETITION = "PD"  # La Liga en la tabla matches
-DEFAULT_TOURNAMENT_ID = 8  # id de "unique tournament" de LaLiga en Sofascore (SIN VERIFICAR, ver README)
-API_BASE = os.environ.get("SOFASCORE_API_BASE", "https://api.sofascore.com/api/v1").rstrip("/")
+DEFAULT_TOURNAMENT_ID = 8  # id de LaLiga en Sofascore (verificado: /unique-tournament/8 devuelve "LaLiga")
+# api.sofascore.com devuelve 403 (Varnish) incluso con huella de Chrome; la misma API por www.sofascore.com
+# responde 200 (comprobado con scripts/diagnose-sofascore.py desde una IP residencial en nov 2026).
+API_BASE = os.environ.get("SOFASCORE_API_BASE", "https://www.sofascore.com/api/v1").rstrip("/")
 
 # Chrome 157 estable (3 nov 2026). Chrome congela la versión menor en "157.0.0.0".
 # Sofascore rechaza los User-Agent de Chrome antiguos: actualiza esto (o usa SOFASCORE_USER_AGENT).
@@ -211,7 +213,11 @@ def current_season() -> int:
 class Supabase:
     def __init__(self, url: str, key: str):
         self.url = url.rstrip("/")
-        self.headers = {"apikey": key, "Authorization": f"Bearer {key}"}
+        # Clave antigua (service_role) = JWT que empieza por "eyJ": va también como Bearer.
+        # Clave nueva (sb_secret_...) no es un JWT: solo va en la cabecera apikey.
+        self.headers = {"apikey": key}
+        if key.startswith("eyJ"):
+            self.headers["Authorization"] = f"Bearer {key}"
 
     def _check(self, resp, what: str) -> None:
         if resp.status_code < 400:
