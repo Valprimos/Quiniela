@@ -90,9 +90,7 @@ export default function XgAdmin({ onChanged }: { onChanged: () => void }) {
             {' '}Puedes añadir o corregir el xG local y visitante en cualquier partido de esta temporada.
           </p>
           <p className="hint">
-            {competition === 'PD'
-              ? 'El xG se importa ejecutando scripts/import-xg.py en local. Lo que guardes aquí a mano no lo pisa.'
-              : 'Para Champions, introduce los valores manualmente.'}
+            El xG se importa ejecutando scripts/import-xg.py en local. Lo que guardes aquí a mano no lo pisa.
           </p>
           <label className="hint xg-search">
             Buscar equipo o fase

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Importa el xG de La Liga desde Sofascore a la tabla `matches` de Supabase.
+"""Importa el xG de La Liga y de la Champions desde Sofascore a la tabla `matches` de Supabase.
 
 Se ejecuta A MANO en tu ordenador (IP residencial) después de cada jornada:
 Sofascore bloquea las IPs de centros de datos, así que no sirve desde Vercel ni GitHub Actions.
 
     python3 scripts/import-xg.py --dry-run     # muestra qué actualizaría, sin escribir
-    python3 scripts/import-xg.py               # escribe en Supabase
+    python3 scripts/import-xg.py               # escribe en Supabase (La Liga y Champions)
+    python3 scripts/import-xg.py --competition CL   # solo Champions (PD = solo La Liga)
 
 Variables de entorno (o fichero .env en la raíz del repo, que NO se sube a GitHub):
     SUPABASE_URL                 igual que en src/lib/db.ts
@@ -20,6 +21,8 @@ Requiere: pip install -U curl_cffi
 from __future__ import annotations
 
 import argparse
+import csv
+import difflib
 import math
 import os
 import random
@@ -39,8 +42,12 @@ except ImportError:  # pragma: no cover
 # Configuración
 # ---------------------------------------------------------------------------------------------
 
-COMPETITION = "PD"  # La Liga en la tabla matches
-DEFAULT_TOURNAMENT_ID = 8  # id de LaLiga en Sofascore (verificado: /unique-tournament/8 devuelve "LaLiga")
+# competition = código en la tabla matches. tournament_id = "unique tournament" de Sofascore.
+#   PD: 8 verificado (/unique-tournament/8 devuelve "LaLiga").  CL: 7 SIN verificar (se comprueba el nombre al arrancar).
+COMPETITIONS = {
+    "PD": {"label": "La Liga", "tournament_id": 8, "hint": "liga", "fuzzy": False, "fallback_rounds": 38},
+    "CL": {"label": "Champions League", "tournament_id": 7, "hint": "champions", "fuzzy": True, "fallback_rounds": 8},
+}
 # api.sofascore.com devuelve 403 (Varnish) incluso con huella de Chrome; la misma API por www.sofascore.com
 # responde 200 (comprobado con scripts/diagnose-sofascore.py desde una IP residencial en nov 2026).
 API_BASE = os.environ.get("SOFASCORE_API_BASE", "https://www.sofascore.com/api/v1").rstrip("/")
@@ -52,14 +59,11 @@ DEFAULT_UA = (
     "Chrome/157.0.0.0 Safari/537.36"
 )
 
+# Solo Referer/Origin: con estas (más User-Agent y sec-ch-ua) el diagnóstico recibió 200 desde una IP residencial.
+# No añadir más cabeceras sin volver a comprobarlo con scripts/diagnose-sofascore.py.
 BROWSER_HEADERS = {
-    "Accept": "*/*",
-    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
     "Referer": "https://www.sofascore.com/",
     "Origin": "https://www.sofascore.com",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-site",
 }
 
 MAX_RETRIES = 4  # reintentos por petición (espera creciente)
@@ -112,8 +116,14 @@ def team_key(name: str) -> str:
         return "atletico"
     if re.search(r"\bbarca", n):
         return "barcelona"
+    # Recién ascendidos: la base los muestra como "Santander" / "Deportivo", Sofascore como "Racing Santander" /
+    # "Deportivo La Coruña"
+    if re.search(r"\bsantander\b", n):
+        return "racing"
+    if re.search(r"\b(coruna|depor)\b", n):
+        return "deportivo"
     words = [w for w in n.split() if w and w not in STOP]
-    return words[0] if words else n
+    return words[0] if words else ("deportivo" if re.search(r"\bdeportivo\b", n) else n)
 
 
 def js_round2(x: float) -> float:
@@ -173,6 +183,90 @@ def pair_with_db(remote: list[dict], db_rows: list[dict]) -> tuple[list[tuple[di
 
 
 # ---------------------------------------------------------------------------------------------
+# Emparejado para la Champions (nombres europeos). teamKey (primera palabra) no basta: "FC Internazionale
+# Milano" vs "Inter", "SL Benfica" vs "Benfica", "Manchester City" vs "Manchester United"...
+# La Liga sigue usando teamKey/pair_with_db tal cual (port fiel de xg.ts).
+# ---------------------------------------------------------------------------------------------
+
+TRANSLIT = str.maketrans({"ø": "o", "Ø": "o", "æ": "ae", "Æ": "ae", "œ": "oe", "ß": "ss", "ł": "l", "Ł": "l",
+                          "đ": "d", "ð": "d", "þ": "th", "ı": "i"})
+CL_STOP = STOP | {"ac", "as", "sc", "sk", "fk", "ssc", "sl", "kv", "bc", "afc", "cp", "sv", "tsg", "rb", "pae",
+                  "olympique", "royal", "clube", "calcio", "sport", "do", "da", "di", "von", "van", "le", "los"}
+# Abreviaturas y variantes de escritura (los nombres de tu base y los de Sofascore). Amplía aquí si sale algún
+# equipo sin emparejar. Un alias puede expandirse a varias palabras.
+CL_ALIAS = {"internazionale": "inter", "munich": "munchen", "kobenhavn": "copenhagen", "olympiakos": "olympiacos",
+            "lyonnais": "lyon", "barca": "barcelona", "atleti": "atletico", "spurs": "tottenham",
+            "man": "manchester", "psg": "paris saint germain", "shaktar": "shakhtar", "shakhtyor": "shakhtar"}
+
+
+def cl_tokens(name: str) -> list[str]:
+    n = unicodedata.normalize("NFD", name.translate(TRANSLIT))
+    n = re.sub(r"[\u0300-\u036f]", "", n).lower()
+    n = re.sub(r"[^a-z0-9 ]+", " ", n)
+    out: list[str] = []
+    for raw in n.split():
+        for w in CL_ALIAS.get(raw, raw).split():
+            if w in CL_STOP or w.isdigit() or w in out:
+                continue
+            out.append(w)
+    return out
+
+
+def cl_key(name: str) -> str:
+    return "+".join(cl_tokens(name))
+
+
+def cl_match_level(a: str, b: str):
+    """0 = mismas palabras significativas; 1 = una incluida en la otra (p. ej. 'Dortmund' / 'Borussia
+    Dortmund') o muy parecidas ('Shaktar' / 'Shakhtar'); None = no casan."""
+    ta, tb = cl_tokens(a), cl_tokens(b)
+    if not ta or not tb:
+        return None
+    sa, sb = set(ta), set(tb)
+    if sa == sb:
+        return 0
+    if sa < sb or sb < sa:
+        return 1
+    if difflib.SequenceMatcher(None, "".join(ta), "".join(tb)).ratio() >= 0.88:
+        return 1
+    return None
+
+
+def cl_same_team(a: str, b: str) -> bool:
+    return cl_match_level(a, b) is not None
+
+
+def pair_fuzzy(remote: list[dict], db_rows: list[dict]) -> tuple[list[tuple[dict, dict]], list[dict]]:
+    """Como pair_with_db (fecha más cercana, margen de 3 días, una fila de la base se usa una vez), pero en dos
+    pasadas: primero solo los equipos que casan exactamente y después los parecidos. Siempre se exige que casen
+    local Y visitante dentro de los 3 días, y así un parecido no puede robar la pareja a uno exacto."""
+    used: set[int] = set()
+    paired: dict[int, dict] = {}
+    for level in (0, 1):
+        for idx, x in enumerate(remote):
+            if idx in paired:
+                continue
+            best = None
+            best_d = 3 * DAY_MS + 1
+            for c in db_rows:
+                if c["id"] in used:
+                    continue
+                lh = cl_match_level(x["home"], c["home_name"])
+                la = cl_match_level(x["away"], c["away_name"])
+                if lh is None or la is None or max(lh, la) > level:
+                    continue
+                d = abs(parse_iso_ms(c["utc_date"]) - x["at"])
+                if d < best_d:
+                    best, best_d = c, d
+            if best is not None:
+                used.add(best["id"])
+                paired[idx] = best
+    pairs = [(remote[i], paired[i]) for i in sorted(paired)]
+    unmatched = [x for i, x in enumerate(remote) if i not in paired]
+    return pairs, unmatched
+
+
+# ---------------------------------------------------------------------------------------------
 # Entorno / .env
 # ---------------------------------------------------------------------------------------------
 
@@ -227,7 +321,7 @@ class Supabase:
             raise SupabaseError("Falta ejecutar supabase/migration-8-xg.sql en Supabase (SQL Editor).")
         raise SupabaseError(f"Supabase respondió {resp.status_code} al {what}: {text}")
 
-    def finished_matches(self, season: int) -> list[dict]:
+    def finished_matches(self, season: int, competition: str) -> list[dict]:
         rows: list[dict] = []
         page = 1000
         offset = 0
@@ -237,7 +331,7 @@ class Supabase:
                 headers=self.headers,
                 params={
                     "select": "id,utc_date,home_name,away_name,home_xg,away_xg,xg_source",
-                    "competition": f"eq.{COMPETITION}",
+                    "competition": f"eq.{competition}",
                     "season": f"eq.{season}",
                     "status": "eq.FINISHED",
                     "order": "utc_date.asc,id.asc",
@@ -253,17 +347,16 @@ class Supabase:
                 return rows
             offset += page
 
-    def update_xg(self, match_id: int, home: float, away: float) -> bool:
+    def update_xg(self, match_id: int, home: float, away: float, overwrite_manual: bool = False) -> bool:
         """Devuelve False si no se tocó ninguna fila (p. ej. pasó a 'manual' mientras corría el script)."""
+        params = {"id": f"eq.{match_id}", "select": "id"}
+        if not overwrite_manual:
+            # Nunca pisar lo puesto a mano, ni siquiera si cambia durante la ejecución
+            params["or"] = "(xg_source.is.null,xg_source.neq.manual)"
         resp = cffi.patch(
             f"{self.url}/rest/v1/matches",
             headers={**self.headers, "Content-Type": "application/json", "Prefer": "return=representation"},
-            params={
-                "id": f"eq.{match_id}",
-                "select": "id",
-                # Nunca pisar lo puesto a mano, ni siquiera si cambia durante la ejecución
-                "or": "(xg_source.is.null,xg_source.neq.manual)",
-            },
+            params=params,
             json={"home_xg": home, "away_xg": away, "xg_source": "sofascore"},
             timeout=30,
         )
@@ -296,6 +389,7 @@ class Sofascore:
         """GET con pausa aleatoria y reintentos con espera creciente ante 403/429/5xx/red."""
         url = f"{API_BASE}{path}"
         last_status = 0
+        last_body = ""
         for attempt in range(MAX_RETRIES + 1):
             self._pause()
             try:
@@ -311,6 +405,7 @@ class Sofascore:
             self._last = time.monotonic()
             self.requests += 1
             last_status = resp.status_code
+            last_body = " ".join(resp.text.split())[:120]
             if resp.status_code == 200:
                 try:
                     return resp.json()
@@ -328,6 +423,7 @@ class Sofascore:
             raise SofascoreBlocked(
                 f"Sofascore bloquea las peticiones (HTTP {last_status}). Prueba desde tu IP de casa "
                 "(sin VPN ni proxy), actualiza curl_cffi (pip install -U curl_cffi) o inténtalo más tarde."
+                f"\n   Petición: {url}\n   Respuesta: {last_body}"
             )
         raise SofascoreError(f"Sofascore respondió HTTP {last_status} en {path} tras {MAX_RETRIES + 1} intentos.")
 
@@ -354,33 +450,50 @@ def find_season_id(sofa: Sofascore, tournament_id: int, start_year: int) -> tupl
     )
 
 
-def check_tournament(sofa: Sofascore, tournament_id: int) -> str:
+def check_tournament(sofa: Sofascore, tournament_id: int, hint: str) -> str:
     data = sofa.get(f"/unique-tournament/{tournament_id}", allow_404=True)
     name = ((data or {}).get("uniqueTournament") or {}).get("name") or ""
     if not name:
         raise SofascoreError(
             f"No puedo leer el torneo {tournament_id} en Sofascore. Revisa el id con --tournament-id."
         )
-    if "liga" not in name.lower():
+    if hint not in name.lower():
         raise SofascoreError(
-            f"El torneo {tournament_id} se llama {name!r}, no parece La Liga. Usa --tournament-id con el id correcto."
+            f"El torneo {tournament_id} se llama {name!r}, no es el esperado. Usa --tournament-id con el id correcto."
         )
     return name
 
 
-def round_numbers(sofa: Sofascore, tournament_id: int, season_id: int) -> list[int]:
+def list_rounds(sofa: Sofascore, tournament_id: int, season_id: int, fallback: int) -> list[dict]:
+    """Rondas a consultar. Las de liga son números (1..N, solo hasta la actual); las eliminatorias de la
+    Champions traen además slug (y a veces prefix) y hay que pedirlas con ellos."""
     data = sofa.get(f"/unique-tournament/{tournament_id}/season/{season_id}/rounds", allow_404=True)
-    if not data:
-        return list(range(1, 39))
-    nums = sorted({r["round"] for r in data.get("rounds", []) if isinstance(r.get("round"), int)})
-    current = (data.get("currentRound") or {}).get("round")
-    if isinstance(current, int):
-        nums = [n for n in nums if n <= current]
-    return nums or list(range(1, 39))
+    if not data or not data.get("rounds"):
+        return [{"round": n} for n in range(1, fallback + 1)]
+    cur = data.get("currentRound") or {}
+    cur_n = cur.get("round") if isinstance(cur.get("round"), int) and not cur.get("slug") else None
+    out = []
+    for r in data["rounds"]:
+        n = r.get("round")
+        if not isinstance(n, int):
+            continue
+        if not r.get("slug") and cur_n is not None and n > cur_n:
+            continue
+        out.append({"round": n, "slug": r.get("slug"), "prefix": r.get("prefix"), "name": r.get("name")})
+    return out or [{"round": n} for n in range(1, fallback + 1)]
 
 
-def finished_events(sofa: Sofascore, tournament_id: int, season_id: int, rnd: int) -> list[dict]:
-    data = sofa.get(f"/unique-tournament/{tournament_id}/season/{season_id}/events/round/{rnd}", allow_404=True)
+def finished_events(sofa: Sofascore, tournament_id: int, season_id: int, rnd: dict) -> list[dict]:
+    base = f"/unique-tournament/{tournament_id}/season/{season_id}/events/round/{rnd['round']}"
+    path = base
+    if rnd.get("slug"):
+        path += f"/slug/{rnd['slug']}"
+    if rnd.get("prefix"):
+        path += f"/prefix/{rnd['prefix']}"
+    data = sofa.get(path, allow_404=True)
+    if data is None and path != base:
+        data = sofa.get(base, allow_404=True)
+    label = (rnd.get("name") or rnd["slug"]) if rnd.get("slug") else f"J{rnd['round']}"
     out = []
     for e in (data or {}).get("events", []):
         if (e.get("status") or {}).get("type") != "finished":
@@ -390,7 +503,7 @@ def finished_events(sofa: Sofascore, tournament_id: int, season_id: int, rnd: in
         ts = e.get("startTimestamp")
         if not home or not away or not isinstance(ts, (int, float)) or "id" not in e:
             continue
-        out.append({"event_id": e["id"], "home": home, "away": away, "at": int(ts) * 1000, "round": rnd})
+        out.append({"event_id": e["id"], "home": home, "away": away, "at": int(ts) * 1000, "round": label})
     return out
 
 
@@ -434,42 +547,16 @@ def same_xg(cur_h, cur_a, h: float, a: float) -> bool:
 
 def fmt(x: dict) -> str:
     when = datetime.fromtimestamp(x["at"] / 1000, timezone.utc).strftime("%d/%m/%Y")
-    return f"{x['home']} - {x['away']} ({when}, J{x['round']})"
+    return f"{x['home']} - {x['away']} ({when}, {x['round']})"
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Importa el xG de La Liga desde Sofascore a Supabase.")
-    ap.add_argument("--dry-run", action="store_true", help="muestra qué actualizaría, sin escribir en Supabase")
-    ap.add_argument("--season", type=int, help="año de inicio de la temporada (por defecto, la actual de la app)")
-    ap.add_argument("--only-missing", action="store_true",
-                    help="no descarga el xG de partidos que ya son de Sofascore (los sin xG y los de Understat sí se descargan)")
-    ap.add_argument("--tournament-id", type=int, default=DEFAULT_TOURNAMENT_ID, help="id de La Liga en Sofascore")
-    ap.add_argument("--sofascore-season-id", type=int, help="id de temporada de Sofascore (si falla la detección)")
-    ap.add_argument("--min-delay", type=float, default=1.0, help="pausa mínima entre peticiones (s)")
-    ap.add_argument("--max-delay", type=float, default=2.0, help="pausa máxima entre peticiones (s)")
-    args = ap.parse_args(argv)
-
-    if cffi is None:
-        print("Falta curl_cffi. Instálalo con:  pip install -U curl_cffi", file=sys.stderr)
-        return 1
-
-    root = Path(__file__).resolve().parent.parent
-    load_dotenv(root / ".env")
-    load_dotenv(Path.cwd() / ".env")
-    url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-    if not url or not key:
-        print("Faltan SUPABASE_URL y/o SUPABASE_SERVICE_ROLE_KEY (entorno o fichero .env; ver .env.example).",
-              file=sys.stderr)
-        return 1
-
-    season = args.season or current_season()
-    user_agent = os.environ.get("SOFASCORE_USER_AGENT") or DEFAULT_UA
-    mode = "SIMULACRO (no se escribe nada)" if args.dry_run else "escritura real"
-    print(f"La Liga, temporada {season} - {mode}")
-
-    supabase = Supabase(url, key)
+def run_competition(code: str, args, supabase: Supabase, sofa: Sofascore, season: int) -> int:
+    cfg = COMPETITIONS[code]
+    label = cfg["label"]
+    key_of = cl_key if cfg["fuzzy"] else team_key
+    print(f"\n########## {label} - temporada {season} ##########")
     try:
-        db_rows = supabase.finished_matches(season)
+        db_rows = supabase.finished_matches(season, code)
     except SupabaseError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
@@ -478,20 +565,21 @@ def main(argv: list[str] | None = None) -> int:
         print("Nada que hacer.")
         return 0
 
-    sofa = Sofascore(user_agent, args.min_delay, args.max_delay)
+    tid = args.tournament_id or cfg["tournament_id"]
     events: list[dict] = []
     blocked: str | None = None
     try:
-        tname = check_tournament(sofa, args.tournament_id)
+        tname = check_tournament(sofa, tid, cfg["hint"])
         if args.sofascore_season_id:
             season_id, sname = args.sofascore_season_id, f"id {args.sofascore_season_id}"
         else:
-            season_id, sname = find_season_id(sofa, args.tournament_id, season)
-        print(f"Sofascore: {tname}, temporada {sname} (torneo {args.tournament_id}, temporada id {season_id})")
-        for rnd in round_numbers(sofa, args.tournament_id, season_id):
-            got = finished_events(sofa, args.tournament_id, season_id, rnd)
+            season_id, sname = find_season_id(sofa, tid, season)
+        print(f"Sofascore: {tname}, temporada {sname} (torneo {tid}, temporada id {season_id})")
+        for rnd in list_rounds(sofa, tid, season_id, cfg["fallback_rounds"]):
+            got = finished_events(sofa, tid, season_id, rnd)
             events.extend(got)
-            print(f"  Jornada {rnd}: {len(got)} partidos terminados", flush=True)
+            rname = rnd.get("name") or (f"Jornada {rnd['round']}" if not rnd.get("slug") else rnd["slug"])
+            print(f"  {rname}: {len(got)} partidos terminados", flush=True)
     except SofascoreBlocked as e:
         blocked = str(e)
     except SofascoreError as e:
@@ -504,13 +592,14 @@ def main(argv: list[str] | None = None) -> int:
     events.sort(key=lambda x: (x["at"], x["event_id"]))
     # Se empareja contra TODAS las filas (también las manuales) para que éstas no ensucien la lista de
     # "sin emparejar"; las manuales se saltan después.
-    pairs, unmatched = pair_with_db(events, db_rows)
+    pairs, unmatched = (pair_fuzzy if cfg["fuzzy"] else pair_with_db)(events, db_rows)
 
     todo: list[tuple[dict, dict, float, float]] = []  # (evento, fila, xG local, xG visitante)
     skipped_manual = skipped_have = no_xg = unchanged = invalid = replaced = relabeled = 0
+    manual_replaced = manual_same = 0
     fetch_list = []
     for ev, row in pairs:
-        if row.get("xg_source") == "manual":
+        if row.get("xg_source") == "manual" and not args.overwrite_manual:
             skipped_manual += 1
         elif args.only_missing and row.get("xg_source") == "sofascore" and row.get("home_xg") is not None \
                 and row.get("away_xg") is not None:
@@ -546,7 +635,8 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             same = same_xg(row.get("home_xg"), row.get("away_xg"), h, a)
             legacy = row.get("xg_source") == "understat"
-            if same and not legacy:
+            manual = row.get("xg_source") == "manual"  # solo llega aquí con --overwrite-manual
+            if same and not legacy and not manual:
                 unchanged += 1
                 print(f"  [{i}/{len(fetch_list)}] {fmt(ev)}: {h:.2f} - {a:.2f} (sin cambios)", flush=True)
                 continue
@@ -558,6 +648,12 @@ def main(argv: list[str] | None = None) -> int:
             elif legacy:
                 replaced += 1
                 note = f" (sustituye a Understat {float(row['home_xg']):.2f} - {float(row['away_xg']):.2f})"
+            elif manual and same:
+                manual_same += 1
+                note = " (era MANUAL con el mismo valor: se marca como Sofascore)"
+            elif manual:
+                manual_replaced += 1
+                note = f" (sustituye al valor MANUAL {float(row['home_xg']):.2f} - {float(row['away_xg']):.2f})"
             print(f"  [{i}/{len(fetch_list)}] {fmt(ev)}: {h:.2f} - {a:.2f}{note}", flush=True)
     except KeyboardInterrupt:
         print("\nInterrumpido; no se ha escrito nada.", file=sys.stderr)
@@ -566,9 +662,11 @@ def main(argv: list[str] | None = None) -> int:
     # Escritura (también de lo obtenido antes de un posible bloqueo)
     written = lost_manual = 0
     if todo and not args.dry_run:
+        if args.overwrite_manual:
+            backup_manual_values(args.backup_path, code, todo)
         try:
             for ev, row, h, a in todo:
-                if supabase.update_xg(row["id"], h, a):
+                if supabase.update_xg(row["id"], h, a, args.overwrite_manual):
                     written += 1
                 else:
                     lost_manual += 1
@@ -578,10 +676,11 @@ def main(argv: list[str] | None = None) -> int:
 
     # Resumen
     with_xg = len(todo) + unchanged
-    def line(label: str, value) -> None:
-        print(f"{label:<42}{value}")
 
-    print("\n=== Resumen ===")
+    def line(text: str, value) -> None:
+        print(f"{text:<42}{value}")
+
+    print(f"\n=== Resumen {label} ===")
     line("Partidos terminados en tu base:", len(db_rows))
     line("Terminados en Sofascore:", len(events))
     line("Emparejados:", len(pairs))
@@ -590,7 +689,11 @@ def main(argv: list[str] | None = None) -> int:
     line("  de ellos, sustituyen a Understat:", replaced)
     line("  de ellos, Understat con el mismo valor:", relabeled)
     line("Sin cambios (mismo xG):", unchanged)
-    line("Saltados por ser manuales:", skipped_manual + lost_manual)
+    if args.overwrite_manual:
+        line("  de ellos, sustituyen valores MANUALES:", manual_replaced)
+        line("  de ellos, manuales con el mismo valor:", manual_same)
+    else:
+        line("Saltados por ser manuales:", skipped_manual + lost_manual)
     if args.only_missing:
         line("Saltados (ya eran de Sofascore):", skipped_have)
     line("Sin xG publicado en Sofascore:", no_xg)
@@ -602,18 +705,19 @@ def main(argv: list[str] | None = None) -> int:
     if unmatched:
         print(f"\nPartidos de Sofascore SIN emparejar con tu base ({len(unmatched)}):")
         for x in unmatched:
-            print(f"  {fmt(x)}   [teamKey: {team_key(x['home'])} | {team_key(x['away'])}]")
+            print(f"  {fmt(x)}   [clave: {key_of(x['home'])} | {key_of(x['away'])}]")
         names = sorted({n for x in unmatched for n in (x["home"], x["away"])})
-        print("Nombres de equipo de Sofascore implicados (amplía teamKey si alguno debería casar):")
+        hint = "CL_ALIAS/CL_STOP" if cfg["fuzzy"] else "STOP/team_key"
+        print(f"Nombres de equipo de Sofascore implicados (amplía {hint} si alguno debería casar):")
         for n in names:
-            print(f"  {n!r} -> {team_key(n)!r}")
+            print(f"  {n!r} -> {key_of(n)!r}")
     paired_ids = {row["id"] for _, row in pairs}
     orphan_db = [r for r in db_rows if r["id"] not in paired_ids]
     if orphan_db and blocked is None:
         print(f"\nPartidos de tu base sin pareja en Sofascore ({len(orphan_db)}):")
         for r in orphan_db:
             print(f"  {r['home_name']} - {r['away_name']} ({r['utc_date'][:10]})   "
-                  f"[teamKey: {team_key(r['home_name'])} | {team_key(r['away_name'])}]")
+                  f"[clave: {key_of(r['home_name'])} | {key_of(r['away_name'])}]")
 
     if blocked:
         print(f"\n!! {blocked}", file=sys.stderr)
@@ -621,6 +725,76 @@ def main(argv: list[str] | None = None) -> int:
             print(f"(Lo obtenido antes del bloqueo sí se ha guardado: {written} partidos.)", file=sys.stderr)
         return 2
     return 0
+
+
+def backup_manual_values(path: Path, code: str, todo: list) -> None:
+    """Guarda en un CSV los xG manuales que se van a sustituir (por si hay que recuperarlos)."""
+    rows = [(ev, row, h, a) for ev, row, h, a in todo if row.get("xg_source") == "manual"]
+    if not rows:
+        return
+    new_file = not path.exists()
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if new_file:
+            w.writerow(["id", "competicion", "fecha", "local", "visitante", "home_xg_manual", "away_xg_manual",
+                        "home_xg_sofascore", "away_xg_sofascore"])
+        for ev, row, h, a in rows:
+            w.writerow([row["id"], code, row["utc_date"][:10], row["home_name"], row["away_name"],
+                        row.get("home_xg"), row.get("away_xg"), h, a])
+    print(f"  Copia de los xG manuales que se van a sustituir: {path}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description="Importa el xG de La Liga y la Champions desde Sofascore a Supabase.")
+    ap.add_argument("--competition", choices=["PD", "CL", "all"], default="all",
+                    help="PD = La Liga, CL = Champions, all = las dos (por defecto)")
+    ap.add_argument("--dry-run", action="store_true", help="muestra qué actualizaría, sin escribir en Supabase")
+    ap.add_argument("--season", type=int, help="año de inicio de la temporada (por defecto, la actual de la app)")
+    ap.add_argument("--overwrite-manual", action="store_true",
+                    help="TAMBIÉN sustituye los xG puestos a mano por los de Sofascore (guarda antes una copia en un CSV)")
+    ap.add_argument("--only-missing", action="store_true",
+                    help="no descarga el xG de partidos que ya son de Sofascore (los sin xG y los de Understat sí se descargan)")
+    ap.add_argument("--tournament-id", type=int, help="id del torneo en Sofascore (solo con --competition PD o CL)")
+    ap.add_argument("--sofascore-season-id", type=int, help="id de temporada de Sofascore (solo con --competition PD o CL)")
+    ap.add_argument("--min-delay", type=float, default=1.0, help="pausa mínima entre peticiones (s)")
+    ap.add_argument("--max-delay", type=float, default=2.0, help="pausa máxima entre peticiones (s)")
+    args = ap.parse_args(argv)
+
+    if cffi is None:
+        print("Falta curl_cffi. Instálalo con:  pip install -U curl_cffi", file=sys.stderr)
+        return 1
+    codes = list(COMPETITIONS) if args.competition == "all" else [args.competition]
+    if len(codes) > 1 and (args.tournament_id or args.sofascore_season_id):
+        print("--tournament-id y --sofascore-season-id solo se pueden usar con --competition PD o CL.", file=sys.stderr)
+        return 1
+
+    root = Path(__file__).resolve().parent.parent
+    load_dotenv(root / ".env")
+    load_dotenv(Path.cwd() / ".env")
+    url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not url or not key:
+        print("Faltan SUPABASE_URL y/o SUPABASE_SERVICE_ROLE_KEY (entorno o fichero .env; ver .env.example).",
+              file=sys.stderr)
+        return 1
+
+    season = args.season or current_season()
+    user_agent = os.environ.get("SOFASCORE_USER_AGENT") or DEFAULT_UA
+    print(f"Importar xG de Sofascore - {'SIMULACRO (no se escribe nada)' if args.dry_run else 'escritura real'}")
+    print(f"Sofascore API: {API_BASE}")
+    if args.overwrite_manual:
+        args.backup_path = root / f"xg-manual-backup-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"
+        print("!! --overwrite-manual: se SUSTITUIRÁN también los xG puestos a mano"
+              + ("" if args.dry_run else f" (copia previa en {args.backup_path.name})"))
+
+    supabase = Supabase(url, key)
+    sofa = Sofascore(user_agent, args.min_delay, args.max_delay)
+    worst = 0
+    for code in codes:
+        rc = run_competition(code, args, supabase, sofa, season)
+        if rc in (2, 130):  # bloqueo o Ctrl+C: no tiene sentido seguir con la otra competición
+            return rc
+        worst = max(worst, rc)
+    return worst
 
 
 if __name__ == "__main__":

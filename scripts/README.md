@@ -1,6 +1,6 @@
-# Importar el xG de La Liga (Sofascore)
+# Importar el xG de La Liga y la Champions (Sofascore)
 
-`scripts/import-xg.py` descarga el xG de los partidos terminados de La Liga desde Sofascore y lo guarda en la
+`scripts/import-xg.py` descarga el xG de los partidos terminados de La Liga y de la Champions desde Sofascore y lo guarda en la
 tabla `matches` de Supabase (`home_xg`, `away_xg`, `xg_source = 'sofascore'`). Se ejecuta **a mano en tu
 ordenador** después de cada jornada: Sofascore bloquea las IPs de centros de datos, así que no puede correr en
 Vercel ni en GitHub Actions.
@@ -31,19 +31,29 @@ Vercel ni en GitHub Actions.
 
 ```bash
 python3 scripts/import-xg.py --dry-run   # simulacro: muestra qué actualizaría, sin escribir
-python3 scripts/import-xg.py             # escribe en Supabase
+python3 scripts/import-xg.py             # escribe en Supabase (La Liga y después Champions)
+python3 scripts/import-xg.py --competition CL   # solo Champions (PD = solo La Liga)
+python3 scripts/import-xg.py --overwrite-manual # también sustituye los xG puestos a mano
 ```
+
+En la Champions los nombres de equipo no se emparejan con `teamKey` (la primera palabra no basta: "Inter" frente a
+"FC Internazionale Milano"), sino comparando las palabras significativas; si algún equipo no casa, aparece en la lista
+de "sin emparejar" y se arregla en `CL_ALIAS` / `CL_STOP` del script. Las eliminatorias de Sofascore se piden con su
+nombre de ronda (`slug`).
 
 Opciones útiles:
 
 - `--only-missing`: no descarga el xG de partidos que ya son de Sofascore (mucho más rápido; los que no tienen xG
   o son de Understat sí se descargan; no detecta correcciones posteriores de Sofascore).
 - `--season 2026`: año de inicio de la temporada (por defecto, la actual de la app).
-- `--tournament-id N` / `--sofascore-season-id N`: si Sofascore cambia los ids o falla la detección.
+- `--tournament-id N` / `--sofascore-season-id N`: si Sofascore cambia los ids o falla la detección (solo con `--competition PD` o `CL`).
 
 Reglas:
 
-- Nunca toca filas con `xg_source = 'manual'` (ni siquiera si cambian durante la ejecución).
+- Por defecto nunca toca filas con `xg_source = 'manual'` (ni siquiera si cambian durante la ejecución).
+  Con `--overwrite-manual` sí las sustituye por el valor de Sofascore; antes guarda los valores manuales en
+  `xg-manual-backup-FECHA.csv` en la carpeta raíz. Pruébalo primero con `--dry-run`: cada línea indica qué valor
+  manual se sustituiría.
 - Por defecto vuelve a descargar TODOS los partidos terminados, también los que ya tienen xG. Los de Understat se
   sustituyen por el valor de Sofascore (aunque coincida, se marcan como `sofascore`).
 - No reescribe filas de Sofascore cuyo xG no ha cambiado.

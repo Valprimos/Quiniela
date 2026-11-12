@@ -17,7 +17,7 @@ export type RemoteMatch = {
 
 const STOP = new Set(['fc', 'cf', 'cd', 'ud', 'sd', 'rc', 'rcd', 'ca', 'club', 'de', 'del', 'real', 'deportivo', 'balompie', 'futbol', 'las', 'la', 'el']);
 
-// "Athletic Club" y "Athletic" -> "athletic"; "Atlético de Madrid" y "Atleti" -> "atletico"; "Barça" -> "barcelona"
+// "Athletic Club" y "Athletic" -> "athletic"; "Atlético de Madrid" y "Atleti" -> "atletico"; "Barça" -> "barcelona"; "Santander" y "Racing Santander" -> "racing"; "Deportivo" y "Deportivo La Coruña" -> "deportivo"
 export function teamKey(name: string): string {
   const n = name
     .normalize('NFD')
@@ -27,8 +27,12 @@ export function teamKey(name: string): string {
     .trim();
   if (/\batleti/.test(n)) return 'atletico';
   if (/\bbarca/.test(n)) return 'barcelona';
+  // Recién ascendidos: la base los muestra como "Santander" / "Deportivo", Sofascore como "Racing Santander" /
+  // "Deportivo La Coruña"
+  if (/\bsantander\b/.test(n)) return 'racing';
+  if (/\b(coruna|depor)\b/.test(n)) return 'deportivo';
   const words = n.split(/\s+/).filter((w) => w && !STOP.has(w));
-  return words[0] ?? n;
+  return words[0] ?? (/\bdeportivo\b/.test(n) ? 'deportivo' : n);
 }
 
 export type DbMatchRef = { id: number; home_name: string; away_name: string; utc_date: string };
