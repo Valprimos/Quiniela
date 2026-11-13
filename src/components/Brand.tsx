@@ -7,7 +7,8 @@ import { toggleFocos } from '@/lib/theme';
 export default function Brand({ children }: { children: React.ReactNode }) {
   return (
     <button type="button" className="brand brand-egg" onClick={() => toggleFocos()}>
-      {children}
+      <img className="brand-logo" src="/logo-quiniela.png" alt="" width={32} height={32} />
+      <span>{children}</span>
     </button>
   );
 }
