@@ -7,6 +7,7 @@ import type { LigaRow, Rec5 } from '@/lib/league';
 import { H2HBody } from './H2HModal';
 import PlayersView from './PlayersView';
 import LuckCard from './LuckCard';
+import Evolution from './Evolution';
 import CompLogo from './CompLogo';
 import { StatsSkeleton } from './Skeleton';
 import { fetchJson, load, peek } from '@/lib/clientCache';
@@ -235,83 +236,6 @@ function Liga({ liga, onTeamClick }: { liga: LigaRow[]; onTeamClick: (name: stri
           </li>
         ))}
       </ol>
-    </>
-  );
-}
-
-/* ---------- Evolución (gráfica) ---------- */
-const PALETTE = ['#1fa970', '#2f8fe0', '#e0577f', '#8a63e8', '#e8782c', '#17a5b0', '#8fb21a', '#c24fd6', '#5b6ee0', '#b98550'];
-
-function Evolution({ ev, meId, comps }: { ev: StatsDTO['evolution']; meId: string; comps: number }) {
-  if (ev.rounds.length < 2) {
-    return (
-      <p className="muted">Disponible tras dos jornadas.</p>
-    );
-  }
-  const W = 480;
-  const H = 230;
-  const pad = { l: 30, r: 10, t: 10, b: 26 };
-  const n = ev.rounds.length;
-  const maxY = Math.max(1, ...ev.series.flatMap((s) => s.values));
-  const x = (i: number) => pad.l + (i * (W - pad.l - pad.r)) / (n - 1);
-  const y = (v: number) => pad.t + (H - pad.t - pad.b) * (1 - v / maxY);
-  const step = Math.ceil(n / 8);
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maxY * f));
-
-  const colorOf = (id: string, i: number) => (id === meId ? 'var(--foco)' : PALETTE[i % PALETTE.length]);
-  const ordered = ev.series
-    .map((s, i) => ({ s, i }))
-    .sort((a, b) => (a.s.playerId === meId ? 1 : 0) - (b.s.playerId === meId ? 1 : 0));
-  const legend = [...ev.series]
-    .map((s, i) => ({ s, i }))
-    .sort((a, b) => b.s.values[n - 1] - a.s.values[n - 1] || a.s.name.localeCompare(b.s.name, 'es'));
-
-  return (
-    <>
-      <svg viewBox={`0 0 ${W} ${H}`} className="evo" role="img" aria-label="Evolución de puntos acumulados por jornada">
-        {ticks.map((t, k) => (
-          <g key={k}>
-            <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} className="evo-grid" />
-            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" className="evo-txt">
-              {t}
-            </text>
-          </g>
-        ))}
-        {ev.rounds.map((r, i) =>
-          i % step === 0 || i === n - 1 ? (
-            <text
-              key={r.key}
-              x={x(i)}
-              y={H - 6}
-              textAnchor="middle"
-              className="evo-txt"
-              style={comps > 1 ? { fill: compColor(r.comp) } : undefined}
-            >
-              {r.short}
-            </text>
-          ) : null
-        )}
-        {ordered.map(({ s, i }) => (
-          <polyline
-            key={s.playerId}
-            fill="none"
-            stroke={colorOf(s.playerId, i)}
-            strokeWidth={s.playerId === meId ? 3.5 : 2}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            points={s.values.map((v, k) => `${x(k)},${y(v)}`).join(' ')}
-          />
-        ))}
-      </svg>
-      <ul className="legend">
-        {legend.map(({ s, i }) => (
-          <li key={s.playerId}>
-            <i style={{ background: colorOf(s.playerId, i) }} />
-            {s.name}
-            <b>{s.values[n - 1]}</b>
-          </li>
-        ))}
-      </ul>
     </>
   );
 }
